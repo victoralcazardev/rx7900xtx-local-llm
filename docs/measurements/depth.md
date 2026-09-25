@@ -1,0 +1,226 @@
+# Depth: context, KV and MTP at long context
+
+## Current conclusion
+
+**Profile: `224k-q8q8-mtp`** (`models.toml`) — recommended daily long-context default
+(`scripts/launch.py`'s default when no alias is given): engine `hip-kvmix`, `-c 229376`, KV
+q8_0/q8_0, MTP n=2, vision disabled, measured under a 272 W power cap (this card's driver
+minimum — see `thermals-power.md`).
+
+- **22.3-25.1 tok/s at 221K fill** across three task types (essay/copy/code, temperature 1),
+  process VRAM peak **22,700 MiB**, 0 evicted, ~1.8 GiB of system VRAM margin. See "Context-window
+  ladder" below and [`../../results/20260925-context-window-ladder/`](../../results/20260925-context-window-ladder/).
+- **`240k-q8q8-mtp` is the measured maximum on this card**: 22.5-24.4 tok/s at 237K fill, process
+  VRAM peak 23,407 MiB, only ~0.3 GiB of margin left — tight, close other GPU applications before
+  using it.
+- **Long-context quality validated up to 190K fill of the 200K window (partial at 190K)**: 44/44
+  exact match (32K 20/20, 128K 20/20, 190K 4/4 on one of five planned documents), 0 loop
+  detections. See "Quality (RULER-style)" below.
+- The narrower `200k-q8q8-mtp` profile (`-c 204800`) stays in `models.toml` as a candidate;
+  `224k-q8q8-mtp` supersedes it as the default because it fits ~24K more tokens of context at a
+  comparable measured margin and throughput (see "Context-window ladder" below).
+- All of the above is measured under the 272 W power cap adopted after a 303 W run overheated
+  (see `thermals-power.md`) — about 6% slower prefill than the older 303 W measurements at a
+  comparable depth, with more thermal margin (hotspot 98-101°C vs. 100-106°C at 303 W). The 303 W
+  figures elsewhere in this file are kept as historical data points (different power policy, not
+  a correction — see `docs/STYLE.md` §7), not superseded.
+
+## Context, KV and MTP: server-real matrix (empty-context baseline)
+
+`llama-server`, 1024-token response to a short prompt, IQ3_S-mtp, ROCm:
+
+| Context | KV | Vision | MTP | Peak VRAM | tok/s | MTP acceptance |
+|---|---|---|---|---:|---:|---:|
+| 128K | q8/q8 | yes | no | 17.5 GiB | 38.8 | — |
+| 128K | q8/q8 | yes | n=2 | 18.9 GiB | 59.1-62.2 | 56-62% |
+| 128K | q8/q8 | yes | n=3 | 19.1 GiB | 60.6 | 56% |
+| 128K | q8/q8 | yes | n=4 | 19.2 GiB | 45.8 | 31% |
+| 128K | q8/q8 | yes | n=5 | 19.3 GiB | 40.0 | 23% |
+| 262K | q8/q8 | yes | no | 22.4 GiB | 38.7 | — |
+| 262K | q8/q8 | yes | n=2 | — | OOM while generating | — |
+| 262K | q8/q8 | no | n=2 | 23.3 GiB | 60.2 | 60% |
+| 262K | q4_0/q4_0 | yes | n=2 | 20.4 GiB | 60.7 | 60% |
+
+KV q4_0 is **discarded on quality grounds** (see `kv-quality.md`): it doesn't improve MTP acceptance
+or speed enough to justify the quality loss.
+
+## Context-full stress test (total VRAM including desktop, 24,560 MiB)
+
+The context is filled with N real tokens (`wiki.train`) and a response is requested; VRAM is sampled
+every second.
+
+| Case | Prompt tokens | Mean pp | tg at that depth | Peak VRAM | Result |
+|---|---:|---:|---:|---:|---|
+| 128K, q8/q8, vision, MTP n=2 | 104,185 | 608 tok/s | 30.7 tok/s (66% acc.) | 20,455 MiB | OK |
+| 262K, q8/q8, no vision, no MTP | 182,132 | 521 tok/s | 19.3 tok/s | 22,347 MiB | OK |
+| 262K, q8/q8, no vision, MTP n=2 (1st attempt) | ~104K of 182K | 640-740 | — | — | FAILED: `Memory access fault by GPU` |
+| Same case (2nd attempt, `LLAMA_ATTN_ROT_DISABLE=1`) | 182,132 | 498 | 21.8 | **24,489 MiB** | OK, 71 MiB free |
+| Same case (3rd attempt, without the variable) | 182,132 | 498 | 23.2 | **24,512 MiB** | OK, 48 MiB free |
+
+Conclusion: the 262K+MTP failure is **running out of VRAM at the margin**, and depends on how much
+VRAM the desktop is using at that moment — not a bug the environment variable fixes (see
+`engines.md` on why `LLAMA_ATTN_ROT_DISABLE` isn't used). **262K with MTP and q8/q8 is not reliable
+in 24 GB.**
+
+## Depth matrix at 262K target (128K / 240K, `llama-server`, 400-token response)
+
+Profile under test: IQ3_S-mtp, `-c 262144`, KV `q8_0/q5_1`, MTP n=2, no vision, `-np 1`.
+
+| Case | Prompt tokens | Mean pp | **tg** | MTP | Peak total VRAM* | GTT at end |
+|---|---:|---:|---:|---:|---:|---:|
+| P1 q8/q5_1 + MTP (ROCm 10 kvmix) | 130,250 | 586 | **27.5** | 58% | 24,260 MiB | 537 MiB |
+| P2 q8/q5_1 + MTP (ROCm 10 kvmix) | 239,314 | 430 | **23.8** | 90% | 24,373 MiB | 542 MiB |
+| P3 q8/q8, no MTP (official) | 130,250 | 607 | 23.7 | — | 23,112 MiB | 527 MiB |
+| P4 q8/q8, no MTP (official) | 239,314 | 453 | 16.0 | — | 22,912 MiB | 525 MiB |
+| P5 = P2 + `-ub 256` | 239,314 | 412 | 19.4 | 63% | 22,983 MiB | **1,304 MiB** (warning) |
+
+\* Total VRAM includes the desktop, which **varied between ~0.3 and ~1.1 GiB** within the same
+session (0.44 GiB at 18:00, 1.09 GiB at 22:00, 0.28 GiB at 23:00) — these totals aren't comparable to
+each other. Per-process VRAM via fdinfo (see `memory.md`) is the reliable metric used from this point
+on.
+
+- The 262K target profile clears 20 tok/s at 240K (23.8) here, and MTP gives +49% vs. not using it
+  (16.0) — but this is a **single sample per case**, one content type (English summarization). MTP
+  acceptance varies a lot between runs (58-90%). **Statistically thin** — see the corrected 240K
+  measurement below. The +49% figure compares P2 (kvmix, q8/q5_1, 90% acceptance) with P4
+  (**official engine, q8/q8**) — it mixes engine, KV type and an unusually high acceptance rate, so
+  it doesn't isolate MTP's effect. With 58% acceptance (see the 240K result below), it would be
+  **~+15%** vs. the same P4. The no-MTP reference with kvmix q8/q5_1 at 240K is still missing.
+- P5 (`-ub 256`) makes things **worse**: ~770 MiB more spilled to GTT (silent overflow, see
+  [#26432](https://github.com/ggml-org/llama.cpp/issues/26432)), and both tg and pp drop.
+  **`-ub 512` (the default) is kept.**
+
+## 128K and 240K with fdinfo, and the aborted first 240K attempt
+
+- **128K** (single sample, method described in `../BENCHMARK-FORMAT.md`): 262,144 reserved,
+  q8_0/q5_1, MTP2, no vision, 128,000 exact prompt tokens, 1,500-token output, cache reuse 0, no
+  truncation, seed 43. MTP accepted 787 of 1,423 drafts (55.3%). Prefill 587.64 tok/s / 217.82 s;
+  generation **26.99 tok/s** / 55.53 s; full request 273.39 s. The >20 tok/s bar is met in **this
+  single sample**. Per-process fdinfo peak: load/ready 21,895.31 MiB VRAM; prefill 22,828.86;
+  generation 22,828.96. GTT 8.07 MiB throughout, 0 evicted. Hotspot peaked 98°C in prefill, 95°C in
+  generation (edge 77/76°C).
+- A first **240K** attempt with the same profile did not finish: the client ran out of allotted
+  tokens and canceled the request at 67,584 of 240,000 prompt tokens (27%, ~748 tok/s), the server
+  was orphaned and stopped by hand. **Not a valid result** — repeated below.
+
+## 240K with fdinfo (repeated, q8/q5_1 + MTP n=2, 262,144 reserved)
+
+Prompt from `wiki.train` (English) with an instruction to write an essay in Spanish, 1,500 forced
+output tokens (`ignore_eos`), followed by a warm turn (history + short question, 500 tokens).
+
+| Case | Prompt | pp | **tg** | MTP | Warm turn: reused/new | tg warm | Peak process VRAM | Process GTT | Evicted | Hotspot |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 240K (a) | 240,000 | 430 | **18.4** | 58% | 239,996 / 1,544 | 16.7 | 22,832 MiB | 8.1 MiB | 0 | 102°C |
+| 240K (b) | 240,000 | 428 | **18.4** | 58% | 239,996 / 1,544 | 17.2 | 22,832 MiB | 8.1 MiB | 0 | 105°C |
+| 128K (reference) | 128,000 | 588 | 27.0 | 55% | — | — | 22,829 MiB | 8.1 MiB | 0 | 98°C |
+
+- **No memory problem at 240K.** Per-process VRAM by phase: load 21,895 MiB → prefill 22,829 →
+  warm turn 22,832. GTT 8 MiB, **0 evicted**. The silent GTT overflow from
+  [#26432](https://github.com/ggml-org/llama.cpp/issues/26432) does not appear with `-ub 512`.
+- **Warm cache works**: the second turn reuses 239,996 of 240,000 tokens and only processes the new
+  ones (~4 s instead of ~9 min) — this is what real agent usage looks like.
+- **Speed: 18.4 tok/s, below the 20 tok/s bar.** (a) and (b) used the same seed: this confirms the
+  result **reproduces**, but they are not independent samples. The earlier P2 figure (23.8) used 400
+  output tokens and a 90% acceptance rate — not comparable one-to-one.
+- Not caused by temperature: the core stayed at 2,500 MHz. tg per 250-token window ranged 15.7-22.2
+  tok/s and tracked MTP acceptance (43-81%). With this synthetic, hard-to-predict text (the model
+  "thinks" by listing loose Wikipedia topics), **MTP barely helps at 240K**.
+- Long prefills (7-9 min at full 303 W power) push the hotspot to 100-105°C (edge 78-83°C) even
+  starting from a cold GPU (edge ≤55°C) — see `thermals-power.md`.
+
+## Target change: ~200K (2026-09-25)
+
+200K accepted "if done well", instead of chasing 262K with a 3-hour measurement campaign. With
+`-c 204800`, **KV q8/q8 fits** (better cache quality than q8/q5_1, and without its ~8% tg cost — see
+`engines.md`). This is the profile measured in `speculative.md`'s 190K A/B, which is the basis for
+the current conclusion at the top of this file.
+
+Extrapolation ahead of the 190K measurement: (1) estimate (hypothesis, 2 points with one sample
+each, q8/q5_1, 55-58% acceptance): ms/step ≈ 32.6 + 0.354 × (thousands of context tokens) →
+**~21.5 tok/s at 190K**; q8/q8 should do somewhat better (no ~8% V-q5_1 cost). (2) VRAM estimate
+with `-c 204800` q8/q8: KV ~6,800 MiB (vs. 7,424) and MTP KV ~800 (vs. 1,024) → **~22,000 MiB
+process VRAM** (hypothesis; confirmed close by the measured 21,679 MiB above). (3) With
+temperature 0, acceptance tends to run **higher** than at the vendor's temperature 1 — validate the
+chosen n with a temperature-1 series. (4) Add `--spec-draft-p-min` (e.g. 0.5/0.7) to the matrix.
+
+## Context-window ladder: 224K and 240K, 272 W (2026-09-25)
+
+Stepping the `qwen38-iq3s-mtp` context window up from the 200K profile, fill = window − 8K, KV
+q8/q8, MTP n=2, under the 272 W power cap; stops on the first failure to fit. Same method as the
+190K A/B in `speculative.md` (three task types, temperature 1, 400 forced output tokens, 2
+repetitions). Raw data and exact commands:
+[`../../results/20260925-context-window-ladder/`](../../results/20260925-context-window-ladder/).
+
+| Case | Fill | pp | tg essay | tg copy | tg code | Process VRAM peak | System VRAM | Hotspot |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| 224K (`-c 229376`) | 221,167 | 422 | 22.3 | 25.1 | 18.7 | 22,700 MiB | ~1.8 GiB margin | 98°C |
+| 240K (`-c 245760`) | 237,551 | 410 | 22.5 | 24.4 | 18.7 | 23,407 MiB | ~0.3 GiB margin | 101°C |
+
+GTT stayed at 8 MiB and evicted at 0 MiB in both cases. **Both fit and clear 18 tok/s on every
+task.** 224K is adopted as the new default profile (`224k-q8q8-mtp`) — ~1.8 GiB of system VRAM
+margin even with another light GPU client running. 240K is the measured maximum
+(`240k-q8q8-mtp`) — only ~0.3 GiB margin, tight; close other GPU applications first. The ladder
+was stopped by the user after 240K (262K, which would need KV `q8_0/q5_1` to fit, was not
+attempted here — see the existing `262k-q8q8`/`262k-q8q51-mtp` profiles above for that end of the
+range).
+
+## Quality (RULER-style), `200k-q8q8-mtp`
+
+`bench/longctx_quality.py`: a Spanish-language multi-key retrieval test (deliberately Spanish, see
+the script's own docstring and `STYLE.md` §1), 5 documents × 4 questions per depth, `-c 204800`,
+KV q8/q8, MTP n=2, temperature 0. Raw data and exact commands:
+[`../../results/20260925-longctx-quality-200k/`](../../results/20260925-longctx-quality-200k/).
+
+| Depth | Power cap | n | Exact match | Loops | tok/s (min-max) |
+|---:|---:|---:|---|---:|---|
+| 32,000 | 303 W | 20 | 20/20 | 0 | 64.1-67.2 |
+| 128,000 | 303 W | 20 | 20/20 | 0 | 36.8-38.9 |
+| 190,000 | 272 W | 4 | 4/4 | 0 | 24.3-29.2 |
+
+**Total: 44/44 exact match, 0 loop detections.** Exact match doesn't collapse anywhere measured
+from 32K to 190K fill, and no output loops were observed — retrieval quality holds up to 190K for
+this profile. **190K is a partial sample**: the first attempt at the factory 303 W limit was
+stopped by the operator when the hotspot reached 106°C (see `thermals-power.md`); the re-run at a
+272 W power cap completed one of the five planned documents (4/4 exact) before the user parked
+190K specifically ("if 200K works well, we can leave 190K aside") — the 32K/128K result plus this
+one 190K document were judged sufficient evidence. The 272 W prefill at 190K (459 tok/s) is ~6%
+slower than the 303 W reference at the same depth (487 tok/s, see `speculative.md`'s 190K A/B).
+
+## Open questions / pending (priority order)
+
+1. A broader 190K quality sample (the remaining 4 of 5 planned documents, 16 of 20 questions) —
+   parked by the user, not required to promote `224k-q8q8-mtp`/`240k-q8q8-mtp` (32K/128K are fully
+   validated, and the one 190K document validated exactly).
+2. Real agent-usage MTP acceptance at depth (temperature 1, 3 seeds): the synthetic benchmark above is
+   pessimistic — a third-party report (`sweeps/radeon.md`,
+   [sudoingX/qwen38-mtp](https://github.com/sudoingX/qwen38-mtp/blob/master/sweeps/radeon.md))
+   measured **~93% acceptance** with a real agent (Hermes, MTP n=3 + p-min 0.75, 29-37K context) on
+   a 7900 GRE — our synthetic figures likely undervalue real usage.
+3. Statistical repetition: the 5-10-prompt, multi-seed MTP acceptance campaign originally planned was
+   not completed — most depth numbers above are single- or double-sample.
+4. Quality beyond English wikitext (Spanish and code tasks with a verifiable answer) — perplexity on
+   English wikitext-2 only ranks variants of the same model, it isn't a quality test on its own.
+5. A third-party report of the same model on a 7900 XTX via **Windows/Vulkan** claims 41 → 85 tok/s
+   with MTP ([sudoingX/qwen38-mtp](https://github.com/sudoingX/qwen38-mtp)) — not reproduced here
+   (Linux only so far); Windows/Vulkan doesn't appear to suffer the Linux memory-clock throttling
+   described in `engines.md`.
+6. 262K with KV `q8_0/q5_1` (the only way to reach it with MTP headroom) was not attempted in the
+   224K/240K ladder above.
+
+## History
+
+- **2026-09-24**: first context/KV/MTP matrix and stress tests (128K/262K); 262K target profile
+  measured at 128K and 240K depth (single samples), 240K attempt #1 invalid (client timeout).
+- **2026-09-24, night**: 240K repeated twice with fdinfo instrumentation — confirms 18.4 tok/s
+  (below the >20 tok/s bar), supersedes the earlier single-sample 23.8 reading for the 262K profile.
+- **2026-09-25**: target changed to ~200K by user decision; `200k-q8q8-mtp` measured at 190K
+  (22-30 tok/s, see `speculative.md`) and adopted as the new candidate profile, superseding
+  `262k-q8q51-mtp`. Quality test still pending as of this date.
+- **2026-09-25, later**: long-context quality test (RULER-style) run partially — 32K and 128K
+  validated (20/20 exact match, 0 loops); 190K stopped on thermal grounds at 303 W (106°C hotspot),
+  re-run in progress at 272 W.
+- **2026-09-25, evening**: 272 W adopted as a permanent power cap; 190K quality re-run completed
+  one document (4/4 exact, 99°C hotspot) before being parked by the user — 44/44 exact match total,
+  0 loops. Context-window ladder measured 224K and 240K (both fit, 18-25 tok/s); 224K adopted as
+  the new default profile (`224k-q8q8-mtp`), 240K as the measured maximum (`240k-q8q8-mtp`),
+  superseding `200k-q8q8-mtp` as the recommended daily default (kept as a narrower candidate).

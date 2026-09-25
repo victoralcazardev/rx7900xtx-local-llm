@@ -1,0 +1,11 @@
+{"backend": "hip", "caso": "131072:q8_0/q8_0:0", "carga_s": 4, "vram_gib": 17.15, "tok_s": 38.8, "tokens": 1024, "vram_pico_gib": 17.49}
+{"backend": "hip", "caso": "131072:q8_0/q8_0:2", "carga_s": 4, "vram_gib": 18.46, "tok_s": 59.1, "tokens": 1024, "mtp_acept": "541/964", "vram_pico_gib": 18.91}
+{"backend": "hip", "caso": "262144:q8_0/q8_0:0", "carga_s": 4, "vram_gib": 22.02, "tok_s": 38.7, "tokens": 1024, "vram_pico_gib": 22.36}
+{"backend": "hip", "caso": "Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp:262144:q8_0/q8_0:2:nomm", "carga_s": 30, "vram_gib": 22.81, "tok_s": 60.2, "tokens": 1024, "mtp_acept": "557/930", "vram_pico_gib": 23.29}
+{"backend": "hip", "caso": "Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp:262144:q4_0/q4_0:2", "carga_s": 22, "vram_gib": 19.96, "tok_s": 60.7, "tokens": 1024, "mtp_acept": "558/929", "vram_pico_gib": 20.4}
+{"backend": "hip", "caso": "Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp:131072:q8_0/q8_0:3", "carga_s": 22, "vram_gib": 18.61, "tok_s": 60.6, "tokens": 1024, "mtp_acept": "639/1146", "vram_pico_gib": 19.05}
+{"backend": "hip", "caso": "Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp:131072:q8_0/q8_0:4", "carga_s": 28, "vram_gib": 18.76, "tok_s": 45.8, "tokens": 1024, "mtp_acept": "567/1822", "vram_pico_gib": 19.2}
+{"backend": "hip", "caso": "Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp:131072:q8_0/q8_0:5", "carga_s": 26, "vram_gib": 18.9, "tok_s": 40.0, "tokens": 1024, "mtp_acept": "551/2356", "vram_pico_gib": 19.34}
+{"backend": "hip", "caso": "Qwen3.8-27B-GSQ-RCO-IQ3_XXS-mtp:131072:q8_0/q8_0:2", "carga_s": 6, "vram_gib": 16.89, "tok_s": 56.3, "tokens": 1024, "mtp_acept": "513/1019", "vram_pico_gib": 17.42}
+{"backend": "hip", "caso": "Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp:131072:q8_0/q8_0:2", "carga_s": 6, "vram_gib": 18.45, "tok_s": 62.2, "tokens": 1024, "mtp_acept": "565/914", "vram_pico_gib": 18.89}
+{"backend": "hip", "caso": "RVN-Q4_K_M-multilingual-mtp:131072:q8_0/q8_0:2", "carga_s": 6, "vram_gib": 7.72, "tok_s": 48.2, "tokens": 1024, "mtp_acept": "537/970", "vram_pico_gib": 7.94}

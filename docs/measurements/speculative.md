@@ -1,0 +1,221 @@
+# Speculative decoding: MTP vs. DFlash2 vs. n-gram
+
+## Current conclusion
+
+- **MTP `--spec-draft-n-max 2` is the best overall speculative-decoding option and uses the least
+  VRAM**: no separate draft model needed, the head ships inside the GGUF (`-mtp`). With an empty
+  context: **+50-60%** generation speed (39 → 58-69 tok/s depending on task).
+- **At depth, MTP's gain shrinks sharply**: at ~190-240K context it drops to roughly +15-50%
+  depending on the exact comparison (see `depth.md`), because MTP's per-step cost also grows with
+  depth. The mechanism is identified (below) but only partially explains the slowdown.
+- **DFlash2 does not beat MTP** once measured at depth (190K): slower on two of three task types,
+  ties on the third, and costs more VRAM. A third-party claim that DFlash2 wins at all depths on a
+  different GPU (RTX 3090) does not reproduce here.
+- **n-gram stacked on MTP**: a single sample suggests it can help on repetitive content (code edits,
+  +6%) and hurt on reasoning (−8%); not adopted without repeated measurement.
+- **MTP n=3, measured at depth for the first time (128K fill, 272 W)**: strongly content-dependent
+  — +17% on literal copy, ≈ on code, small essay gain — but acceptance drops 11 points vs. n=2 (75%
+  → 64%). **Not adopted as the default** (n=2 stays); candidate for a copy/refactor-heavy profile.
+  `--spec-draft-p-min 0.3` is within noise of plain n=2 at the same depth — not adopted. See
+  "`-ub` and MTP screening at 128K fill" below.
+- The **root cause of MTP's depth slowdown is identified but not fully explained**: verifying ≥3
+  tokens per step (MTP n≥2) routes through the FlashAttention TILE kernel, which converts the whole
+  KV cache to f16 on every step; a fork that removes that conversion only recovered ~2.5% of the
+  step time, so the conversion is a minor contributor, not the main cost.
+
+## MTP vs. DFlash2 vs. n-gram, empty context
+
+IQ3_S-mtp, 128K, KV q8/q8, vision enabled, ROCm b11160. Method: 3 content types, 1500 tokens per
+prompt, `seed 42`, vendor Qwen sampling (temp 1.0). Draft model for DFlash2:
+[`z-lab/Qwen3.8-27B-DFlash2-GGUF`](https://huggingface.co/z-lab/Qwen3.8-27B-DFlash2-GGUF) (Q4_K_M
+1.1 GB / Q8_0 2.0 GB), `-md <draft> -ngld all`.
+
+| Configuration | New code | Reasoning | Edit given code | VRAM |
+|---|---:|---:|---:|---:|
+| No speculation | 38.4 | 38.3 | 38.1 | 17.8 GiB |
+| **MTP n=2** | **57.7** (54%) | **68.8** (74%) | 63.2 (65%) | **19.7 GiB** |
+| ngram-map-k4v + MTP n=2 | 57.8 (54%) | 63.3 (61%) | **67.1** (58%) | 19.7 GiB |
+| DFlash2 Q4_K_M n5 p0.4 | 49.9 (44%) | 69.4 (60%) | 59.4 (53%) | 20.3 GiB |
+| DFlash2 Q8_0 n5 p0.4 | 46.6 (41%) | 71.3 (64%) | 59.0 (55%) | 21.2 GiB |
+| DFlash2 Q4_K_M n7 (z-lab's example) | 44.9 (26%) | 67.8 (47%) | 47.0 (28%) | 20.6 GiB |
+| ngram-map-k4v + DFlash2 Q8_0 n5 p0.4 | 46.6 (41%) | 70.4 (58%) | 65.0 (54%) | 21.2 GiB |
+
+Generation tok/s (accepted-draft percentage in parentheses).
+
+- DFlash2 only beats MTP on reasoning (+1-4%), loses 6-20% on code, and costs 0.6-1.5 GiB more. With
+  24 GB VRAM and a 262K target, it doesn't pay off. A third-party figure (QingYis, 68 tok/s on
+  reasoning with DFlash2) matches MTP's number here.
+- ngram-map-k4v stacked on MTP: +6% editing code (repetitive content), −8% reasoning, **single
+  sample**. Candidate for a "coding agent" profile; needs repetition before adopting.
+- This comparison is **with an empty context**. DFlash2's draft metadata
+  (`dflash.attention.sliding_window 2048` across its 5 layers) shows its attention uses a **2K
+  sliding window**: its cost and KV don't grow with context, while the MTP layer attends to the
+  full context in f16. A user with an RTX 3090 and this same model (@ItsmeAjayKV, 2026-09-14, no
+  published method) reports DFlash2 beating MTP at every depth. **This needed repeating at ~190K**
+  before trusting "MTP is better" for long-context use — see the 190K result below, where DFlash2
+  is measured directly and does not reproduce that claim on this GPU.
+
+## Why MTP's advantage shrinks with depth: VEC vs. TILE kernel selection
+
+In `ggml/src/ggml-cuda/fattn.cu` (`ggml_cuda_get_best_fattn_kernel`), the RX 7900 XTX (RDNA3: WMMA,
+no NVIDIA-style MMA or MFMA) and Qwen3.8's attention shape (head_dim 256, GQA 6 → effective GQA
+ratio 2) fall into the generic kernel selection path:
+
+- Quantized KV and **≤2 tokens** in the batch → **VEC** kernel, reads q8_0/q5_1 directly.
+- **≥3 tokens** → **TILE** kernel, needs K and V in f16 (`need_f16_K/V`): **converts the entire
+  layer's KV to f16 on every step** (hundreds of MiB per layer at 240K).
+- Generating without MTP = 1 token (VEC). **MTP n=1 verifies 2 tokens (VEC). MTP n=2 verifies 3
+  (TILE). n=3 verifies 4 (TILE).**
+
+This matches what's measured: MTP gains +50-60% with an empty context (converting little KV is
+cheap), but very little at 240K. It likely also explains part of the +933 MiB of VRAM seen during
+prefill (f16 conversion buffer) — see `memory.md`.
+
+**Experimental engine `llama-b11160-linux-rocm10-gfx1100-kvmix-vec4`**: same build with one line
+changed (`Q->ne[1] <= 2` → `<= 4` in that branch), so 3-4-token batches stay on VEC. Patch:
+`vec4.patch`. **Not adopted without measuring speed and quality** — see the 190K A/B below, where it
+loses.
+
+(1) TILE selection is **verified in the code**. (2) Risks of vec4: VEC doesn't apply the GQA
+optimization, and with 3-4 tokens it launches 2 blocks of 2 columns, so it **reads the KV twice**
+per step — the gain could go either way, needs measuring (out-of-range accesses are guarded,
+`fattn-vec.cuh:164,215,280,434,511`). It also **changes the numerics**: TILE uses Q/K in f16, VEC
+quantizes Q to q8_1 (`:97`), same as no-MTP generation. (3) Doubt that the +933 MiB in prefill is
+the conversion buffer: `ggml_cuda_flash_attn_ext_get_alloc_size` reserves it inside the compute
+buffer, and that +933 MiB is **identical at 128K and 240K** — a hypothesis, not confirmed. (4)
+**Untried lever: `--spec-draft-p-min`** (default 0.00; MTP respects it,
+`common/speculative.cpp:1684`). If the draft is unsure, it proposes 1 token, 2 get verified, and
+VEC is used **without needing the patch**.
+
+Bugs relevant to why MTP costs so much VRAM/compute at depth (open as of b11160/b11170):
+[#28433](https://github.com/ggml-org/llama.cpp/issues/28433) (draft context sized by total context,
+not per-sequence — confirmed **not applicable here** since it only multiplies with `-np > 1`, and
+this setup uses `-np 1`), [#26038](https://github.com/ggml-org/llama.cpp/issues/26038) (MTP draft
+over-reserves compute buffers on HIP), [#26432](https://github.com/ggml-org/llama.cpp/issues/26432)
+(silent GTT fallback when context + MTP exceed VRAM), [#27282](https://github.com/ggml-org/llama.cpp/issues/27282)
+(shared MTP compute arena, open with a CUDA proof-of-concept patch), and
+[#28003](https://github.com/ggml-org/llama.cpp/pull/28003) (RDNA3 single-token MMVQ, draft). No flag
+exists to limit the MTP draft's own context or compute footprint.
+
+## A/B at 190K (`-c 204800`, KV q8/q8): kvmix vs. vec4, MTP n=2
+
+One server per variant; 190,000-token document + 3 tasks (essay, literal copy, code); temperature 0;
+400 tokens max, natural EOS. First request per task does the prefill (not counted), second reuses
+the cache (`cache_n` 189,979-189,983).
+
+| Engine | Essay | Copy | Code | Accepted/proposed (essay, copy, code) |
+|---|---:|---:|---:|---|
+| **kvmix (b11160 + ROCm 10), n=2** | **25.2** | **29.4** | **22.1** | 238/321, 261/275, 215/365 |
+| vec4, n=2 | 21.6 | 24.5 | 18.5 | 241/313, 261/275, 215/365 |
+
+- **With 200K reserved and q8/q8, the current engine stays above 20 tok/s at 190K on all three
+  tasks** (temperature 0: an optimistic acceptance rate, see `depth.md`). Switching task reuses
+  189,467 tokens of cache and only reprocesses ~515 (end-of-document checkpoint).
+- **vec4 is 14-17% slower: discarded.** The TILE-converts-KV-to-f16 hypothesis above is **confirmed**
+  (own code reading + an independent source below), but the VEC-based fix is worse: VEC doesn't
+  apply the GQA optimization and, with 3 tokens, reads the KV twice (2 blocks of 2 columns), as the
+  external audit predicted. vec4 with n=3 was not measured. The `...-kvmix-vec4` engine is kept only
+  as a reference.
+- Even with matching acceptance rates, vec4 changes the numerics (VEC quantizes Q to q8_1), so
+  accepted-draft counts differ slightly (321 vs. 313 for essay).
+
+## DFlash2 and the "native q8 KV" fork, at 190K
+
+Same method as the 190K A/B above. VRAM = per-process fdinfo maximum by phase. ms/step = generation
+time / (generated − accepted), warm turn.
+
+| Variant | Essay | Copy | Code | ms/step | VRAM ready → peak | Prefill @190K |
+|---|---:|---:|---:|---:|---:|---:|
+| **kvmix, MTP n=2** (reference) | **25.2** | **29.4** | **22.1** | 97.7 | 20,712 → **21,679 MiB** | 487 tok/s |
+| kvmix, DFlash2 Q4_K_M n=5, p-min 0.4 (GGUF without MTP) | 21.3 | 26.5 | 22.2 | — | 21,440 → 21,979 MiB | — |
+| Fork stew675 v16 (`ebbb18522`), MTP n=2, native q8_0 (auto) | 26.5 | 30.1 | 22.4 | 95.4 | 20,033 → 21,847 MiB | 489 tok/s |
+
+GTT stayed at 8 MiB and 0 evicted for all three; hotspot peaked at 103°C.
+
+- **DFlash2 does not beat MTP at 190K**: slower on essay and copy, ties on code, +300 MiB. The
+  @ItsmeAjayKV (RTX 3090) claim from the empty-context section above does not reproduce here.
+  **Discarded.** DFlash2 n=3 was not measured (deprioritized).
+- **"Native q8" fork** ([stew675/llama-cpp-rdna-boosts](https://github.com/stew675/llama-cpp-rdna-boosts),
+  `GREEDY-PURITY.md` §14 and `V4-NATIVE-Q8-KV-PLAN.md`; same TILE-converts-to-f16 finding as above,
+  independently documented): reads q8_0 KV directly in TILE/MMA instead of converting to f16. It
+  claims −758 MiB VRAM for a 27B model at 204,800 context, `-ub 512`, q8_0/q8_0 only. Measured here:
+  `ready` VRAM drops 680 MiB (close to the claim), but **prefill peak is 170 MiB higher**, and the
+  per-step cost only improves ~2.5% (97.7 → 95.4 ms). Per-task tok/s differences also mix in
+  different text (different code base, different hashes). **Not adopted** — experimental fork on an
+  older upstream base. Engine kept as
+  `llama-rdnaboosts-v16-ebbb18522-rocm10-gfx1100` (`test-backend-ops -o FLASH_ATTN_EXT` with
+  hsk=256 and q8_0: 10/10 OK). `GGML_CUDA_FA_KV_NATIVE=0` (old f16 path) was not isolated against the
+  auto (native) mode separately.
+- Cost model: at 240K, one MTP n=2 step costs ~117 ms whether acceptance is 90% or 58% (see
+  `depth.md`) — tg ≈ steps/s × tokens/step, so **it's mostly the acceptance rate that drives tg**,
+  not the per-step cost varying. A step of n=2 costs ~1.9x a single non-MTP token (ideally it should
+  be 1.1-1.3x) — that overhead is the real target to fix. The "native q8" fork's 2.5% improvement
+  shows the f16 conversion is only a few ms of the ~98 ms step; the rest is the attention computation
+  itself over the long KV, plus the draft steps. Without per-kernel profiling, the bulk of the
+  overhead is still unexplained.
+- Not measured (deprioritized this session): kvmix without MTP at 190K, MTP n=3, `--spec-draft-p-min`
+  sweep, temperature 1 with multiple seeds.
+
+## `-ub` and MTP screening at 128K fill, 272 W (2026-09-25)
+
+Fast, cool screening at 128K fill (of the 200K `-c 204800` window) under the 272 W power cap
+(`thermals-power.md`), before confirming any winner at 190-240K depth — this is the first n≥3 and
+`--spec-draft-p-min` data measured at depth rather than with an empty context. Same three task
+types, temperature 1 (vendor sampling), 400 forced output tokens, 2 repetitions. Raw data and
+exact commands: [`../../results/20260925-ubatch-mtp-screening-128k/`](../../results/20260925-ubatch-mtp-screening-128k/).
+
+| Variant | pp | tg essay | tg copy | tg code | Accept | Peak VRAM | Peak hotspot |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| base (n2, `-ub 512`) | 552.6 | 30.6 | 36.0 | 27.7 | 75% | 21,648 MiB | 96°C |
+| `-ub 1024` | 551.7 | 30.1 | 35.9 | 27.6 | 75% | 22,238 MiB | 98°C |
+| `-ub 2048` | 543.4 | 30.6 | 35.8 | 26.7 | 74% | 23,420 MiB | 98°C |
+| n3 | 551.3 | 31.3 | 42.1 | 27.5 | 64% | 21,797 MiB | 98°C |
+| `--spec-draft-p-min 0.3` (n2) | 551.8 | 31.3 | 36.4 | 27.5 | 78% | 21,647 MiB | 98°C |
+
+- **`-ub 512` (the default) is optimal at this depth**: `-ub 1024` gains nothing and costs 590 MiB,
+  `-ub 2048` is strictly worse (slower prefill, −3.6% code tg, +1.8 GiB VRAM). This supersedes the
+  earlier `pp2048`-only, empty-context reading in `engines.md` ("within ±1% of default"), which
+  never exercised `-ub` at depth.
+- **`--spec-draft-p-min 0.3` is within noise of plain n=2**: essentially the same tg and VRAM,
+  accept +3 points (78% vs. 75%) — not a clear win, **not adopted**.
+- **MTP n=3 is strongly content-dependent**: +17% on literal copy (predictable text, the draft is
+  right more often even at lower acceptance), ≈ on code, small essay gain — but acceptance drops 11
+  points vs. n=2 (75% → 64%), consistent with a longer, harder-to-verify draft. **Not adopted as
+  the default** (n=2 remains the better all-round choice); a candidate for a copy- or
+  refactor-heavy profile where the content is more predictable. Needs confirming at 190-240K depth
+  before any such profile is added (TILE-kernel cost grows with depth — see the VEC/TILE section
+  above).
+
+## Investigation notes on nearby forks (not adopted)
+
+- **Lemonade b1331** (llama.cpp base ≈ b11170): its build workflow does not enable
+  `GGML_CUDA_FA_ALL_QUANTS`, so it almost certainly doesn't support KV q8_0/q5_1 with FlashAttention.
+  A/B against it was dropped for the target profile.
+- **nasone32 `llama.cpp-RDNA3-7900xtx-opt`**: based on an upstream snapshot older than b11160, no
+  binaries provided. Its FlashAttention patches target RDNA3.5/RDNA4 or prefill; its sparse-attention
+  patch is for a different architecture (`qwen4exp`, not Qwen3.8) and its cmake doesn't enable
+  `FA_ALL_QUANTS`. Nothing in it attacks long-context generation on gfx1100. **Discarded.**
+- Checked against the latest release (b11170, 2026-09-24): no commit between b11160 and b11170
+  touches MTP, the draft path, or HIP.
+
+## Open questions
+
+- MTP acceptance rate with real agent-style tool use at ~190K (temperature 1, multiple seeds): the
+  synthetic Wikipedia-summarization benchmark used above is a pessimistic proxy — a third-party
+  report on a different setup saw 85-93% acceptance with real agent traffic (see `depth.md`).
+- MTP n=3 and `--spec-draft-p-min` were only measured at 128K fill (272 W, single sample per task)
+  — not confirmed at 190-240K depth, and not repeated.
+- Whether a future llama.cpp release picks up #27282 (shared MTP compute arena) or #26038, which
+  would reduce MTP's VRAM/compute overhead at depth.
+
+## History
+
+- **2026-09-24**: MTP vs. DFlash2 vs. n-gram measured with an empty context (table above). MTP n=2
+  selected as the default speculative-decoding profile.
+- **2026-09-25**: VEC/TILE kernel-selection hypothesis formed and confirmed by an independent fork;
+  vec4 patch tested and discarded (slower); DFlash2 and the "native q8" fork measured directly at
+  190K and both discarded. This supersedes the empty-context-only comparison above for any
+  long-context decision — see `depth.md` for the depth-specific throughput numbers.
+- **2026-09-25, evening**: `-ub` and MTP n=3/`--spec-draft-p-min` measured at depth (128K fill,
+  272 W) for the first time — `-ub 512` confirmed optimal, p-min 0.3 within noise, n=3
+  content-dependent and not adopted as the default.

@@ -1,0 +1,22 @@
+# Copy this to local.toml (git-ignored) and adjust the paths for this machine.
+# models_root: folder that contains the .gguf files referenced in models.toml.
+models_root = "/path/to/Models"
+
+# One engine per backend. Empty ("") = not installed on this machine yet.
+# Never a binary with both Vulkan and HIP compiled in (llama.cpp issue #23199,
+# see docs/measurements/engines.md).
+[engines]
+vulkan = ""
+hip = ""
+hip-kvmix = ""
+
+# Optional: verify this launcher is wired into your own coding-agent harness. Off unless
+# harness.enabled = true. Each target's config file is checked for EXACTLY two providers,
+# local-128k and local-224k, pointing at :8080 with the right contextWindow -- see
+# scripts/check-sync.py and AGENTS.md.
+# [harness]
+# enabled = true
+# targets = [
+#   { name = "example", path = "~/.example/agent/models.json", format = "json",
+#     root = [], base_url_key = "baseUrl" },
+# ]

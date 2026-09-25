@@ -1,0 +1,94 @@
+# Sources
+
+External claims checked against this repository's own measurements (`docs/measurements/`). Status:
+**verified** (matches an own test or a primary source read directly), **hypothesis** (plausible,
+not yet tested here), **refuted** (contradicted by an own test or a primary source read directly).
+"Own test" links to where this repository measured the same thing, when it exists.
+
+## Engine / backend
+
+| Claim | Source | Date | Status | Own test |
+|---|---|---|---|---|
+| Official ROCm binaries only ship FlashAttention for symmetric K/V; asymmetric mixes fall to a slow path | [llama.cpp discussion #22411](https://github.com/ggml-org/llama.cpp/discussions/22411) | 2026 | Verified | Resolved by building `hip-kvmix` with `GGML_CUDA_FA_QUANTS` covering q8_0/q5_1 — [`docs/ENGINES.md`](ENGINES.md) |
+| With both Vulkan and HIP compiled into one binary, MTP silently routes to ROCm and gets disabled | [llama.cpp issue #23199](https://github.com/ggml-org/llama.cpp/issues/23199) | 2026 | Verified | Single-backend-only policy adopted, see `AGENTS.md` and [`docs/measurements/engines.md`](measurements/engines.md) |
+| SYCL/Intel BMG: moving quantized-KV decode from the VEC kernel to TILE gave +128% (Qwen 35B q4_0) / +169% (Gemma 12B) at 118K | [llama.cpp PR #26689](https://github.com/ggml-org/llama.cpp/pull/26689) | 2026-08-28 | Verified (source read) | Motivated testing the `stew675/llama-cpp-rdna-boosts` fork's native-q8 KV path on this GPU — only -2.5% ms/step at depth, far short of the SYCL gain — [`docs/measurements/speculative.md`](measurements/speculative.md) |
+| `stew675/llama-cpp-rdna-boosts` fork: the FlashAttention kernel selector returns VEC for ≤2 verified tokens and TILE from 3, converting KV to f16 on every step with quantized KV | [GREEDY-PURITY.md](https://github.com/stew675/llama-cpp-rdna-boosts/blob/main/GREEDY-PURITY.md) | 2026-09 | Verified | Matches this repo's own reading of `fattn.cu`; independent confirmation |
+| Same fork's "native q8_0 KV" build avoids the f16 copy, claims −758 MiB VRAM and ±0% tg at short context | [V4-NATIVE-Q8-KV-PLAN.md](https://github.com/stew675/llama-cpp-rdna-boosts/blob/main/archive/work/arch-independent-memory/V4-NATIVE-Q8-KV-PLAN.md) | 2026-09 | Refuted at depth | Built and measured on this hardware: only −2.5% ms/step at ~190K, not worth maintaining a fork — [`docs/ENGINES.md`](ENGINES.md), [`docs/measurements/speculative.md`](measurements/speculative.md) |
+| `llama.cpp` issue #26038: "excessive compute buffer reservation" on HIP | [llama.cpp issue #26038](https://github.com/ggml-org/llama.cpp/issues/26038) (labeled `bug-unconfirmed`) | 2026-07-23 | Verified (issue exists) | No fix published; not independently re-measured here |
+| `llama.cpp` PR #28003: per-kernel Q4_K GEMV speedup measured on a 7900 XTX | [llama.cpp PR #28003](https://github.com/ggml-org/llama.cpp/pull/28003) (draft) | 2026-08-30 | Verified (source read), not applicable | This repo's model is IQ3_S, not Q4_K — the cited gain doesn't predict a gain here |
+| `llama.cpp` PR #27210: adaptive MTP depth; author recommends against it below draft depth 7 | [llama.cpp PR #27210](https://github.com/ggml-org/llama.cpp/pull/27210) | 2026-08-17 | Verified (source read), deprioritized | This repo's measured optimum is n=2 — see [`docs/measurements/speculative.md`](measurements/speculative.md) |
+| llama-server `--parallel`/`--kv-unified`/`--kv-unified-per-slot`: multiple slots share one compute stream and one KV cache (or one KV cache per slot with `--kv-unified-per-slot`) | [llama.cpp server README](https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md), [PR #24124](https://github.com/ggml-org/llama.cpp/pull/24124) | 2026 | Hypothesis | Consistent with this repo's own measurement that a concurrent slot's prefill starves generation on other slots — [`docs/measurements/concurrency.md`](measurements/concurrency.md) |
+| MTP is recommended with `--parallel 1` (single slot) | [llama.cpp server README](https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md) | 2026 | Hypothesis | Matches this repo's own multi-agent recommendation (1 slot + MTP, queue) — [`docs/measurements/concurrency.md`](measurements/concurrency.md) |
+| PR #28102: FlashAttention tuning change that may regress gfx1100 deep-prefill performance | [llama.cpp PR #28102](https://github.com/ggml-org/llama.cpp/pull/28102) | 2026 | Hypothesis | Not yet tested here — re-validate on the next engine update, see [`sop/update-engine.md`](sop/update-engine.md) |
+| Issue #26648: MTP sampler assertion at long context on HIP | [llama.cpp issue #26648](https://github.com/ggml-org/llama.cpp/issues/26648) | 2026 | Hypothesis | Not reproduced here yet — see [`sop/update-engine.md`](sop/update-engine.md) |
+| PR #56: RDNA3 IQ2/IQ3 MMVQ scale-multiply change | [halo-box/strix-llama.cpp#56](https://github.com/halo-box/strix-llama.cpp/pull/56) | 2026 | Hypothesis | Not tested here; candidate for a future speed/quality A/B on this GPU's IQ3_S quant |
+
+## MTP / speculative decoding
+
+| Claim | Source | Date | Status | Own test |
+|---|---|---|---|---|
+| Asymmetric KV (q5_1/q4_0) disables FlashAttention and falls back to slow CPU kernels | AI-summarized answer, no link | 2026-09-24 | Refuted | `hip-kvmix` compiles FA kernels for q8_0/q5_1; runs on GPU, costs ~8% generation speed — [`docs/measurements/speculative.md`](measurements/speculative.md) |
+| Constant recurrent state of ~72 MiB regardless of MTP | AI-summarized answer, no link | 2026-09-24 | Refuted | Measured: 150 MiB without MTP, 449 MiB with MTP at 262K — [`docs/measurements/memory.md`](measurements/memory.md) |
+| 262K context + vision + MTP with q8/q8 fits at ~100% of 24 GB | AI-summarized answer, no link | 2026-09-24 | Refuted | OOMs while generating; fits only without vision, 99.7% of VRAM — [`docs/measurements/depth.md`](measurements/depth.md) |
+| MTP limits usable context to ~136K on a 24 GB card | [llama.cpp issue #20969](https://github.com/ggml-org/llama.cpp/issues/20969) (4090, third-party report) | 2026 | Refuted | 240K with MTP loaded and generated on this GPU — [`docs/measurements/depth.md`](measurements/depth.md) |
+| `sudoingX/qwen38-mtp`: 7900 XTX, ROCm, UD-Q4_K_M, 131K, KV q4_0: no MTP 36.3 → MTP n=2 **62.6 tok/s** (+72%), empty context | [`sweeps/radeon.md`](https://github.com/sudoingX/qwen38-mtp/blob/master/sweeps/radeon.md) | 2026-09 | Verified (corroborates) | Matches this repo's own empty-context shape: 39 → 58-69 tok/s with n=2 — [`docs/measurements/speculative.md`](measurements/speculative.md) |
+| Same repo: each extra MTP draft slot costs ~150 MiB VRAM | [`sweeps/radeon.md`](https://github.com/sudoingX/qwen38-mtp/blob/master/sweeps/radeon.md) | 2026-09 | Verified (corroborates) | Matches this repo's own recurrent-state estimate — [`docs/measurements/memory.md`](measurements/memory.md) |
+| `--spec-draft-p-min 0.60` hurts acceptance on fast cards | [`sweeps/radeon.md`](https://github.com/sudoingX/qwen38-mtp/blob/master/sweeps/radeon.md) | 2026-09 | Hypothesis | Only measured with an empty context there; not tested at depth on this GPU |
+| DFlash2 beats MTP at every context depth (RTX 3090, same GSQ-RCO IQ3_S model) | X/Twitter thread, @ItsmeAjayKV | 2026-09-14 | Refuted at depth | At ~190K, DFlash2 is slower than MTP n=2 on 2 of 3 task types and ties on the third, and uses more VRAM — [`docs/measurements/speculative.md`](measurements/speculative.md) |
+| 7900 XT, LM Studio, 143K context: 45 → 27 tok/s at 110K filled, MTP accept rate ~85% with real MCP tool-call traffic | X/Twitter, @caseyjp11 (link unverified) | 2026-09 | Hypothesis | This repo's own synthetic-text acceptance at 190K is 55-90% depending on task — same order of magnitude, real-agent acceptance not directly measured yet — see `docs/STATUS.md` next steps |
+| Real Hermes-agent traffic on a 7900 GRE: MTP n=3 + p-min 0.75, acceptance 0.87-0.96, no-MTP 28.5-28.8 → with-MTP 44.5-53.8 tok/s (+54%) | [`sweeps/radeon.md`, PR #19, @lsunay's section](https://github.com/sudoingX/qwen38-mtp/blob/master/sweeps/radeon.md) | 2026-09 | Verified (source read) | Suggests this repo's synthetic-text acceptance (55-90%) may be a pessimistic floor vs. real agent traffic; not directly measured on this GPU |
+| 2× 7900 XTX (Reddit): MTP acceptance 73% on benchmark text, 87% with 86K of real context, ~64% with real coding-agent traffic | Reddit (fetch blocked, not independently verified) | 2026 | Hypothesis | Nuances the two claims above — real-agent acceptance on this GPU is still unmeasured; don't assume ~0.9 |
+| ISTA-DASLab GSQ-RCO HF repo, discussion 6: RTX 5060 Ti, IQ3_S KV q8: 30 → 17 tok/s at 112K filled; IQ3_XXS-MTP: 54.6 → 25.2 at 118K | [HF discussion #6](https://huggingface.co/ISTA-DASLab/Qwen3.8-27B-GSQ-RCO-GGUF/discussions/6) | 2026 | Verified (corroborates) | Same shape as this repo's own falloff (58-69 empty → ~27 at 128K) on different hardware — [`docs/measurements/depth.md`](measurements/depth.md) |
+| gist: 7900 XTX, ROCm 7.2.4, Q3_K_M + separate MTP Q4_0 draft, KV q8/q8: 190,000 real tokens → 19.45 tok/s (9/17 accepted, synthetic, few output tokens) | [gist.github.com/ojus1](https://gist.github.com/ojus1/f7b77c8f032a5895fc3e3f5849ae5bd4) | 2026 | Verified (corroborates) | Consistent with this repo's 22-29 tok/s at 190K (400-token response) — [`docs/measurements/depth.md`](measurements/depth.md) |
+| "TILE allocates ~16 GiB extra at 262K context" | [llama.cpp issue #21526](https://github.com/ggml-org/llama.cpp/issues/21526) (AI-summarized citation) | 2026 | Refuted (off by ~16x) | The f16 copy is one layer's K+V (~1 GiB at 262K), inside this repo's measured 1,360 MiB compute buffer — [`docs/measurements/memory.md`](measurements/memory.md) |
+| GPU spills weights to GTT with no warning at load time | [llama.cpp issue #26432](https://github.com/ggml-org/llama.cpp/issues/26432) | 2026-08-02 | Verified (issue exists) | Not observed here: GTT stayed at 8 MiB with 0 evicted at 190-240K depth — [`docs/measurements/memory.md`](measurements/memory.md) |
+| Prompt checkpoints are "always invalidated on hybrid/recurrent models" | [llama.cpp issue #24055](https://github.com/ggml-org/llama.cpp/issues/24055) | 2026-06-03 | Hypothesis | Not independently re-verified in this repository yet |
+
+## KV / weight quantization quality
+
+| Claim | Source | Date | Status | Own test |
+|---|---|---|---|---|
+| KV bytes/token math: 16 of 64 layers carry growing KV, 4 KV heads, head_dim 256 → 64 KiB/token f16, 34 KiB q8_0, 18 KiB q4_0 | X/Twitter thread, @bountyAIhunter | 2026-08-16/17 | Verified | Matches this repo's own measured VRAM exactly at 204,800 tokens KV q8/q8 (21,679 MiB peak) — [`docs/measurements/memory.md`](measurements/memory.md) |
+| "The KV cache doesn't affect model performance/quality" | X/Twitter, @Naw50591287 | 2026 | Refuted | Contradicted directly by this repo's own KLD measurements — [`docs/measurements/kv-quality.md`](measurements/kv-quality.md) |
+| BuffedMod variant of the adopted IQ3_S-mtp quant upcasts `output.weight` (the LM head) for better quality at the same quantization level | [tooltd/Qwen3.8-27B-GSQ-RCO-BuffedMod-GGUF](https://huggingface.co/tooltd/Qwen3.8-27B-GSQ-RCO-BuffedMod-GGUF) | 2026 | Hypothesis | Not downloaded or measured here — candidate for a future KLD/speed comparison against the currently adopted quant |
+
+## GPU firmware, thermals and power
+
+| Claim | Source | Date | Status | Own test |
+|---|---|---|---|---|
+| Thermal/power limits are set by the GPU's own firmware and must be read from the hardware, not assumed | ChatGPT round, item F13 | 2026-09-25 | Verified (own primary source) | Read directly from `/sys/class/hwmon` on this GPU: memory critical 108°C/emergency 113°C, junction 110/115°C, edge 100/105°C, power limit 303 W default (min 272, max 350) — [`docs/measurements/thermals-power.md`](measurements/thermals-power.md) |
+| 7900 XTX Vulkan, different model, 272 W vs. 302 W: −4% prefill, −1.3% generation at short context | Reddit (not independently verified) | 2026 | Hypothesis | Power tuning is explicitly deprioritized for this repository — see `docs/STATUS.md` |
+| RTX 3090 power sweep: MTP is more power-sensitive than no-MTP (350→250 W: −26% with MTP vs. −21% without) | [`sweeps/rtx-3090.md`](https://github.com/sudoingX/qwen38-mtp/blob/master/sweeps/rtx-3090.md), @ctaylor83's section | 2026-09-15 | Verified (source read), different GPU | Not directly transferable across CUDA/GDDR6X vs. RDNA3/GDDR6; not tested here — power tuning deprioritized |
+| LACT has known RDNA3 power-reporting quirks (reported power draw doesn't always match the applied limit) | [ilya-zlobintsev/LACT#237](https://github.com/ilya-zlobintsev/LACT/issues/237) | 2026 | Hypothesis | Not independently checked here; this repo reads the power limit from sysfs `power1_cap*` directly rather than through LACT — see `docs/measurements/thermals-power.md` |
+
+## OS / driver
+
+| Claim | Source | Date | Status | Own test |
+|---|---|---|---|---|
+| Some `linux-cachyos` rolling-kernel builds get stuck at the lowest GPU P-state under ROCm compute load | [CachyOS/linux-cachyos#888](https://github.com/CachyOS/linux-cachyos/issues/888) | 2026-06-20 | Verified (issue exists) | Workaround (LTS kernel) documented in `docs/hardware/gpu-7900xtx.md`; check whether it still reproduces on the kernel in use |
+| Plasma Wayland session freeze on some rolling-kernel builds with this GPU | [CachyOS/linux-cachyos#1035](https://github.com/CachyOS/linux-cachyos/issues/1035) | 2026-09-12 | Verified (issue exists) | Same caveat as above |
+
+## Methodology references
+
+| Claim | Source | Date | Status | Own test |
+|---|---|---|---|---|
+| RULER-style multi-key retrieval with distractors is a reasonable long-context quality methodology beyond simple needle-in-haystack | [github.com/NVIDIA/RULER](https://github.com/NVIDIA/RULER) | — | Verified (methodology reference) | Adopted as the shape for this repo's pending long-context quality test — see `docs/STATUS.md` |
+| "ctx"/context figures in social-media posts usually mean *reserved* context (`-c`), not *filled* context — inflated tok/s numbers often hide this | Several X/Twitter threads (§ auditoria review) | 2026 | Verified (methodology finding) | Applied throughout `docs/measurements/`: every figure states filled depth, not just `-c` |
+
+## Agent harness / API compatibility (context only)
+
+This repository's scope is the GPU and the model (`AGENTS.md`); it doesn't recommend or maintain a
+particular coding-agent harness. These entries are recorded as context, not a recommendation.
+
+| Claim | Source | Date | Status | Own test |
+|---|---|---|---|---|
+| `llama-server` implements an Anthropic-compatible Messages API endpoint | [Hugging Face blog, ggml-org](https://huggingface.co/blog/ggml-org/anthropic-messages-api-in-llamacpp) | 2026 | Hypothesis | Not exercised here; this repo's own harness wiring (`AGENTS.md`) targets the OpenAI-compatible `baseUrl` shape, not this endpoint |
+| `pi` coding agent and its `oh-my-pi` fork can be configured against an OpenAI-compatible provider pointing at `llama-server`; `pi` has a reported RPC hang issue | [earendil-works/pi](https://github.com/earendil-works/pi), [can1357/oh-my-pi](https://github.com/can1357/oh-my-pi), [pi issue #2078](https://github.com/earendil-works/pi/issues/2078) | 2026 | Hypothesis | Not evaluated against this repository's server — kept here only as context for the harness-agnostic wiring already described in `AGENTS.md` |
+
+## Not pursued
+
+- `unsloth/Qwen3.8-27B-GGUF` `UD-IQ3_S` (12 GB) as an alternative quant — candidate for a
+  perplexity/speed comparison at the same size budget, not tested (`docs/models/qwen38-27b-quants.md`).
+- Quantized vision projector (`mmproj` Q5_K-MIX, ~0.9 GB) — HF-reported 74.58% vs. 74.93% for BF16
+  on 11 benchmarks; not pursued because vision was deprioritized by the user for this hardware.
+- Power-limit and undervolt tuning (LACT) — explicitly deprioritized; see `docs/STATUS.md`.

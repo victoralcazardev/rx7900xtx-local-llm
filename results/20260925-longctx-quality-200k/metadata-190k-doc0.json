@@ -1,0 +1,24 @@
+{
+  "created": "2026-09-25T18:01:26+0100",
+  "runner": "bench/depth_bench.py",
+  "server": "~/engines/llama-b11160-linux-rocm10-gfx1100-kvmix/llama-server",
+  "model": "~/models/Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp/Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp.gguf",
+  "context": 204800,
+  "depths": [
+    190000
+  ],
+  "docs_per_depth": 5,
+  "questions_per_doc": 4,
+  "variants": [
+    [
+      "q8q8",
+      true
+    ]
+  ],
+  "seed_base": 262024,
+  "temperature": 0,
+  "max_tokens": 200,
+  "thinking": false,
+  "ignore_eos": false,
+  "cache_prompt": true
+}

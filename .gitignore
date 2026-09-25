@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.pyc
+_tmp/
+
+# Local machine config (copy from local.example.toml)
+local*.toml
+!local.example.toml
+
+# Raw run artifacts (kept on disk, never tracked)
+*.log
+*.sse
+telemetry.jsonl
+request.json
+warm-request.json
+*.gguf
+bench/res/
+
+# Secrets
+.env
+.env.*
+*.token
+hf_token*
+
