@@ -1,0 +1,13 @@
+# Oneshot unit that samples the local llama-server's /metrics endpoint into the persistent
+# token ledger (scripts/token_ledger.py). Triggered by llm-token-ledger.timer, not enabled
+# directly. Install: docs/sop/token-ledger.md.
+#
+# REPO_PATH is a placeholder, not a real path: substitute your own clone's absolute path
+# before installing (same convention as local.example.toml's models_root).
+[Unit]
+Description=Sample the local llama.cpp /metrics endpoint into the persistent token ledger
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 REPO_PATH/scripts/token_ledger.py collect

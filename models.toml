@@ -17,7 +17,7 @@
 
 [defaults]
 port = 8080
-flags = ["-fa", "on", "-np", "1", "--ctx-checkpoints", "4", "-ngl", "all"]
+flags = ["-fa", "on", "-np", "1", "--ctx-checkpoints", "4", "-ngl", "all", "--metrics"]
 default_alias = "qwen38-iq3s-mtp"
 default_profile = "224k-q8q8-mtp"
 

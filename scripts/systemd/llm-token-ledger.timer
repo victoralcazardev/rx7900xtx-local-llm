@@ -1,0 +1,11 @@
+# Runs llm-token-ledger.service every 60 seconds. Install: docs/sop/token-ledger.md.
+[Unit]
+Description=Run llm-token-ledger.service every 60 seconds
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=60s
+Persistent=true
+
+[Install]
+WantedBy=timers.target

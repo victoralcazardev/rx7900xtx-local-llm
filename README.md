@@ -76,6 +76,18 @@ model/profile instead of the default, pass them explicitly:
 `python3 scripts/launch.py <alias> --profile <profile>` (see the table above for the available
 profiles). Full walkthrough: `docs/sop/launch-model.md`.
 
+## Token usage ledger
+
+`--metrics` in `[defaults] flags` exposes Prometheus counters at `/metrics` that reset on every
+server restart. `scripts/token_ledger.py` samples them on a systemd user timer and keeps an
+all-time, restart-proof total in `~/.local/share/llm-usage/ledger.json`:
+
+```bash
+python3 scripts/token_ledger.py show
+```
+
+Install and details: `docs/sop/token-ledger.md`.
+
 ## Failure cards
 
 | Symptom | Cause | Fix |
@@ -117,7 +129,7 @@ from the new one's `README.md` if relevant (`docs/BENCHMARK-FORMAT.md` "Immutabl
 | `docs/ENGINES.md` | llama.cpp build inventory: commits, flags, SHA256 |
 | `docs/measurements/` | Benchmark results and conclusions, by topic (engines, kv-quality, memory, coexistence, depth, speculative, thermals-power, concurrency) |
 | `docs/BENCHMARK-FORMAT.md` | How the numbers are produced and reported |
-| `docs/sop/` | Step-by-step procedures: launch, add a model, update the engine, install day |
+| `docs/sop/` | Step-by-step procedures: launch, add a model, update the engine, install day, token ledger |
 | `bench/` | Benchmark scripts that reproduce the numbers in `docs/measurements/` |
 | `results/` | Curated, small result folders — see `results/INDEX.md` |
 | `scripts/check-repo.py` | Repo hygiene check (broken links, oversized files, personal paths, secrets, Spanish leftovers) — run before every push |
