@@ -53,7 +53,7 @@ tok/s). The ~36.7 ms/token difference, spent reading ~8.3 GB of KV once per step
 **Cause**: with a GQA ratio of 6, HIP's FlashAttention kernels only fold 2 query heads per block
 (`ncols2 = 2`), so each K/V element is fetched and dequantized **3 times per query row** to cover
 all 6 query heads sharing one KV head. The quantized (`q8_0`) tile path is additionally
-instruction-issue bound on RDNA3/RDNA4: an external measurement on gfx1201 found ~276 GB/s for
+instruction-issue bound on RDNA4 (likely also RDNA3, not measured here): an external measurement on gfx1201 found ~276 GB/s for
 q8_0 vs. ~615 GB/s for f16 in the same kernel
 ([stew675/llama-cpp-rdna-boosts#45](https://github.com/stew675/llama-cpp-rdna-boosts/issues/45),
 reported by `overdoingism`). MTP verify batches of 3-4 tokens add a second, separate cost on top —
