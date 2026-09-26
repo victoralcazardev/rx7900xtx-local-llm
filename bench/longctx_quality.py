@@ -289,6 +289,9 @@ def main() -> int:
     ap.add_argument("--variants", nargs="+", help="e.g. q8q51-mtp1 q8q8-mtp0")
     ap.add_argument("--ctx", type=int, default=262144)
     ap.add_argument("--server", help="alternate llama-server")
+    ap.add_argument("--mtp-n", type=int, default=2, help="--spec-draft-n-max for mtp1 variants")
+    ap.add_argument("--extra", default="",
+                    help='extra llama-server flags appended to every variant, e.g. --extra "-ub 256"')
     args = ap.parse_args()
     if args.depths: DEPTHS = tuple(args.depths)
     if args.docs: DOCS = args.docs
@@ -354,8 +357,11 @@ def run_matrix(args, runner):
                 "-ctk", "q8_0", "-ctv", "q8_0" if kv == "q8q8" else "q5_1",
                 "--temp", "0", "--top-k", "20", "--min-p", "0", "-fa", "on", "-np", "1",
                 "--ctx-checkpoints", "4", "-ngl", "all"]
+        hardcoded = {tok for tok in argv if tok.startswith("-")}
         if mtp:
-            argv += ["--spec-type", "draft-mtp", "--spec-draft-n-max", "2"]
+            argv += ["--spec-type", "draft-mtp", "--spec-draft-n-max", str(args.mtp_n)]
+            hardcoded |= {"--spec-type", "--spec-draft-n-max"}
+        argv += runner.extra_argv(args.extra, hardcoded)
         (variant_dir / "command.json").write_text(json.dumps(argv, indent=2) + "\n")
         with (variant_dir / "server.log").open("w") as log:
             proc = subprocess.Popen(argv, stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
