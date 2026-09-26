@@ -26,7 +26,7 @@ Full evidence and method: [`docs/BENCHMARK-FORMAT.md`](docs/BENCHMARK-FORMAT.md)
 
 | Component | Spec |
 |---|---|
-| **GPU** | **AMD Radeon RX 7900 XTX, 24 GB (RDNA3, gfx1100)**, reference-class board, VBIOS `113-3E4710U-O4O` |
+| **GPU** | **AMD Radeon RX 7900 XTX, 24 GB (RDNA3, gfx1100)** — Sapphire PULSE (PCI `1da2:471e`), VBIOS `113-3E4710U-O4O` |
 | **Power cap** | 272 W (stock 303 W) |
 | CPU | AMD Ryzen 7 5700X (8C/16T) |
 | RAM | 32 GB |
@@ -43,10 +43,11 @@ for the full spec breakdown and driver notes.
 
 ## Quick start
 
-1. **Get the model.** Adopted model: Qwen3.8-27B GSQ-RCO IQ3_S-mtp — see "Quick start" details
-   and SHA256 below.
-2. **Build or download an engine.** Single-backend only (never Vulkan+HIP in the same build) —
-   see [`docs/ENGINES.md`](docs/ENGINES.md).
+1. **Get the model** (Qwen3.8-27B GSQ-RCO IQ3_S-mtp, 12.1 GB) — file, SHA256 and folder layout in
+   [Get the model](#get-the-model) below.
+2. **Build the engine (required).** The official llama.cpp binaries lack the FlashAttention kernels
+   for K `q8_0` + V `q5_1`; the build recipe (ROCm-only, never Vulkan+HIP in one build) is in
+   [`docs/ENGINES.md`](docs/ENGINES.md).
 3. **Cap the power to 272 W** — see [`docs/measurements/thermals-power.md`](docs/measurements/thermals-power.md)
    §"Making it permanent".
 4. **Configure and launch**:
@@ -118,13 +119,6 @@ Use `backend = "hip"` (default in `models.toml`). See `docs/measurements/engines
 
 A binary compiled with both Vulkan and HIP ([llama.cpp #23199](https://github.com/ggml-org/llama.cpp/issues/23199)).
 Use a single-backend binary only — see `docs/ENGINES.md`.
-</details>
-
-<details>
-<summary>Official ROCm binary rejects a K/V combination (q8_0/q5_1, q8_0/q4_1)</summary>
-
-The official binary ships FlashAttention kernels only for symmetric K/V. Use the `hip-kvmix`
-engine (own build with the extra kernels) — see `docs/ENGINES.md`.
 </details>
 
 <details>
