@@ -52,11 +52,12 @@ best default, no overlapping alternatives.
 
 ## Open questions
 
-- **Vulkan re-test with the GPU memory clock pinned**: the measured Vulkan generation slowdown
-  coincided with the memory clock sitting at 772 MHz vs. 1249 MHz on ROCm, not necessarily the
-  backend itself — not yet re-tested with the clock pinned. See
-  [`measurements/engines.md`](measurements/engines.md).
-- **Speed research at depth for the 262K profile** — open, not started.
+- **Vulkan re-test with the GPU memory clock pinned**: a 2026-09-26 depth screen reproduced the
+  clock-throttling behavior (456 MHz in 93 of 118 samples) but was inconclusive for decode at
+  depth — Vulkan's prefill collapses ~5x at `-ub 256` and the run was stopped before 128K depth. A
+  fair re-test needs `-ub >= 512` and the clock pinned at the root, and is currently blocked by the
+  profile's thin VRAM headroom (190 MiB). See
+  [`measurements/engines.md`](measurements/engines.md#vulkan-depth-screen-2026-09-26).
 - **MTP acceptance with real agent traffic at temperature 1**: depth numbers here use a synthetic
   prompt at temperature 0; third-party reports with real tool-call traffic range 64-93%
   acceptance. See `docs/SOURCES.md`.
@@ -99,9 +100,19 @@ best default, no overlapping alternatives.
   less VRAM headroom. See `docs/ENGINES.md`/`docs/SOURCES.md`.
 - **GPU power-limit/undervolt tuning beyond the permanent 272 W cap** — deprioritized. See
   `docs/DECISIONS.md`.
+- **Round 4 speed-research candidates, gains <5% or blocked by VRAM/context** (2026-09-26, no
+  measurement run for any of these): cherry-picking llama.cpp PR #29393 outside a regular engine
+  update; `--spec-draft-p-min 0.5` / `--spec-draft-n-min`; the fork's adaptive MTP
+  (`draft-mtp-adaptive` — upstream PR #27210's author advises against adaptive below draft depth
+  7); `-ub 384`; a 290/303 W power cap (303 W pushes the deep-prefill hotspot to 100-106°C, over
+  the 104°C bench ceiling); Vulkan with the memory clock pinned; building ik_llama.cpp. See
+  [`measurements/depth.md`](measurements/depth.md#why-decode-slows-with-depth-attention-bandwidth-2026-09-26-round-4).
 
 ## Next steps
 
-1. Vulkan re-test with the GPU memory clock pinned.
-2. Speed research at depth for the 262K profile.
+1. Vulkan re-test with the GPU memory clock pinned — blocked by VRAM headroom, see "Open
+   questions" above.
+2. Next engine update: pick up llama.cpp PR #29393 (RMS_NORM+SCALE fusion) and watch upstream for
+   a GQA-folding FlashAttention fix for RDNA3 or removal of the TILE f16 KV conversion — see
+   `docs/sop/update-engine.md` and `measurements/depth.md`.
 3. GPU care beyond the permanent 272 W cap (undervolt) — deferred.

@@ -20,6 +20,10 @@
   disabled ([llama.cpp#23199](https://github.com/ggml-org/llama.cpp/issues/23199), closed
   `NOT_PLANNED`). This is a routing bug, not a Vulkan precision problem — no evidence was found for
   an MTP accuracy issue specific to Vulkan on RDNA3.
+- **A 2026-09-26 depth screen of Vulkan vs. HIP at `-ub 256` was inconclusive**: Vulkan's prefill
+  collapses ~5x at `-ub 256` regardless of K/V type, and the memory clock wasn't pinned, so the run
+  never reached a fair decode-at-depth comparison. Not pursued further this round (VRAM headroom
+  too thin for `-ub 512`) — see "Vulkan depth screen" below.
 
 ## Vulkan vs ROCm, generation and prompt processing
 
@@ -164,6 +168,49 @@ older base ~b10830, hypothesis, not isolated — see
 verdict in [`kv-quality.md`](kv-quality.md#beellama-kvarn-kld-2026-09-26); raw data in
 [`../../results/20260926-beellama-kvarn/`](../../results/20260926-beellama-kvarn/).
 
+## Vulkan depth screen (2026-09-26)
+
+Part of round 4's speed research at depth for the `262k-q8q51-mtp` default. `llama-bench`, same
+model/build as above, 272 W, `perf_level=auto`,
+`-fa 1 -ctk q8_0 -ctv q5_1 -ub 256 -p 512 -n 64 -d 0,65536,131072 -r 1`, official
+`ubuntu-vulkan` b11160 binary (RADV NAVI31, `KHR_coopmat`) vs. `hip-kvmix`. Raw data and full
+tables: [`../../results/20260926-speed-round4-vulkan-depth/`](../../results/20260926-speed-round4-vulkan-depth/).
+
+| Backend | pp512 | tg64 | pp512 @64K | tg64 @64K | pp512 @128K | tg64 @128K |
+|---|---:|---:|---:|---:|---:|---:|
+| HIP `hip-kvmix` | 856.57 | 37.56 | 544.59 | 23.86 | 385.52 | 16.65 |
+| Vulkan | 160.07 | 11.04 | 126.53 | 10.64 | — | — |
+
+Vulkan was stopped after 64K depth (128K would have taken ~45 more minutes at that prefill speed).
+Memory clock sat at **456 MHz in 93 of 118 monitor samples** (1249 MHz in only 8) — the same
+throttling behavior as the 2026-09-24 baseline above, confirmed again. Hotspot peaked 94°C.
+
+A follow-up diagnostic (`-p 512 -n 32 -r 1`, depth 0) isolated the `-ub` effect from the K/V type:
+
+| `-ub` | K/V | pp512 | tg32 |
+|---:|---|---:|---:|
+| 512 | q8_0/q8_0 | 847.07 | 23.58 |
+| 512 | q8_0/q5_1 | 834.88 | 23.22 |
+| 256 | q8_0/q8_0 | 162.16 | 23.34 |
+| 256 | q8_0/q5_1 | 162.57 | 23.37 |
+
+**Vulkan's prefill collapses ~5x at `-ub 256`**, independent of K/V type (Vulkan's `supports_op`
+already accepts `q5_1` and mixed K/V without recompiling, see below) — this is a `-ub` effect, not
+a quantized-KV one. Generation stays flat (23.2-23.6 tok/s) across all four combinations at depth
+0, yet the V1 run above shows tg varying 11.0-23.9 tok/s at the very same `-ub 256`/K-V
+configuration, tracking only which memory-clock state (456/772/1249 MHz) the driver happened to be
+in.
+
+**Conclusion: inconclusive for decode at depth**, and not pursued further. A fair re-test needs
+`-ub >= 512` (to avoid the prefill collapse above) with the memory clock pinned at the root. Not
+attempted this round because: `-ub 512` costs ~350 MiB more process VRAM than the adopted
+`-ub 256` (`memory.md`), while the current default leaves only 190 MiB of system-wide VRAM
+headroom (`../../results/20260926-ubatch256-262k/`); Vulkan already reports ~1.7 GB less free VRAM
+than ROCm at startup (`--list-devices`: 22,781 MiB vs. 24,504 MiB free); Vulkan's prefill already
+fell off faster with depth than ROCm's in the 2026-09-24 baseline above; and MTP-on-Vulkan
+correctness is unverified on this stack. Context (`AGENTS.md` priority #1) outweighs chasing this
+lever further this round.
+
 ## Upstream research: build flags, feature parity, protocol
 
 Read directly from `ggml-org/llama.cpp` source and docs (2026-09-22, before the GPU was installed;
@@ -249,14 +296,16 @@ a separate, additive effect on top of (or against) this kernel-level gap.
 
 ## Open questions
 
-- Whether the Ubuntu Vulkan tarball runs unmodified on CachyOS (glibc/libstdc++/libvulkan
-  compatibility) — not tested, building from source is used instead.
+- ~~Whether the Ubuntu Vulkan tarball runs unmodified on CachyOS~~ — confirmed 2026-09-26: the
+  official `ubuntu-vulkan` b11160 binary ran unmodified for the depth screen above.
 - Real tok/s of Vulkan vs. HIP across the full model lineup beyond what's measured above — the
   community scoreboards above are other models/GPUs of the same chip, order-of-magnitude reference
   only.
 - Whether an LTS kernel is still needed to avoid the P-state bug referenced by
   `CachyOS/linux-cachyos#888`/`#1035` — not seen with kernel 7.2.7 during any of this session's
   measurements (GPU clocked normally throughout), not re-tested directly.
+- A fair Vulkan decode-at-depth re-test (`-ub >= 512`, memory clock pinned at the root) — blocked
+  for now by the current profile's thin VRAM headroom, see "Vulkan depth screen" above.
 
 ## History
 
@@ -270,3 +319,8 @@ a separate, additive effect on top of (or against) this kernel-level gap.
 - **2026-09-26**: ROCm 10 runtime tested against the ROCm 7.2.4 runtime (same ROCm 10 compiler) —
   rejected, -1..-2% tg / -5% pp with higher variance. BeeLlama v0.4.7 measured for parity — -18%
   tg vs. `hip-kvmix`.
+- **2026-09-26, round 4**: Vulkan vs. HIP depth screen re-tested the memory-clock-throttling
+  hypothesis from 2026-09-24 (still reproduces: 456 MHz in 93 of 118 samples) but the run was
+  inconclusive for decode at depth because Vulkan's prefill collapses ~5x at `-ub 256` and the run
+  was stopped before reaching 128K depth. Not pursued further (VRAM headroom too thin for the
+  `-ub >= 512` a fair re-test would need) — see "Vulkan depth screen" above.

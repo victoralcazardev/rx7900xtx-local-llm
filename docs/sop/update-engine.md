@@ -13,7 +13,14 @@ disabled). One single-backend binary per download/build.
    whether the diff includes [PR #28102](https://github.com/ggml-org/llama.cpp/pull/28102)
    (FlashAttention tuning change that may regress gfx1100 deep-prefill performance) — if it does,
    the A/B below should include a deep-depth case, not just the default couple of depths (see
-   `docs/SOURCES.md`).
+   `docs/SOURCES.md`). Also check whether the diff includes
+   [PR #29393](https://github.com/ggml-org/llama.cpp/pull/29393) (RMS_NORM+SCALE fusion, author-
+   measured +4.2-4.8% pp on CUDA with MTP) — if merged, re-measure prefill at depth on this
+   profile — and check `fattn.cu`/`fattn-common.cuh` for a GQA-folding change (`ncols2`) or a
+   quantized-KV TILE-path change that could remove the attention-bandwidth bottleneck described in
+   [`docs/measurements/depth.md`](../measurements/depth.md#why-decode-slows-with-depth-attention-bandwidth-2026-09-26-round-4)
+   (tracked upstream: [#27796](https://github.com/ggml-org/llama.cpp/issues/27796),
+   [#28867](https://github.com/ggml-org/llama.cpp/issues/28867)).
 2. **Only if something relevant changed**: build the new engine following "Build a new engine"
    below. The custom `GGML_CUDA_FA_QUANTS` build flags are still required for this build — the
    official binaries don't ship K q8_0 + V q5_1/q4_1 FlashAttention kernels.

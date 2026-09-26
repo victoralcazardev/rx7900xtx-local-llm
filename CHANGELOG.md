@@ -11,6 +11,12 @@ All notable changes to this project are documented here. Format follows
 - Re-validated long-context retrieval quality at 240K on the exact adopted server flags (MTP n=3,
   `-ub 256`, not just the KV q8_0/q5_1 variant, using `bench/longctx_quality.py`'s `--mtp-n`/
   `--extra` options): 8/8 exact match — cumulative 68/68 exact match, 32K-240K fill.
+- Closed round 4 (speed research at depth for `262k-q8q51-mtp`) with **no config change**:
+  identified the root cause of the long-context decode slowdown (a GQA-6 attention-bandwidth limit
+  in HIP's quantized-KV FlashAttention kernels, reaching only ~24% of peak memory bandwidth) and
+  screened a Vulkan depth re-test, which was inconclusive (unpinned memory clock, `-ub 256`
+  prefill collapse) and not pursued further. See `docs/measurements/depth.md`,
+  `docs/measurements/engines.md`, and `docs/DECISIONS.md`.
 
 ## [2026-09-26]
 

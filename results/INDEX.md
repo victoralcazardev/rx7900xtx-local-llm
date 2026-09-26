@@ -33,6 +33,7 @@ present: `caso` = case, `carga_s` = load time (s), `mtp_acept` = MTP acceptance 
 | 2026-09-26 | Long-context retrieval quality at 240K, `262k-q8q51-mtp` (incl. exact adopted flags) | [`20260926-longctx-quality-262k/`](20260926-longctx-quality-262k/) | `bench/longctx_quality.py` | 8/8 + 8/8 exact match; 68/68 cumulative 32K-240K | [`depth.md`](../docs/measurements/depth.md#quality-ruler-style-200k-q8q8-mtp) |
 | 2026-09-26 | MTP n=3 confirmed at depth (190K/240K fill) | [`20260926-mtp-n3-depth/`](20260926-mtp-n3-depth/) | `bench/spec_depth_bench.py` | n=3 wins by 9-11% mean tg on both profiles; adopted as the new default | [`speculative.md`](../docs/measurements/speculative.md#mtp-n3-confirmed-at-depth-190k-and-240k-fill-2026-09-26) |
 | 2026-09-26 | `-ub 256` on `262k-q8q51-mtp` n=3, system VRAM headroom | [`20260926-ubatch256-262k/`](20260926-ubatch256-262k/) | `bench/spec_depth_bench.py` | `-ub 256` adopted (-350 MiB, +190 MiB system margin); corrects the 224K margin claim | [`memory.md`](../docs/measurements/memory.md#-ub-256-on-the-262k-default-and-system-vram-headroom-2026-09-26) |
+| 2026-09-26 | Speed round 4: Vulkan vs. HIP depth screen | [`20260926-speed-round4-vulkan-depth/`](20260926-speed-round4-vulkan-depth/) | `llama-bench` | Inconclusive (unpinned memory clock, `-ub 256` prefill collapse); not pursued further | [`engines.md`](../docs/measurements/engines.md#vulkan-depth-screen-2026-09-26) |
 
 ## Not curated (skipped, kept only on disk, not published)
 

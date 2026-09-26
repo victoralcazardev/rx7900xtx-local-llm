@@ -35,6 +35,63 @@ driver minimum — see `thermals-power.md`).
   figures elsewhere in this file are kept as historical data points (different power policy, not
   a correction — see `docs/STYLE.md` §7), not superseded.
 
+## Why decode slows with depth: attention bandwidth (2026-09-26, round 4)
+
+Speed research at depth for the `262k-q8q51-mtp` default, closed with **no config change** (see
+`docs/DECISIONS.md`) — this section records the root-cause analysis, not a new measurement.
+
+Qwen3.8-27B has 64 layers, full attention on only 1 of every 4 (16 attention layers with a
+growing KV cache), `head_dim` 256, 24 query heads / 4 KV heads (GQA ratio 6). KV cost per token:
+q8_0/q5_1 (adopted) ≈ 29.7 KB/token → **7.1 GB at 240K**; q8_0/q8_0 ≈ 34.8 KB/token → **8.3 GB
+at 240K**.
+
+Case D above (q8/q8, no MTP, 239,314-token fill) generates at 16.0 tok/s = 62.5 ms/token, vs.
+~25.8 ms/token at empty context (262K q8/q8, no MTP, no vision, empty-context matrix above: 38.7
+tok/s). The ~36.7 ms/token difference, spent reading ~8.3 GB of KV once per step, works out to
+**≈ 226 GB/s** — about 24% of this card's 960 GB/s peak memory bandwidth.
+
+**Cause**: with a GQA ratio of 6, HIP's FlashAttention kernels only fold 2 query heads per block
+(`ncols2 = 2`), so each K/V element is fetched and dequantized **3 times per query row** to cover
+all 6 query heads sharing one KV head. The quantized (`q8_0`) tile path is additionally
+instruction-issue bound on RDNA3/RDNA4: an external measurement on gfx1201 found ~276 GB/s for
+q8_0 vs. ~615 GB/s for f16 in the same kernel
+([stew675/llama-cpp-rdna-boosts#45](https://github.com/stew675/llama-cpp-rdna-boosts/issues/45),
+reported by `overdoingism`). MTP verify batches of 3-4 tokens add a second, separate cost on top —
+routing through the TILE kernel, which converts the whole KV cache to f16 on every step — already
+covered in [`speculative.md`](speculative.md#why-mtps-advantage-shrinks-with-depth-vec-vs-tile-kernel-selection);
+not duplicated here.
+
+**Upstream status (checked 2026-09-26)**: `ggml/src/ggml-cuda/fattn.cu` and `fattn-common.cuh` on
+llama.cpp master are byte-identical to the pinned b11160. Upstream issue
+[#27796](https://github.com/ggml-org/llama.cpp/issues/27796) (gfx1201, the same GQA-6/`head_dim`
+256 case) was closed as expected behavior; issue
+[#28867](https://github.com/ggml-org/llama.cpp/issues/28867) (gfx1201 WMMA threshold) is open.
+Master sits 40 commits ahead of b11160; the only one that looks perf-relevant here is
+[PR #29393](https://github.com/ggml-org/llama.cpp/pull/29393) (RMS_NORM+SCALE fusion, the author
+measured +4.2-4.8% on `pp8000`/`pp20000` for Qwen3.8-27B with `draft-mtp` n=3 on CUDA — the HIP
+benefit is inferred, not measured). The open MTP-on-HIP issues
+[#26038](https://github.com/ggml-org/llama.cpp/issues/26038) and
+[#27282](https://github.com/ggml-org/llama.cpp/issues/27282) and
+[#28433](https://github.com/ggml-org/llama.cpp/issues/28433) are unchanged; issue
+[#26648](https://github.com/ggml-org/llama.cpp/issues/26648) is closed. `GGML_HIP_GRAPHS` is
+already on by default (`ggml/CMakeLists.txt:216`) — not an untapped lever.
+
+**Fixes that exist elsewhere, not adopted here**:
+
+- The `rdna-boosts` fork's r4 "WMMA full-fold band" (routes `n_q <= 8` to MMA-f16 with
+  `ncols2 = 8`, +28% decode at 110K on gfx1201) — the fork maintainer tested it on gfx1100 and did
+  **not** integrate it for RDNA3 (mixed/negative results, non-MTP decode was slower).
+- Vulkan's FlashAttention folds all 6 query heads per workgroup and dequantizes per tile
+  (`flash_attn_dequant.glsl`), reported ~1.7x faster than HIP's tile kernel on gfx1201 (same
+  stew675/llama-cpp-rdna-boosts#45 report). Screened directly on this GPU
+  ([`../../results/20260926-speed-round4-vulkan-depth/`](../../results/20260926-speed-round4-vulkan-depth/),
+  [`engines.md`](engines.md#vulkan-depth-screen-2026-09-26)) — inconclusive, not pursued further.
+- ik_llama.cpp routes every AMD FlashAttention batch size to its vec kernel (no f16 conversion) and
+  supports Qwen3.x + MTP, but its own README deprioritizes ROCm. Not built or measured here.
+
+None of these were measured directly on this GPU beyond the Vulkan screen above; see
+`docs/SOURCES.md` for verification status of each claim.
+
 ## Context, KV and MTP: server-real matrix (empty-context baseline)
 
 `llama-server`, 1024-token response to a short prompt, IQ3_S-mtp, ROCm:
@@ -308,3 +365,9 @@ default profile actually launches with — closing the gap left by the n=2/no-`-
   loses to n=3 (-8% mean tg), as it did at 128K empty-context. Quality re-validated at 240K on the
   *exact* adopted flags (MTP n=3, `-ub 256`, not just the KV variant): 8/8 exact match, cumulative
   68/68 from 32K to 240K. See `speculative.md`.
+- **2026-09-26, round 4 (speed research at depth)**: root cause of the long-context decode
+  slowdown identified by analysis (GQA-6 attention-bandwidth limit in HIP's FlashAttention
+  kernels, ~24% of peak memory bandwidth reached) — see "Why decode slows with depth" above. A
+  Vulkan depth screen and several other candidates were evaluated; none cleared the adoption bar
+  or were measurable without extra VRAM/context cost. **Closed with no config change** — see
+  `docs/DECISIONS.md` and `docs/STATUS.md`.
