@@ -1,19 +1,48 @@
 # rx7900xtx-local-llm
 
-Run **Qwen3.8-27B with a 262K-token context** on a single **AMD Radeon RX 7900 XTX (24 GB)** with
-`llama.cpp` — validated config, launcher and benchmark evidence.
+**262K-context Qwen3.8-27B on a single AMD Radeon RX 7900 XTX (24 GB)** — `llama.cpp` on ROCm,
+IQ3_S-mtp + MTP n=3, KV `q8_0`/`q5_1`, `-ub 256`, 272 W power cap. 18.6-26.9 tok/s at 240K fill,
+60/60 exact-match retrieval — validated config, launcher and benchmark evidence.
 
 [![License: MIT](https://img.shields.io/badge/code%20license-MIT-blue.svg)](LICENSE)
 [![License: CC BY 4.0](https://img.shields.io/badge/docs%20license-CC%20BY%204.0-lightgrey.svg)](LICENSE)
-[![CI](https://github.com/valcazar57/rx7900xtx-local-llm/actions/workflows/ci.yml/badge.svg)](https://github.com/valcazar57/rx7900xtx-local-llm/actions/workflows/ci.yml)
+[![CI](https://github.com/victoralcazardev/rx7900xtx-local-llm/actions/workflows/ci.yml/badge.svg)](https://github.com/victoralcazardev/rx7900xtx-local-llm/actions/workflows/ci.yml)
 
-## Headline results
+## Final configuration
 
-`262k-q8q51-mtp` (`-c 262144`, KV `q8_0/q5_1`, MTP n=3, `-ub 256`), 272 W power cap:
+`qwen38-iq3s-mtp` / `262k-q8q51-mtp` — the single model/profile this repository ships (one best
+default, no overlapping alternatives, see `docs/DECISIONS.md`):
+
+| Component | Value |
+|---|---|
+| Model | Qwen3.8-27B, ISTA-DASLab GSQ-RCO |
+| Weights | `IQ3_S-mtp` (native MTP head baked in), 12.1 GB, PPL 6.734 ± 0.084 |
+| Context | 262,144 tokens (native, no YaRN) |
+| KV cache | K `q8_0` / V `q5_1`, FlashAttention |
+| Speculative decoding | Built-in MTP head, 3 draft tokens (`--spec-draft-n-max 3`) |
+| Physical batch | `-ub 256` |
+| Slots | 1 (`-np 1`) |
+| Engine | llama.cpp b11160 `hip-kvmix` (ROCm 10.0.0 compiler, system ROCm 7.2.4 runtime, own FlashAttention kernels for K `q8_0` + V `q5_1`) |
+| Power cap | 272 W (this card's driver minimum; factory default 303 W) |
+| Sampling | `temp 1.0`, `top-p 0.95`, `top-k 20`, `min-p 0.0` — per the Qwen3.8-27B card |
+| Reasoning effort | medium |
+
+Exact launch command (`scripts/launch.py --dry-run`'s output for the default, model path replaced
+with a placeholder):
+
+```bash
+llama-server -m <models_root>/Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp/Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp.gguf \
+  --port 8080 -c 262144 -ctk q8_0 -ctv q5_1 \
+  --temp 1.0 --top-p 0.95 --top-k 20 --min-p 0.0 \
+  -fa on -np 1 --ctx-checkpoints 4 -ngl all --metrics \
+  --spec-type draft-mtp --spec-draft-n-max 3 -ub 256 --reasoning-effort medium
+```
+
+### Results at 240K fill
 
 | Metric | Value |
 |---|---:|
-| Generation at 240K fill — essay / copy / code | 24.4 / 26.9 / 18.6 tok/s |
+| Generation at 240K fill — essay / copy / code | 24.4 / 26.9 / 18.6 tok/s (mean 23.3) |
 | Prefill at 240K fill | 380 tok/s |
 | Peak process VRAM at 240K fill | 22,630 MiB |
 | Long-context retrieval quality | 60/60 exact, 32K-240K fill |
@@ -21,6 +50,88 @@ Run **Qwen3.8-27B with a 262K-token context** on a single **AMD Radeon RX 7900 X
 
 Full evidence and method: [`docs/BENCHMARK-FORMAT.md`](docs/BENCHMARK-FORMAT.md),
 [`docs/measurements/`](docs/measurements/), [`docs/STATUS.md`](docs/STATUS.md).
+
+### Flags explained
+
+| Flag | Value | Why |
+|---|---|---|
+| `-c` | `262144` | Full native context of Qwen3.8-27B; matches the harness's wired `local-262k` provider — [`AGENTS.md`](AGENTS.md) |
+| `-ctk` / `-ctv` | `q8_0` / `q5_1` | `q8_0/q8_0` is near-free (KLD 0.000587 vs. f16); `q5_1` on V costs +27% KLD but fits the full 262K in 24 GB — [`docs/measurements/kv-quality.md`](docs/measurements/kv-quality.md) |
+| `-fa on` | on | Mandatory with a quantized V cache; also prevents a KV combo silently falling back to a slow path if a kernel is missing — [`docs/measurements/engines.md`](docs/measurements/engines.md) |
+| `--spec-type draft-mtp` | `draft-mtp` | Uses the MTP head already baked into the GGUF instead of a separate draft model — [`docs/models/qwen38-27b-quants.md`](docs/models/qwen38-27b-quants.md) |
+| `--spec-draft-n-max 3` | `3` | Wins across essay/copy/code at the real 190K/240K operating depths (+9-11% mean tg vs. n=2); n=4/n=5 lose acceptance — [`docs/measurements/speculative.md`](docs/measurements/speculative.md) |
+| `-ub 256` | `256` | -350 MiB peak process VRAM vs. the 512 default, -5% prefill cost, no generation-speed cost — [`docs/measurements/memory.md`](docs/measurements/memory.md) |
+| `-np 1` | `1` | Single user; 1 slot + MTP with request queuing beats adding `-np` slots end-to-end — [`docs/measurements/concurrency.md`](docs/measurements/concurrency.md) |
+| `--ctx-checkpoints 4` | `4` | b11160 default is 32; kept at 4 to bound RAM (each checkpoint holds a full KV-cache snapshot) — warm turns still reuse ~all KV in practice (e.g. 189,467 of 190,000 tokens on a task switch) — [`docs/measurements/engines.md`](docs/measurements/engines.md), [`docs/measurements/speculative.md`](docs/measurements/speculative.md) |
+| `-ngl all` | `all` | All layers on GPU (explicit, not left to `auto`) |
+| `--temp`/`--top-p`/`--top-k`/`--min-p` | `1.0`/`0.95`/`20`/`0.0` | The Qwen3.8-27B card's own recommended sampling — nothing invented, `min-p` set explicitly since the binary's default (0.05) isn't what the vendor tested — [`AGENTS.md`](AGENTS.md) |
+| `--reasoning-effort medium` | `medium` | The card's template default is `xhigh`, which injects "think carefully, validate assumptions, consider alternatives" and tends to overthink; `medium` adds no extra instruction — `models.toml` |
+| `--metrics` | on | Exposes `/metrics` for the persistent token usage ledger — `docs/sop/token-ledger.md` |
+
+<details>
+<summary>Flags we tried and don't recommend</summary>
+
+- **`-ub 1024`/`-ub 2048`** — no speed gain at depth; `-ub 1024` costs +590 MiB VRAM, `-ub 2048`
+  costs +1.8 GiB and is strictly worse (pp -1.7%, code tg -3.6%) — measured at 128K fill, see
+  [`docs/measurements/speculative.md`](docs/measurements/speculative.md#-ub-and-mtp-screening-at-128k-fill-272-w-2026-09-25).
+- **`--spec-draft-n-max 4`** — 45.8 tok/s at 31% acceptance vs. n=3's 60.6 tok/s at 56% (128K
+  fill) — [`docs/measurements/depth.md`](docs/measurements/depth.md).
+- **`--spec-draft-p-min 0.3`** (n=2, 128K fill) — within noise of plain n=2; **`0.8`** (n=3, 190K)
+  raises acceptance 67%→96% but not speed — neither adopted — [`docs/measurements/speculative.md`](docs/measurements/speculative.md).
+- **`-ctkd q8_0 -ctvd q8_0`** (quantizing the MTP draft's own KV) — shrinks the draft KV by
+  480 MiB but grows its compute buffer by 1,036 MiB: a net +426 MiB more total VRAM. Kept at the
+  f16 default — [`docs/measurements/memory.md`](docs/measurements/memory.md).
+- **KV `q4_0/q4_0`** — 4x the KLD of `q8_0/q8_0`, the only mix below 98% same-top-1 token —
+  [`docs/measurements/kv-quality.md`](docs/measurements/kv-quality.md).
+- **`-np` > 1** (extra slots) — a slot's own prefill starves generation on the others; queuing
+  through 1 slot beats 2 slots (6-9% faster wall time) and 4 slots (~26% faster) —
+  [`docs/measurements/concurrency.md`](docs/measurements/concurrency.md).
+
+</details>
+
+## What we tested
+
+- **Backend**: ROCm/HIP is 2-3.5x faster than Vulkan for generation on this system — Vulkan's GPU
+  memory clock drops to 772 MHz while generating, ROCm holds 1249 MHz.
+- **ROCm toolchain**: the ROCm 7.2.4 *compiler* costs -7.5% tg at 16K vs. the ROCm 10.0.0 compiler;
+  the ROCm 10.0.0 *runtime* is 1-2% slower on tg and ~5% on pp (more variance) than the system's
+  ROCm 7.2.4 runtime — kept ROCm 10 compiler + ROCm 7.2.4 runtime.
+- **Weight quant**: `IQ3_S-mtp` (PPL 6.734) ties plain `IQ3_S` and beats `IQ3_XXS-mtp` (PPL 6.948)
+  while accepting more MTP drafts; the HauhauCS and RVN finetunes are larger and slower per byte.
+- **KV cache quant**: `q8_0/q5_1` costs 27% more KLD than `q8_0/q8_0` (still near-lossless) but
+  fits the full 262K context where `q8_0/q8_0` tops out at 240K; `q4_0/q4_0` discarded (4x KLD).
+- **Speculative decoding**: the built-in MTP head at n=3 wins across task types at the real
+  190K/240K operating depths (+9-11% mean tg over n=2); n=4/n=5 lose acceptance, and DFlash2/n-gram
+  alternatives don't beat it at depth.
+- **Context ladder**: pushed from a 200K candidate through 224K/240K (KV `q8_0/q8_0`) to the full
+  native 262K (KV `q8_0/q5_1`), which ended up fitting in less VRAM than 240K.
+- **Concurrency**: 1 slot + MTP with request queuing beats adding `-np` slots — a concurrent slot's
+  prefill starves generation on the others.
+- **Power**: the 272 W cap (this card's driver minimum) costs ~6% prefill speed at depth for a
+  7-8°C cooler hotspot; kept permanently via a systemd unit.
+
+<details>
+<summary>Full experiment log (verified against <code>docs/</code>, one row per area)</summary>
+
+| Area | Variants tested | Result (key numbers) | Verdict | Evidence |
+|---|---|---|---|---|
+| Backend | ROCm/HIP vs. Vulkan (b11160) | ROCm 39 tok/s vs. Vulkan 11-23 tok/s (2-3.5x); Vulkan VRAM clock 772 MHz vs. ROCm 1249 MHz | ROCm/HIP adopted; Vulkan re-test with the clock pinned is still open | [`docs/measurements/engines.md`](docs/measurements/engines.md) |
+| ROCm toolchain — compiler | 7.2.4 vs. 10.0.0 (own build) | 7.2.4 compiler: tg 33.9 @16K (-7.5%) vs. the ROCm-10-compiler build (36.8-36.9) | ROCm 10.0.0 compiler adopted | [`docs/measurements/engines.md`](docs/measurements/engines.md) |
+| ROCm toolchain — runtime | TheRock 10.0.0 vs. system 7.2.4 runtime (same compiler) | ROCm 10 runtime: -1..-2% tg, ~-5% pp, much higher variance | System 7.2.4 runtime kept | [`docs/measurements/engines.md`](docs/measurements/engines.md), [`results/20260926-rocm-runtime-ab/`](results/20260926-rocm-runtime-ab/) |
+| Weight quant | IQ3_XXS-mtp, IQ3_S, **IQ3_S-mtp**, HauhauCS IQ4_XS, RVN Q4_K_M-mtp, Q4_K_M | PPL 6.948 / 6.734 / **6.734** / 6.823 / 6.710 / 6.639; MTP tg (accept) 56.3 (50%) / — / **62.2 (62%)** / — / 48.2 (55%) / — | `IQ3_S-mtp` adopted — best PPL/MTP trade-off in its size class | [`docs/measurements/kv-quality.md`](docs/measurements/kv-quality.md#weight-quantization-matrix-perplexity-toks) |
+| KV cache quant | f16, q8/q8, q8/q5_1, q8/q4_1, q4_0/q4_0 (KLD vs. f16) | 0 / 0.000587 / 0.000744 (+27%) / 0.001244 (2x) / 0.002450 (4x) | `q8_0/q5_1` adopted at 262K; `q4_0` discarded | [`docs/measurements/kv-quality.md`](docs/measurements/kv-quality.md#kv-cache-quantization-kld-vs-f16) |
+| KVarN (BeeLlama v0.4.7) | q8/q8, q8/q6_0, q8/q5_1, kvarn8/8, kvarn6/6, kvarn5/5 | KLD ~0.0020-0.0022 for KVarN (~2.7x q8/q8 at every bit width); BeeLlama itself -18-22% tg vs. `hip-kvmix` | Rejected; `q8_0/q6_0` near-lossless as a side finding, but BeeLlama-only | [`docs/measurements/kv-quality.md`](docs/measurements/kv-quality.md#beellama-kvarn-kld-2026-09-26) |
+| Context window ladder | 200K/224K/240K KV q8/q8, 262K KV q8_0/q5_1 | 224K: 22.3-25.1 tok/s @ 22,700 MiB; 240K: 22.5-24.4 @ 23,407 MiB; 262K: 18.6-26.9 @ 22,630 MiB | 262K `q8_0/q5_1` adopted — more context in less VRAM than 240K `q8/q8` | [`docs/measurements/depth.md`](docs/measurements/depth.md#context-window-ladder-224k-and-240k-272-w-2026-09-25) |
+| Long-context retrieval quality | RULER-style Spanish multi-key retrieval, 32K-240K fill | **60/60 exact match**, 0 loops (44/44 to 190K + 8/8 @ 220K + 8/8 @ 240K) | Validated on the adopted profile | [`docs/measurements/depth.md`](docs/measurements/depth.md#quality-ruler-style-200k-q8q8-mtp) |
+| Speculative decoding | none, MTP n=2/3/4/5, `--spec-draft-p-min` 0.3/0.8, DFlash2, n-gram stacking | n=3 +9-11% mean tg over n=2 at 190K/240K; n=4 45.8 tok/s @ 31% accept vs. n=3's 60.6 @ 56% (128K); p-min 0.8 raises accept 67%→96% but not speed; DFlash2 slower on 2 of 3 tasks at 190K | MTP n=3 adopted | [`docs/measurements/speculative.md`](docs/measurements/speculative.md) |
+| Physical batch | `-ub` 256/512/1024/2048 | 256: -350 MiB, pp -5%, same tg (262K profile); 1024: +590 MiB, no gain; 2048: +1.8 GiB, pp -1.7%, code tg -3.6% (128K screening) | `-ub 256` adopted at 262K; default (512) stays best at 128K fill | [`docs/measurements/memory.md`](docs/measurements/memory.md), [`docs/measurements/speculative.md`](docs/measurements/speculative.md#-ub-and-mtp-screening-at-128k-fill-272-w-2026-09-25) |
+| Concurrency | 1/2/4 slots (`-np`) | vs. queuing through 1 slot: 2 slots +MTP 8.6% slower wall time, 2 slots no MTP 6.0% slower, 4 slots 25.6% slower | 1 slot + MTP + queue adopted | [`docs/measurements/concurrency.md`](docs/measurements/concurrency.md#1-vs-2-vs-4-slots-mtp-onoff-2026-09-25) |
+| Power cap | 303 W vs. 272 W | Prefill -6% (487→459 tok/s) at 190K; hotspot 100-106°C→99°C; tg128 ~-3.4% at empty context (39.35→38.0, single uncontrolled sample) | 272 W adopted as the permanent cap | [`docs/measurements/thermals-power.md`](docs/measurements/thermals-power.md), [`results/20260926-rocm-runtime-ab/`](results/20260926-rocm-runtime-ab/) |
+| Engine patches/forks | `kvmix-vec4`, `stew675/llama-cpp-rdna-boosts` (native q8 KV), Lemonade b1331/b1332, nasone32, exllamav3-rocm | vec4 +20% ms/step (worse); rdna-boosts -2.5% ms/step; Lemonade's build doesn't enable the FA quant kernels this needs; nasone32 targets a different arch/depth; exllamav3-rocm audited clean but deprioritized (15.3 GB model, less VRAM headroom, author's own numbers not comparable) | None adopted | [`docs/measurements/speculative.md`](docs/measurements/speculative.md), [`docs/ENGINES.md`](docs/ENGINES.md), [`docs/SOURCES.md`](docs/SOURCES.md) |
+| Vision (`mmproj`) | on vs. off at long context | VRAM/context cost not worth it at 200K+ | Off by default at 262K | [`docs/DECISIONS.md`](docs/DECISIONS.md) |
+| Prompt-cache checkpoints | `--ctx-checkpoints` default (32) vs. 4 | Warm-turn reuse observed regardless (189,467 of 190,000 tokens reused across a task switch) | Kept at 4 — bounds RAM, each checkpoint holds a full KV snapshot | [`docs/measurements/engines.md`](docs/measurements/engines.md), [`docs/measurements/speculative.md`](docs/measurements/speculative.md#ab-at-190k--c-204800-kv-q8q8-kvmix-vs-vec4-mtp-n2) |
+
+</details>
 
 ## Tested setup
 
@@ -87,15 +198,19 @@ path in `models.toml` (`Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp/Qwen3.8-27B-GSQ-RCO-IQ3_S-
 See `docs/models/qwen38-27b-quants.md` for the other candidate quants (IQ3_S, IQ3_XXS-mtp, RVN)
 and their provenance.
 
-## The recommended configuration, briefly
+## Tech stack
 
-- **KV `q8_0/q5_1`**: near-free quality loss and more context in 24 GB than `q8_0/q8_0`.
-- **MTP n=3**: +9-11% mean tg over n=2 at the real 190K/240K operating depths.
-- **`-ub 256`**: -350 MiB peak process VRAM for a small prefill cost, no generation-speed cost.
-- **272 W power cap**: trades ~6% prefill speed for a comfortable thermal margin vs. the 303 W
-  factory default.
-
-Full reasoning and evidence: [`docs/STATUS.md`](docs/STATUS.md).
+- **Inference engine**: [`llama.cpp`](https://github.com/ggml-org/llama.cpp)'s `llama-server`, an
+  OpenAI-compatible API on `127.0.0.1:8080`.
+- **GPU backend**: ROCm/HIP, with an own `hip-kvmix` build for the asymmetric KV FlashAttention
+  kernels the official binary doesn't ship.
+- **Speculative decoding**: MTP (multi-token prediction), the head baked into the GGUF — no
+  separate draft model.
+- **Weights and KV cache**: GGUF IQ-quants for the weights, quantized KV cache (`q8_0`/`q5_1`).
+- **Scripts**: Python 3, standard library only (launcher, manifest validation, benchmarks).
+- **Power and telemetry**: `systemd` (permanent power-cap unit, token-usage-ledger timer).
+- **Clients**: any OpenAI-compatible coding-agent harness (e.g. `omp`, `pi`) — this repository
+  doesn't assume a particular one.
 
 ## Troubleshooting
 
@@ -166,7 +281,8 @@ The official CI binaries only ship FlashAttention kernels for symmetric K/V pair
 flags.
 </details>
 
-## What this is (and is NOT)
+<details>
+<summary>What this is (and is NOT)</summary>
 
 - **IS**: a single-GPU, single-model local inference setup — one RX 7900 XTX, one `llama-server`
   process, long-context (128K-262K) usage with speculative decoding (MTP).
@@ -179,8 +295,10 @@ flags.
 - **IS NOT a harness/agent-wiring guide** — connect any OpenAI-compatible client to the fixed
   local endpoint described in `AGENTS.md`; this repository doesn't assume a particular
   coding-agent tool.
+</details>
 
-## Token usage ledger (optional)
+<details>
+<summary>Token usage ledger (optional)</summary>
 
 `--metrics` in `[defaults] flags` exposes Prometheus counters at `/metrics` that reset on every
 server restart. `scripts/token_ledger.py` samples them on a systemd user timer and keeps an
@@ -191,6 +309,7 @@ python3 scripts/token_ledger.py show
 ```
 
 Install and details: `docs/sop/token-ledger.md`.
+</details>
 
 ## Repository layout
 
@@ -208,7 +327,7 @@ rx7900xtx-local-llm/
 │   ├── ENGINES.md           # llama.cpp build inventory: commits, flags, SHA256
 │   ├── BENCHMARK-FORMAT.md  # how every number in this repo was produced
 │   ├── hardware/            # GPU specs, driver setup
-│   ├── models/              # model table and quant provenance
+│   ├── models/               # model table and quant provenance
 │   ├── measurements/        # benchmark results and conclusions, by topic
 │   └── sop/                 # step-by-step procedures (install, launch, add a model, ...)
 └── results/                 # curated, small result folders — see results/INDEX.md
@@ -221,18 +340,13 @@ rx7900xtx-local-llm/
 | `docs/STATUS.md` | Current recommended profile, key figures, open questions |
 | `docs/DECISIONS.md` | Append-only decision log with evidence links |
 | `docs/SOURCES.md` | External claims checked against this repository's own measurements |
-| `docs/hardware/` | RX 7900 XTX specs, driver setup, install background |
-| `docs/models/` | Model table and quant provenance |
-| `docs/ENGINES.md` | llama.cpp build inventory: commits, flags, SHA256 |
+| `docs/hardware/`, `docs/models/`, `docs/ENGINES.md` | GPU/driver specs, model/quant provenance, llama.cpp build inventory |
 | `docs/measurements/` | Benchmark results and conclusions, by topic (engines, kv-quality, memory, coexistence, depth, speculative, thermals-power, concurrency) |
 | `docs/BENCHMARK-FORMAT.md` | How the numbers are produced and reported |
 | `docs/sop/` | Step-by-step procedures: install, launch, add a model, update the engine, token ledger |
-| `bench/` | Benchmark scripts that reproduce the numbers in `docs/measurements/` |
-| `results/` | Curated, small result folders — see `results/INDEX.md` |
-| `scripts/check-repo.py` | Repo hygiene check (broken links, oversized files, personal paths, secrets, Spanish leftovers) — run before every push |
-| `tests/` | Stdlib `unittest` unit tests for the launcher's pure logic — `python3 -m unittest discover -s tests -v` |
-| `CONTRIBUTING.md` | How to report issues and contribute reproducible results |
-| `.github/` | CI workflow and issue/PR templates |
+| `bench/`, `results/` | Scripts that reproduce the numbers in `docs/measurements/`, and the curated result folders — see `results/INDEX.md` |
+| `scripts/check-repo.py`, `tests/` | Repo hygiene check and the stdlib `unittest` suite — `python3 -m unittest discover -s tests -v` |
+| `CONTRIBUTING.md`, `.github/` | How to contribute, and the CI workflow / issue-PR templates |
 
 ## Contributing & feedback
 
