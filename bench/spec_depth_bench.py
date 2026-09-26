@@ -35,7 +35,8 @@ def main():
     ap.add_argument('--run', action='store_true', required=True)
     ap.add_argument('--depth', type=int, default=240000)
     ap.add_argument('--reps', type=int, default=2)
-    ap.add_argument('--kv', default='q5_1')
+    ap.add_argument('--kv', default='q5_1', help='V cache type')
+    ap.add_argument('--kv-k', default='q8_0', help='K cache type (e.g. kvarn8 on BeeLlama)')
     ap.add_argument('--ctx', type=int, default=262144)
     ap.add_argument('--variants', nargs='+', default=list(VARIANTS))
     ap.add_argument('--server', help='alternate llama-server binary (e.g. the vec4 engine)')
@@ -56,7 +57,7 @@ def main():
     for v in a.variants:
         cooldown = b.cool_down()
         case = out / v; case.mkdir()
-        argv = [str(b.SERVER), '-m', str(MODEL_NO_MTP if v.startswith('dfl') else b.MODEL), '--port', str(b.PORT), '-c', str(a.ctx), '-ctk', 'q8_0',
+        argv = [str(b.SERVER), '-m', str(MODEL_NO_MTP if v.startswith('dfl') else b.MODEL), '--port', str(b.PORT), '-c', str(a.ctx), '-ctk', a.kv_k,
                 '-ctv', a.kv, '-fa', 'on', '-np', '1', '--ctx-checkpoints', '4', '-ngl', 'all',
                 '--temp', '1', '--top-k', '20', '--min-p', '0'] + VARIANTS[v]
         hardcoded = {'-m', '--port', '-c', '-ctk', '-ctv', '-fa', '-np', '--ctx-checkpoints', '-ngl',
