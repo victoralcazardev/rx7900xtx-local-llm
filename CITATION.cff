@@ -1,0 +1,9 @@
+cff-version: 1.2.0
+message: "If you use these results, please cite this repository."
+title: "rx7900xtx-local-llm"
+authors:
+  - family-names: Alcazar
+    given-names: Victor
+url: "https://github.com/valcazar57/rx7900xtx-local-llm"
+license: MIT
+date-released: 2026-09-26
