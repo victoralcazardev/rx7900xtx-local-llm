@@ -47,8 +47,10 @@ at 240K**.
 
 Case D above (q8/q8, no MTP, 239,314-token fill) generates at 16.0 tok/s = 62.5 ms/token, vs.
 ~25.8 ms/token at empty context (262K q8/q8, no MTP, no vision, empty-context matrix above: 38.7
-tok/s). The ~36.7 ms/token difference, spent reading ~8.3 GB of KV once per step, works out to
-**≈ 226 GB/s** — about 24% of this card's 960 GB/s peak memory bandwidth.
+tok/s). The ~36.7 ms/token difference over the ~8.3 GB KV cache works out to an **effective
+≈ 226 GB/s** (counting each KV byte once) — about 24% of this card's 960 GB/s peak memory bandwidth.
+The kernel's actual traffic is higher (see the cause below), so this is a ceiling on useful work,
+not a hardware limit.
 
 **Cause**: with a GQA ratio of 6, HIP's FlashAttention kernels only fold 2 query heads per block
 (`ncols2 = 2`), so each K/V element is fetched and dequantized **3 times per query row** to cover

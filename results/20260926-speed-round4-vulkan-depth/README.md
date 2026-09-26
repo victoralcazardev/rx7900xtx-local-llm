@@ -33,9 +33,9 @@ Vulkan was stopped (killed, exit 143) after the 64K depth: at its measured prefi
 
 **Vulkan prefill collapses ~5x at `-ub 256`**, independent of the V cache type (Vulkan's
 `supports_op` accepts `q5_1` and mixed K/V without recompiling — see `docs/measurements/engines.md`).
-Generation (tg32) stays flat at 23.2-23.6 tok/s across all four combinations at depth 0 — but the V1
-run above shows tg varying 11.0-23.9 tok/s at the *same* `-ub 256`/K-V config, purely with which
-memory-clock state (456/772/1249 MHz) the driver happened to be in during that sample window.
+Generation (tg32) stays flat at 23.2-23.6 tok/s across all four combinations at depth 0, while the V1
+run above measured Vulkan tg64 at 11.0 tok/s (depth 0) with the same `-ub 256`/K-V config. The
+difference is consistent with the memory clock (456 MHz in most V1 samples) but was not isolated.
 
 **Raw data**: `bench/res/v1-vulkan-depth-20260926-160341/` (`hip.md`, `vulkan.md`, `diag-*.md`,
 `monitor.csv`, `run.log`) — local only, `bench/res` is git-ignored.

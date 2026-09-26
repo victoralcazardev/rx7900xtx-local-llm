@@ -197,9 +197,9 @@ A follow-up diagnostic (`-p 512 -n 32 -r 1`, depth 0) isolated the `-ub` effect 
 **Vulkan's prefill collapses ~5x at `-ub 256`**, independent of K/V type (Vulkan's `supports_op`
 already accepts `q5_1` and mixed K/V without recompiling, see below) — this is a `-ub` effect, not
 a quantized-KV one. Generation stays flat (23.2-23.6 tok/s) across all four combinations at depth
-0, yet the V1 run above shows tg varying 11.0-23.9 tok/s at the very same `-ub 256`/K-V
-configuration, tracking only which memory-clock state (456/772/1249 MHz) the driver happened to be
-in.
+0, while the V1 run above measured Vulkan tg64 at 11.0 tok/s (depth 0) with the same `-ub 256`/K-V
+configuration. The difference is consistent with the memory clock (456 MHz in most V1 samples) but
+was not isolated.
 
 **Conclusion: inconclusive for decode at depth**, and not pursued further. A fair re-test needs
 `-ub >= 512` (to avoid the prefill collapse above) with the memory clock pinned at the root. Not
