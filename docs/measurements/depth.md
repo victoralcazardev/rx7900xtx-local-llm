@@ -77,11 +77,11 @@ Profile under test: IQ3_S-mtp, `-c 262144`, KV `q8_0/q5_1`, MTP n=2, no vision, 
 
 | Case | Prompt tokens | Mean pp | **tg** | MTP | Peak total VRAM* | GTT at end |
 |---|---:|---:|---:|---:|---:|---:|
-| P1 q8/q5_1 + MTP (ROCm 10 kvmix) | 130,250 | 586 | **27.5** | 58% | 24,260 MiB | 537 MiB |
-| P2 q8/q5_1 + MTP (ROCm 10 kvmix) | 239,314 | 430 | **23.8** | 90% | 24,373 MiB | 542 MiB |
-| P3 q8/q8, no MTP (official) | 130,250 | 607 | 23.7 | — | 23,112 MiB | 527 MiB |
-| P4 q8/q8, no MTP (official) | 239,314 | 453 | 16.0 | — | 22,912 MiB | 525 MiB |
-| P5 = P2 + `-ub 256` | 239,314 | 412 | 19.4 | 63% | 22,983 MiB | **1,304 MiB** (warning) |
+| Case A: q8/q5_1 + MTP (ROCm 10 kvmix) | 130,250 | 586 | **27.5** | 58% | 24,260 MiB | 537 MiB |
+| Case B: q8/q5_1 + MTP (ROCm 10 kvmix) | 239,314 | 430 | **23.8** | 90% | 24,373 MiB | 542 MiB |
+| Case C: q8/q8, no MTP (official) | 130,250 | 607 | 23.7 | — | 23,112 MiB | 527 MiB |
+| Case D: q8/q8, no MTP (official) | 239,314 | 453 | 16.0 | — | 22,912 MiB | 525 MiB |
+| Case E: Case B + `-ub 256` | 239,314 | 412 | 19.4 | 63% | 22,983 MiB | **1,304 MiB** (warning) |
 
 \* Total VRAM includes the desktop, which **varied between ~0.3 and ~1.1 GiB** within the same
 session (0.44 GiB at 18:00, 1.09 GiB at 22:00, 0.28 GiB at 23:00) — these totals aren't comparable to
@@ -91,13 +91,20 @@ on.
 - The 262K target profile clears 20 tok/s at 240K (23.8) here, and MTP gives +49% vs. not using it
   (16.0) — but this is a **single sample per case**, one content type (English summarization). MTP
   acceptance varies a lot between runs (58-90%). **Statistically thin** — see the corrected 240K
-  measurement below. The +49% figure compares P2 (kvmix, q8/q5_1, 90% acceptance) with P4
+  measurement below. The +49% figure compares Case B (kvmix, q8/q5_1, 90% acceptance) with Case D
   (**official engine, q8/q8**) — it mixes engine, KV type and an unusually high acceptance rate, so
   it doesn't isolate MTP's effect. With 58% acceptance (see the 240K result below), it would be
-  **~+15%** vs. the same P4. The no-MTP reference with kvmix q8/q5_1 at 240K is still missing.
-- P5 (`-ub 256`) makes things **worse**: ~770 MiB more spilled to GTT (silent overflow, see
-  [#26432](https://github.com/ggml-org/llama.cpp/issues/26432)), and both tg and pp drop.
-  **`-ub 512` (the default) is kept.**
+  **~+15%** vs. the same Case D. The no-MTP reference with kvmix q8/q5_1 at 240K is still missing.
+- **Update, 2026-09-26** (current default profile, MTP n=3, q8_0/q5_1, 262K, 240K fill): `-ub 256`
+  shows **no spill** — system GTT 662-678 MiB vs. 642-680 MiB with `-ub 512`, per-process GTT
+  8 MiB, 0 evicted, process VRAM 22,630 MiB vs. 22,980 MiB with `-ub 512`. This supersedes the
+  2026-09-24 reading below (Case E), which used the older MTP n=2 depth matrix at a different
+  profile stage. See `memory.md`'s "`-ub 256`" section and
+  [`../../results/20260926-ubatch256-262k/`](../../results/20260926-ubatch256-262k/).
+- **2026-09-24 (superseded by the update above)**: Case E (`-ub 256`) appeared to make things
+  worse: ~770 MiB more spilled to GTT (silent overflow, see
+  [#26432](https://github.com/ggml-org/llama.cpp/issues/26432)), and both tg and pp dropped
+  relative to the `-ub 512` default at the time.
 
 ## 128K and 240K with fdinfo, and the aborted first 240K attempt
 
@@ -129,7 +136,7 @@ output tokens (`ignore_eos`), followed by a warm turn (history + short question,
 - **Warm cache works**: the second turn reuses 239,996 of 240,000 tokens and only processes the new
   ones (~4 s instead of ~9 min) — this is what real agent usage looks like.
 - **Speed: 18.4 tok/s, below the 20 tok/s bar.** (a) and (b) used the same seed: this confirms the
-  result **reproduces**, but they are not independent samples. The earlier P2 figure (23.8) used 400
+  result **reproduces**, but they are not independent samples. The earlier Case B figure (23.8) used 400
   output tokens and a 90% acceptance rate — not comparable one-to-one.
 - Not caused by temperature: the core stayed at 2,500 MHz. tg per 250-token window ranged 15.7-22.2
   tok/s and tracked MTP acceptance (43-81%). With this synthetic, hard-to-predict text (the model
@@ -168,8 +175,8 @@ repetitions). Raw data and exact commands:
 GTT stayed at 8 MiB and evicted at 0 MiB in both cases. **Both fit and clear 18 tok/s on every
 task.** 224K was adopted as the default profile (`224k-q8q8-mtp`) at the time — ~1.8 GiB of system
 VRAM margin even with another light GPU client running. 240K was the measured maximum
-(`240k-q8q8-mtp`) — only ~0.3 GiB margin, tight. The ladder was stopped by the user after 240K
-(262K, which would need KV `q8_0/q5_1` to fit, was not attempted in this ladder).
+(`240k-q8q8-mtp`) — only ~0.3 GiB margin, tight. The ladder was stopped after 240K (262K, which
+would need KV `q8_0/q5_1` to fit, was not attempted in this ladder).
 
 **Superseded 2026-09-26**: 262K with KV `q8_0/q5_1` was measured directly (below and in
 `speculative.md`/`memory.md`) and adopted as the new default (`262k-q8q51-mtp`), fitting more
@@ -196,9 +203,9 @@ KV q8/q8, MTP n=2, temperature 0. Raw data and exact commands:
 from 32K to 190K fill, and no output loops were observed — retrieval quality holds up to 190K for
 this profile. **190K is a partial sample**: the first attempt at the factory 303 W limit was
 stopped by the operator when the hotspot reached 106°C (see `thermals-power.md`); the re-run at a
-272 W power cap completed one of the five planned documents (4/4 exact) before the user parked
-190K specifically ("if 200K works well, we can leave 190K aside") — the 32K/128K result plus this
-one 190K document were judged sufficient evidence. The 272 W prefill at 190K (459 tok/s) is ~6%
+272 W power cap completed one of the five planned documents (4/4 exact) before 190K testing was
+deprioritized (200K judged sufficient if it works well) — the 32K/128K result plus this one 190K
+document were judged sufficient evidence. The 272 W prefill at 190K (459 tok/s) is ~6%
 slower than the 303 W reference at the same depth (487 tok/s, see `speculative.md`'s 190K A/B).
 
 ### 220K, `224k-q8q8-mtp` (2026-09-26)
@@ -227,13 +234,13 @@ MiB, 0 evicted, hotspot 98°C.
 
 **Cumulative: 60/60 exact match, 32K-240K fill** (52/52 above + this 8/8). The +27% KLD of KV
 q8_0/q5_1 over q8_0/q8_0 (`kv-quality.md`) does not show up as a retrieval error at this depth —
-one of the criteria that closed the P5c decision to adopt `262k-q8q51-mtp` as the default profile
+one of the criteria that closed the decision to adopt `262k-q8q51-mtp` as the default profile
 (`docs/DECISIONS.md`).
 
 ## Open questions / pending (priority order)
 
 1. A broader 190K quality sample (the remaining 4 of 5 planned documents, 16 of 20 questions) —
-   parked by the user, not required to keep `224k-q8q8-mtp`/`262k-q8q51-mtp` adopted (32K/128K are
+   deprioritized, not required to keep `224k-q8q8-mtp`/`262k-q8q51-mtp` adopted (32K/128K are
    fully validated, and the one 190K document validated exactly).
 2. Real agent-usage MTP acceptance at depth (temperature 1, 3 seeds): the synthetic benchmark above is
    pessimistic — a third-party report (`sweeps/radeon.md`,
@@ -257,14 +264,14 @@ one of the criteria that closed the P5c decision to adopt `262k-q8q51-mtp` as th
   measured at 128K and 240K depth (single samples), 240K attempt #1 invalid (client timeout).
 - **2026-09-24, night**: 240K repeated twice with fdinfo instrumentation — confirms 18.4 tok/s
   (below the >20 tok/s bar), supersedes the earlier single-sample 23.8 reading for the 262K profile.
-- **2026-09-25**: target changed to ~200K by user decision; `200k-q8q8-mtp` measured at 190K
+- **2026-09-25**: target changed to ~200K; `200k-q8q8-mtp` measured at 190K
   (22-30 tok/s, see `speculative.md`) and adopted as the new candidate profile, superseding
   `262k-q8q51-mtp`. Quality test still pending as of this date.
 - **2026-09-25, later**: long-context quality test (RULER-style) run partially — 32K and 128K
   validated (20/20 exact match, 0 loops); 190K stopped on thermal grounds at 303 W (106°C hotspot),
   re-run in progress at 272 W.
 - **2026-09-25, evening**: 272 W adopted as a permanent power cap; 190K quality re-run completed
-  one document (4/4 exact, 99°C hotspot) before being parked by the user — 44/44 exact match total,
+  one document (4/4 exact, 99°C hotspot) before being deprioritized — 44/44 exact match total,
   0 loops. Context-window ladder measured 224K and 240K (both fit, 18-25 tok/s); 224K adopted as
   the new default profile (`224k-q8q8-mtp`), 240K as the measured maximum (`240k-q8q8-mtp`),
   superseding `200k-q8q8-mtp` as the recommended daily default (kept as a narrower candidate).

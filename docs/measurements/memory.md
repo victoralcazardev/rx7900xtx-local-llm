@@ -13,14 +13,17 @@
   "total VRAM" readings incomparable across runs. fdinfo exposes `drm-memory-vram`,
   `drm-memory-gtt`, `amd-requested-vram` and `amd-evicted-vram` per process and doesn't depend on the
   desktop.
+- **`-ub 256` on the current default, updated 2026-09-26** (`262k-q8q51-mtp`, MTP n=3, q8_0/q5_1,
+  262K, 240K fill): `-ub 256` shows **no spill** — system GTT 662-678 MiB vs. 642-680 MiB with
+  `-ub 512`, per-process GTT 8 MiB, 0 evicted, process VRAM 22,630 MiB vs. 22,980 MiB with
+  `-ub 512` — see "`-ub 256`" below. This supersedes the 2026-09-24 reading in `depth.md`
+  (Case E), which appeared to spill ~770 MiB more to GTT on the older MTP n=2 depth matrix, a
+  different profile stage. `-ub 256` also lowers real process VRAM here (-350 MiB vs. the
+  `-ub 512` default) with only a small prefill cost; this differs from the 2026-09-25 128K-fill
+  screening (`speculative.md`) where `-ub 512` was optimal — the effect of `-ub` depends on
+  profile and depth, re-measure rather than assume.
 - No flag exists in b11160 to limit the MTP draft's own context or compute footprint. Smaller `-ub`
-  reduces the declared compute buffers but doesn't consistently lower real VRAM use, and at 240K
-  causes GTT overflow instead (see `depth.md`, case P5).
-- **Update, 2026-09-26**: on the current `262k-q8q51-mtp` profile (MTP n=3), `-ub 256` *does*
-  lower real process VRAM (-350 MiB vs. the `-ub 512` default) with only a small prefill cost —
-  see "`-ub 256`" below; this differs from the 2026-09-25 128K-fill screening (`speculative.md`)
-  where `-ub 512` was optimal, and from the P5 case above (GTT overflow) — the effect of `-ub`
-  depends on profile and depth, re-measure rather than assume.
+  reduces the declared compute buffers but doesn't consistently lower real VRAM use.
 - **System VRAM headroom depends on the desktop's own usage, measured directly 2026-09-26**: total
   system VRAM (not just the process) left only 12-190 MiB free across every long-context
   configuration measured that day, with desktop idle usage at ~1.5 GiB (vs. ~0.8 GiB on other
@@ -91,7 +94,7 @@ the time, not just the profile.
 ## Open questions
 
 - fdinfo instrumentation was not yet wired into every benchmark script at the time of the earlier
-  262K-target measurements (`depth.md`'s P1-P5 table uses total VRAM, not per-process); later
+  262K-target measurements (`depth.md`'s Case A-E table uses total VRAM, not per-process); later
   measurements (128K/240K repeats, 190K A/B) do use per-process fdinfo throughout.
 
 ## History
