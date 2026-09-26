@@ -66,7 +66,7 @@ and verify it.
 | Script | Old name (still in historical `command.json` files) | Measures |
 |---|---|---|
 | `depth_bench.py` | `validacion262.py` | Cold matrix: tok/s and acceptance at fixed input depths (128K/200K/240K), KV q8_0/q8_0 vs. q8_0/q5_1+MTP2, plus a warm second turn reusing the KV cache. |
-| `longctx_quality.py` | `calidad262.py` | Long-context retrieval quality (RULER-style needle test) across the same depths and KV/MTP variants. Run 32K-240K, 60/60 exact match cumulative — see [`../results/20260925-longctx-quality-200k/`](../results/20260925-longctx-quality-200k/), [`../results/20260926-longctx-quality-224k/`](../results/20260926-longctx-quality-224k/), [`../results/20260926-longctx-quality-262k/`](../results/20260926-longctx-quality-262k/), and `docs/measurements/depth.md`. |
+| `longctx_quality.py` | `calidad262.py` | Long-context retrieval quality (RULER-style needle test) across the same depths and KV/MTP variants. Run 32K-240K, 68/68 exact match cumulative — see [`../results/20260925-longctx-quality-200k/`](../results/20260925-longctx-quality-200k/), [`../results/20260926-longctx-quality-224k/`](../results/20260926-longctx-quality-224k/), [`../results/20260926-longctx-quality-262k/`](../results/20260926-longctx-quality-262k/), and `docs/measurements/depth.md`. |
 | `spec_bench.py` | `mtp262.py` | Paired comparison of speculative-decoding variants (no draft, MTP n=2/n=3, n-gram map/mod) across six task types. |
 | `spec_depth_bench.py` | `mtpprof262.py` | Speculative-decoding draft-n sweep (including DFlash) at a fixed deep context (default 240K), to see which draft length wins once the KV read dominates. |
 | `summarize.py` | `resumen262.py` | Turns a `depth_bench.py` output folder into a Markdown table (throughput, warm-turn reuse, VRAM/GTT/thermal peaks per phase). |
@@ -76,10 +76,13 @@ and verify it.
 
 ## `--extra`: A/B-testing a new flag without editing a script
 
-`depth_bench.py`, `spec_depth_bench.py` and `concurrency_bench.py` accept `--extra "<flags>"`:
-shlex-split and appended to the `llama-server` argv for every case/variant, and recorded verbatim
-in that run's `command.json` (and, for `depth_bench.py`, in `metadata.json`). A flag that
-duplicates one the script already hardcodes is warned about on stderr, not rejected. Examples:
+`depth_bench.py`, `spec_depth_bench.py`, `concurrency_bench.py` and `longctx_quality.py` accept
+`--extra "<flags>"`: shlex-split and appended to the `llama-server` argv for every case/variant,
+and recorded verbatim in that run's `command.json` (and, for `depth_bench.py`, in
+`metadata.json`). A flag that duplicates one the script already hardcodes is warned about on
+stderr, not rejected. `longctx_quality.py` additionally takes `--mtp-n N` (`--spec-draft-n-max`
+for `*-mtp1` variants, default 2), so retrieval quality can be checked on a draft length other
+than the default — e.g. the exact adopted flags instead of just the KV variant. Examples:
 
 ```bash
 # spec_depth_bench.py: sweep --spec-draft-p-min at a fixed depth
@@ -89,6 +92,10 @@ env IA_BENCH_INHIBITED=1 python bench/spec_depth_bench.py --run --depth 190000 \
 # depth_bench.py: a smaller checkpoint stride for warm-turn reuse
 env IA_BENCH_INHIBITED=1 python bench/depth_bench.py --run --inhibitor-ok \
     --target-only --extra "-cms 2048"
+
+# longctx_quality.py: exact adopted 262K flags (MTP n=3, -ub 256) instead of the n=2 default
+python bench/longctx_quality.py --run --ctx 262144 --variants q8q51-mtp1 --depths 240000 \
+    --docs 2 --mtp-n 3 --extra "-ub 256"
 ```
 
 ## `concurrency_bench.py`: multi-agent slots

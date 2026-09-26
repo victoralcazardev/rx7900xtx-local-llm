@@ -2,7 +2,7 @@
 
 **262K-context Qwen3.8-27B on a single AMD Radeon RX 7900 XTX (24 GB)** — `llama.cpp` on ROCm,
 IQ3_S-mtp + MTP n=3, KV `q8_0`/`q5_1`, `-ub 256`, 272 W power cap. 18.6-26.9 tok/s at 240K fill,
-60/60 exact-match retrieval — validated config, launcher and benchmark evidence.
+68/68 exact-match retrieval — validated config, launcher and benchmark evidence.
 
 [![License: MIT](https://img.shields.io/badge/code%20license-MIT-blue.svg)](LICENSE)
 [![License: CC BY 4.0](https://img.shields.io/badge/docs%20license-CC%20BY%204.0-lightgrey.svg)](LICENSE)
@@ -45,7 +45,7 @@ llama-server -m <models_root>/Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp/Qwen3.8-27B-GSQ-RCO-
 | Generation at 240K fill — essay / copy / code | 24.4 / 26.9 / 18.6 tok/s (mean 23.3) |
 | Prefill at 240K fill | 380 tok/s |
 | Peak process VRAM at 240K fill | 22,630 MiB |
-| Long-context retrieval quality | 60/60 exact, 32K-240K fill |
+| Long-context retrieval quality | 68/68 exact, 32K-240K fill |
 | Empty-context generation (single smoke sample) | ~61 tok/s |
 
 Full evidence and method: [`docs/BENCHMARK-FORMAT.md`](docs/BENCHMARK-FORMAT.md),
@@ -74,8 +74,9 @@ Full evidence and method: [`docs/BENCHMARK-FORMAT.md`](docs/BENCHMARK-FORMAT.md)
 - **`-ub 1024`/`-ub 2048`** — no speed gain at depth; `-ub 1024` costs +590 MiB VRAM, `-ub 2048`
   costs +1.8 GiB and is strictly worse (pp -1.7%, code tg -3.6%) — measured at 128K fill, see
   [`docs/measurements/speculative.md`](docs/measurements/speculative.md#-ub-and-mtp-screening-at-128k-fill-272-w-2026-09-25).
-- **`--spec-draft-n-max 4`** — 45.8 tok/s at 31% acceptance vs. n=3's 60.6 tok/s at 56% (128K
-  fill) — [`docs/measurements/depth.md`](docs/measurements/depth.md).
+- **`--spec-draft-n-max 4`** — at 240K fill, on the exact adopted flags (`-ub 256`): 21.4 tok/s
+  mean vs. n=3's 23.3 (-8%), 66% vs. 71% acceptance; also loses at 128K empty-context (45.8 tok/s
+  at 31% acceptance vs. n=3's 60.6 tok/s at 56%) — [`docs/measurements/speculative.md`](docs/measurements/speculative.md#n4-checked-again-at-240k-exact-adopted-flags--ub-256-2026-09-26).
 - **`--spec-draft-p-min 0.3`** (n=2, 128K fill) — within noise of plain n=2; **`0.8`** (n=3, 190K)
   raises acceptance 67%→96% but not speed — neither adopted — [`docs/measurements/speculative.md`](docs/measurements/speculative.md).
 - **`-ctkd q8_0 -ctvd q8_0`** (quantizing the MTP draft's own KV) — shrinks the draft KV by
@@ -122,8 +123,8 @@ Full evidence and method: [`docs/BENCHMARK-FORMAT.md`](docs/BENCHMARK-FORMAT.md)
 | KV cache quant | f16, q8/q8, q8/q5_1, q8/q4_1, q4_0/q4_0 (KLD vs. f16) | 0 / 0.000587 / 0.000744 (+27%) / 0.001244 (2x) / 0.002450 (4x) | `q8_0/q5_1` adopted at 262K; `q4_0` discarded | [`docs/measurements/kv-quality.md`](docs/measurements/kv-quality.md#kv-cache-quantization-kld-vs-f16) |
 | KVarN (BeeLlama v0.4.7) | q8/q8, q8/q6_0, q8/q5_1, kvarn8/8, kvarn6/6, kvarn5/5 | KLD ~0.0020-0.0022 for KVarN (~2.7x q8/q8 at every bit width); BeeLlama itself -18-22% tg vs. `hip-kvmix` | Rejected; `q8_0/q6_0` near-lossless as a side finding, but BeeLlama-only | [`docs/measurements/kv-quality.md`](docs/measurements/kv-quality.md#beellama-kvarn-kld-2026-09-26) |
 | Context window ladder | 200K/224K/240K KV q8/q8, 262K KV q8_0/q5_1 | 224K: 22.3-25.1 tok/s @ 22,700 MiB; 240K: 22.5-24.4 @ 23,407 MiB; 262K: 18.6-26.9 @ 22,630 MiB | 262K `q8_0/q5_1` adopted — more context in less VRAM than 240K `q8/q8` | [`docs/measurements/depth.md`](docs/measurements/depth.md#context-window-ladder-224k-and-240k-272-w-2026-09-25) |
-| Long-context retrieval quality | RULER-style Spanish multi-key retrieval, 32K-240K fill | **60/60 exact match**, 0 loops (44/44 to 190K + 8/8 @ 220K + 8/8 @ 240K) | Validated on the adopted profile | [`docs/measurements/depth.md`](docs/measurements/depth.md#quality-ruler-style-200k-q8q8-mtp) |
-| Speculative decoding | none, MTP n=2/3/4/5, `--spec-draft-p-min` 0.3/0.8, DFlash2, n-gram stacking | n=3 +9-11% mean tg over n=2 at 190K/240K; n=4 45.8 tok/s @ 31% accept vs. n=3's 60.6 @ 56% (128K); p-min 0.8 raises accept 67%→96% but not speed; DFlash2 slower on 2 of 3 tasks at 190K | MTP n=3 adopted | [`docs/measurements/speculative.md`](docs/measurements/speculative.md) |
+| Long-context retrieval quality | RULER-style Spanish multi-key retrieval, 32K-240K fill | **68/68 exact match**, 0 loops (44/44 to 190K + 8/8 @ 220K + 8/8 @ 240K + 8/8 @ 240K on the exact adopted flags) | Validated on the exact adopted profile flags (MTP n=3, `-ub 256`) | [`docs/measurements/depth.md`](docs/measurements/depth.md#quality-ruler-style-200k-q8q8-mtp) |
+| Speculative decoding | none, MTP n=2/3/4/5, `--spec-draft-p-min` 0.3/0.8, DFlash2, n-gram stacking | n=3 +9-11% mean tg over n=2 at 190K/240K; n=4 21.4 @ 66% accept vs. n=3's 23.3 @ 71% (240K, exact adopted flags), also 45.8 @ 31% vs. 60.6 @ 56% (128K); p-min 0.8 raises accept 67%→96% but not speed; DFlash2 slower on 2 of 3 tasks at 190K | MTP n=3 adopted | [`docs/measurements/speculative.md`](docs/measurements/speculative.md) |
 | Physical batch | `-ub` 256/512/1024/2048 | 256: -350 MiB, pp -5%, same tg (262K profile); 1024: +590 MiB, no gain; 2048: +1.8 GiB, pp -1.7%, code tg -3.6% (128K screening) | `-ub 256` adopted at 262K; default (512) stays best at 128K fill | [`docs/measurements/memory.md`](docs/measurements/memory.md), [`docs/measurements/speculative.md`](docs/measurements/speculative.md#-ub-and-mtp-screening-at-128k-fill-272-w-2026-09-25) |
 | Concurrency | 1/2/4 slots (`-np`) | vs. queuing through 1 slot: 2 slots +MTP 8.6% slower wall time, 2 slots no MTP 6.0% slower, 4 slots 25.6% slower | 1 slot + MTP + queue adopted | [`docs/measurements/concurrency.md`](docs/measurements/concurrency.md#1-vs-2-vs-4-slots-mtp-onoff-2026-09-25) |
 | Power cap | 303 W vs. 272 W | Prefill -6% (487→459 tok/s) at 190K; hotspot 100-106°C→99°C; tg128 ~-3.4% at empty context (39.35→38.0, single uncontrolled sample) | 272 W adopted as the permanent cap | [`docs/measurements/thermals-power.md`](docs/measurements/thermals-power.md), [`results/20260926-rocm-runtime-ab/`](results/20260926-rocm-runtime-ab/) |

@@ -5,6 +5,13 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+- Measured MTP n=4 at 240K depth on the exact adopted flags (`-ub 256`): -8% mean tg vs. n=3
+  (21.4 vs. 23.3 tok/s), 66% vs. 71% acceptance — n=3 stays adopted. Also found generated text is
+  not bit-identical across n=2/n=3/`-ub 256` at temperature 0 for essay and code tasks.
+- Re-validated long-context retrieval quality at 240K on the exact adopted server flags (MTP n=3,
+  `-ub 256`, not just the KV q8_0/q5_1 variant, using `bench/longctx_quality.py`'s `--mtp-n`/
+  `--extra` options): 8/8 exact match — cumulative 68/68 exact match, 32K-240K fill.
+
 ## [2026-09-26]
 
 - Adopted `262k-q8q51-mtp` (262,144 context, KV `q8_0/q5_1`, MTP n=3, `-ub 256`) as the single

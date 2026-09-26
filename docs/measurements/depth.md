@@ -16,10 +16,11 @@ driver minimum — see `thermals-power.md`).
   `-ub 512` default): 21.4-32.2 tok/s at 190K fill, process VRAM peak 22,883 MiB. **Removed
   2026-09-26** from `models.toml` — one best default, no overlapping alternatives (see
   `docs/DECISIONS.md`); the measurement stands as evidence.
-- **Long-context quality validated up to 240K fill (60/60 exact match total)**: 52/52 up to 220K
+- **Long-context quality validated up to 240K fill (68/68 exact match total)**: 52/52 up to 220K
   (see below) plus 8/8 at 240K on the adopted `262k-q8q51-mtp` profile (KV q8_0/q5_1) — the +27%
-  KLD of q8_0/q5_1 over q8_0/q8_0 does not show up as a retrieval error at this depth. See
-  "Quality (RULER-style)" below.
+  KLD of q8_0/q5_1 over q8_0/q8_0 does not show up as a retrieval error at this depth — plus a
+  further 8/8 at 240K re-run on the *exact* adopted server flags (MTP n=3, `-ub 256`, not just the
+  KV variant). See "Quality (RULER-style)" below.
 - The `200k-q8q8-mtp` and `240k-q8q8-mtp` profiles were **removed from `models.toml`**: 262K
   q8_0/q5_1 now gives more context than either at the same validated quality and less process VRAM
   than 240K q8/q8 (see "Context-window ladder" below).
@@ -237,6 +238,26 @@ q8_0/q5_1 over q8_0/q8_0 (`kv-quality.md`) does not show up as a retrieval error
 one of the criteria that closed the decision to adopt `262k-q8q51-mtp` as the default profile
 (`docs/DECISIONS.md`).
 
+### 240K, exact adopted flags (MTP n=3, `-ub 256`), 2026-09-26
+
+The 240K run above used MTP n=2 and no `-ub 256` — not the exact flags `262k-q8q51-mtp` ships
+with. Repeated on those exact flags via `bench/longctx_quality.py`'s new `--mtp-n`/`--extra`
+options (commit 17567ff): `--ctx 262144 --variants q8q51-mtp1 --depths 240000 --docs 2 --mtp-n 3
+--extra "-ub 256"`. Same corpus, 2 documents × 4 questions, temperature 0. Raw data:
+[`../../results/20260926-longctx-quality-262k/README.md`](../../results/20260926-longctx-quality-262k/README.md#exact-adopted-config-confirmation-mtp-n3--ub-256-2026-09-26).
+
+**8/8 exact match, field accuracy 1.0, 0 loops, 0 truncated, 0 failures.** Prompts
+240,105-240,111, cold prefill 380-382 tok/s; follow-up questions reuse 239,845-239,851 cached
+tokens and process ~255-262 new tokens at 142-152 tok/s; generation 27.9-29.7 tok/s (vs.
+23.0-24.0 tok/s on the n=2/no-`-ub 256` run above). Peak process VRAM 22,628 MiB, GTT 8 MiB,
+0 evicted, hotspot 99°C, system VRAM peak 24,432 of 24,560 MiB.
+
+**Cumulative: 68/68 exact match, 32K-240K fill** (60/60 above + this 8/8). Confirms quality holds
+not only for the KV q8_0/q5_1 variant but on the exact server flags (MTP n=3, `-ub 256`) the
+default profile actually launches with — closing the gap left by the n=2/no-`-ub 256` run above
+(also relevant since generated text is not bit-identical across n=2/n=3/`-ub 256` at temperature
+0 for some task types — see `speculative.md`'s "n=4 checked again at 240K").
+
 ## Open questions / pending (priority order)
 
 1. A broader 190K quality sample (the remaining 4 of 5 planned documents, 16 of 20 questions) —
@@ -283,3 +304,7 @@ one of the criteria that closed the decision to adopt `262k-q8q51-mtp` as the de
   adopted as the new default, superseding `224k-q8q8-mtp` (kept as the alternative);
   `200k-q8q8-mtp` and `240k-q8q8-mtp` removed from `models.toml`. See `speculative.md` and
   `memory.md` for the full evidence.
+- **2026-09-26, night**: MTP n=4 re-checked at 240K on the exact adopted flags (`-ub 256`) — still
+  loses to n=3 (-8% mean tg), as it did at 128K empty-context. Quality re-validated at 240K on the
+  *exact* adopted flags (MTP n=3, `-ub 256`, not just the KV variant): 8/8 exact match, cumulative
+  68/68 from 32K to 240K. See `speculative.md`.

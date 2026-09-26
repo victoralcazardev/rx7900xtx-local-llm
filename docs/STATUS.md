@@ -26,8 +26,9 @@ best default, no overlapping alternatives.
   [`measurements/memory.md`](measurements/memory.md).
 - **Empty-context generation**: ~61 tok/s from a single smoke-test sample (not a depth measurement
   — see `measurements/depth.md`'s empty-context matrix for the fuller table).
-- **Quality**: **60/60 exact match, 0 loop detections** on a RULER-style multi-key retrieval test,
-  32K-240K fill (`bench/longctx_quality.py`). See
+- **Quality**: **68/68 exact match, 0 loop detections** on a RULER-style multi-key retrieval test,
+  32K-240K fill (`bench/longctx_quality.py`), including 8/8 on the exact adopted server flags
+  (MTP n=3, `-ub 256`) at 240K. See
   [`measurements/depth.md`](measurements/depth.md#quality-ruler-style-200k-q8q8-mtp).
 - **Power**: 272 W permanent cap (this card's driver minimum) — ~6% slower prefill than the
   factory 303 W default, with the hotspot 7-8°C cooler. See

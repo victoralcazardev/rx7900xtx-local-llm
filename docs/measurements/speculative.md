@@ -7,7 +7,9 @@
   190K (`224k-q8q8-mtp`, removed 2026-09-26) and +11% at 240K (`262k-q8q51-mtp`, the current
   default) — see "MTP n=3 confirmed at depth" below. **n=4 is slower**: at the 128K empty-context
   screening, n=4 drops to 45.8 tok/s and 31% acceptance vs. n=3's 60.6 tok/s and 56% (see
-  `depth.md`'s server-real matrix). `--spec-draft-p-min 0.8` (a community config) raises acceptance
+  `depth.md`'s server-real matrix). Confirmed again at 240K depth on the exact adopted flags
+  (`-ub 256`): 21.4 vs. 23.3 tok/s mean (-8%), 66% vs. 71% acceptance — see "n=4 checked again at
+  240K" below. `--spec-draft-p-min 0.8` (a community config) raises acceptance
   substantially (67%→96%) but **not speed** — not adopted on its own.
 - **At depth, MTP's gain over no speculation shrinks sharply** vs. the empty-context finding below:
   at ~190-240K context it drops to roughly +15-50% depending on the exact comparison (see
@@ -229,6 +231,31 @@ Prefill ~455 tok/s (224K) / 400 tok/s (262K), hotspot 98-99°C, 0 evicted in eve
   floor (≥15 tok/s, target ≥17) with 0 evicted, one of the criteria for adopting
   `262k-q8q51-mtp` as the new default profile (see `docs/DECISIONS.md`).
 
+### n=4 checked again at 240K, exact adopted flags (`-ub 256`, 2026-09-26)
+
+The 128K empty-context screening above already showed n=4 losing to n=3 (45.8 tok/s @ 31% accept
+vs. 60.6 @ 56%). Re-checked at the 262K profile's real 240K operating depth, on the exact flags
+`262k-q8q51-mtp` ships with (`-ub 256`, adopted after the n=3-at-depth measurement above — see
+`../../results/20260926-ubatch256-262k/`). Same method: `bench/spec_depth_bench.py`, essay/copy/
+code, temperature 0, 400 forced output tokens, 1 repetition (cold + warm identical), 272 W.
+
+| Variant | Essay | Copy | Code | Mean | Accept | Peak process VRAM |
+|---|---:|---:|---:|---:|---:|---:|
+| n=3 + `-ub 256` (adopted, reference) | 24.4 | 26.9 | 18.6 | 23.3 | 71% | 22,630 MiB |
+| **n=4** + `-ub 256` | **21.9** | **25.6** | **16.7** | **21.4 (-8%)** | 66% | 22,781 MiB |
+
+Prefill ~380 tok/s both, hotspot 99°C, 0 evicted. Raw data and exact command:
+[`../../results/20260926-mtp-n3-depth/README.md`](../../results/20260926-mtp-n3-depth/README.md#n4-at-240k-on-the-exact-adopted-flags--ub-256).
+
+- **n=3 stays adopted; n=4 loses at 240K depth too**, not just at the 128K empty-context
+  screening.
+- **Generated text is not bit-identical at temperature 0** across n=2/n=3/`-ub 256` for the essay
+  and code tasks (copy is identical): batched verification of different draft sizes changes
+  floating-point rounding, and greedy decoding eventually diverges. Retrieval-quality results
+  must therefore be validated on the exact adopted flags rather than assumed from a
+  differently-configured run — see the "exact adopted config" confirmation in
+  [`depth.md`](depth.md#quality-ruler-style-200k-q8q8-mtp).
+
 ## Investigation notes on nearby forks (not adopted)
 
 - **Lemonade b1331** (llama.cpp base ≈ b11170): its build workflow does not enable
@@ -265,3 +292,7 @@ Prefill ~455 tok/s (224K) / 400 tok/s (262K), hotspot 98-99°C, 0 evicted in eve
 - **2026-09-26**: MTP n=3 re-measured at 190K and 240K fill (the two long-context profiles' actual
   operating depths) — wins across all three task types at both depths (+9-11% mean tg), superseding
   the 128K-fill "content-dependent, not adopted" call; adopted as the new default MTP draft length.
+- **2026-09-26, later**: n=4 re-checked at 240K on the exact adopted flags (`-ub 256`) — still
+  loses to n=3 (-8% mean tg), confirming the 128K-fill screening's call at depth too. Also found
+  generated text is not bit-identical across n=2/n=3/`-ub 256` at temperature 0 for essay and
+  code; retrieval quality re-validated on the exact adopted flags (`depth.md`), cumulative 68/68.

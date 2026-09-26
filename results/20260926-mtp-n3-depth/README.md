@@ -35,6 +35,34 @@ Prefill 400 tok/s, hotspot 99°C, 0 evicted.
 **Raw data**: `bench/res/spec-depth-20260926-113943-p5b-262k-q8q51-n2/`,
 `bench/res/spec-depth-20260926-115338-p5b-262k-q8q51-n3/` (local only).
 
+### n=4 at 240K on the exact adopted flags (`-ub 256`)
+
+Repeated with `-ub 256` (adopted after the table above was measured — see
+`20260926-ubatch256-262k/`), to compare n=4 against the adopted n=3 + `-ub 256` baseline instead
+of the no-`-ub 256` n=3 row above. Same method: `bench/spec_depth_bench.py`, 262K window
+(`-c 262144`, KV q8_0/q5_1), 240K fill, temperature 0, 400 forced output tokens, 1 repetition
+(cold + warm identical).
+
+| Variant | Essay | Copy | Code | Mean | Accept | Peak process VRAM |
+|---|---:|---:|---:|---:|---:|---:|
+| n=3 + `-ub 256` (adopted, reference) | 24.4 | 26.9 | 18.6 | 23.3 | 71% | 22,630 MiB |
+| **n=4** + `-ub 256` | **21.9** | **25.6** | **16.7** | **21.4 (-8%)** | 66% | 22,781 MiB |
+
+Prefill ~380 tok/s both, hotspot 99°C, 0 evicted.
+
+**Command**: `bench/spec_depth_bench.py --run --depth 240000 --ctx 262144 --kv q5_1 --reps 1
+--variants none --extra "--spec-type draft-mtp --spec-draft-n-max 4 -ub 256"`.
+
+**Conclusion**: n=3 stays adopted; n=4 loses at 240K just as it did at the 128K empty-context
+screening (`speculative.md`).
+
+**Non-bit-identical output note**: at temperature 0, generated text is **not bit-identical**
+across n=2 / n=3 / `-ub 256` for the essay and code tasks (copy is identical) — batched
+verification of different draft sizes changes floating-point rounding, and greedy decoding
+eventually diverges downstream. Quality (exact-match retrieval) results must therefore be
+validated on the exact adopted flags, not assumed from a differently-configured run — see
+[`../20260926-longctx-quality-262k/README.md`](../20260926-longctx-quality-262k/README.md#exact-adopted-config-confirmation-mtp-n3--ub-256-2026-09-26).
+
 **Conclusion**: **n=3 wins at depth on both profiles** (+9-11% mean tg), unlike the 128K-fill
 screening in `speculative.md` where only literal copy favored n=3 — the earlier "content-dependent,
 not adopted" call was scoped to that shallower depth. `--spec-draft-p-min 0.8` raises acceptance

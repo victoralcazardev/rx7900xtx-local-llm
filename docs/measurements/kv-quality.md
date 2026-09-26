@@ -15,9 +15,9 @@
   without MTP. On RDNA3, IQ quantizations generate faster than K quantizations at the same
   file size class.
 - Limitation: KLD was measured at 32K of context. At 262K the KV error could accumulate further —
-  this is now checked: a long-context retrieval/quality test (RULER-style) is **done**, 60/60 exact
-  match from 32K to 240K fill (q8_0/q8_0 up to 220K, q8_0/q5_1 at 240K on the adopted
-  `262k-q8q51-mtp` profile) — see [`depth.md`](depth.md).
+  this is now checked: a long-context retrieval/quality test (RULER-style) is **done**, 68/68 exact
+  match from 32K to 240K fill (q8_0/q8_0 up to 220K, q8_0/q5_1 at 240K, including on the exact
+  adopted `262k-q8q51-mtp` server flags) — see [`depth.md`](depth.md).
 
 ## KV cache quantization: KLD vs. f16
 

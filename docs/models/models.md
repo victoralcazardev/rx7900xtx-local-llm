@@ -26,7 +26,7 @@ K/V mix out of the box and stays as a reference/fallback backend.
 ## Recommended profile
 
 `qwen38-iq3s-mtp` / `262k-q8q51-mtp` is the manifest's only model/profile and
-`scripts/launch.py`'s `[defaults]` when no alias is given: fill 240K, quality 60/60 exact match
+`scripts/launch.py`'s `[defaults]` when no alias is given: fill 240K, quality 68/68 exact match
 32K-240K (0 loops), KV q8_0/q5_1, MTP n=3, `-ub 256`, process VRAM peak 22,630 MiB, 0 evicted. See
 `docs/STATUS.md` for the exact launch command and `docs/measurements/depth.md` for the full
 matrix.
