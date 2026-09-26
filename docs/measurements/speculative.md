@@ -2,12 +2,21 @@
 
 ## Current conclusion
 
-- **MTP `--spec-draft-n-max 2` is the best overall speculative-decoding option and uses the least
-  VRAM**: no separate draft model needed, the head ships inside the GGUF (`-mtp`). With an empty
-  context: **+50-60%** generation speed (39 → 58-69 tok/s depending on task).
-- **At depth, MTP's gain shrinks sharply**: at ~190-240K context it drops to roughly +15-50%
-  depending on the exact comparison (see `depth.md`), because MTP's per-step cost also grows with
-  depth. The mechanism is identified (below) but only partially explains the slowdown.
+- **MTP `--spec-draft-n-max 3` is the adopted default at depth (2026-09-26)**: confirmed at both
+  long-context profiles' real operating fill, it wins across all three task types, +9% mean tg at
+  190K (`224k-q8q8-mtp`, removed 2026-09-26) and +11% at 240K (`262k-q8q51-mtp`, the current
+  default) — see "MTP n=3 confirmed at depth" below. **n=4 is slower**: at the 128K empty-context
+  screening, n=4 drops to 45.8 tok/s and 31% acceptance vs. n=3's 60.6 tok/s and 56% (see
+  `depth.md`'s server-real matrix). `--spec-draft-p-min 0.8` (a community config) raises acceptance
+  substantially (67%→96%) but **not speed** — not adopted on its own.
+- **At depth, MTP's gain over no speculation shrinks sharply** vs. the empty-context finding below:
+  at ~190-240K context it drops to roughly +15-50% depending on the exact comparison (see
+  `depth.md`), because MTP's per-step cost also grows with depth. The mechanism is identified
+  (below) but only partially explains the slowdown.
+- **Older finding, empty context**: before the depth-specific measurements above, `--spec-draft-n-max
+  2` looked like the best overall option and used the least VRAM: no separate draft model needed,
+  the head ships inside the GGUF (`-mtp`). With an empty context: **+50-60%** generation speed
+  (39 → 58-69 tok/s depending on task). Superseded at depth by n=3 (above).
 - **DFlash2 does not beat MTP** once measured at depth (190K): slower on two of three task types,
   ties on the third, and costs more VRAM. A third-party claim that DFlash2 wins at all depths on a
   different GPU (RTX 3090) does not reproduce here.
@@ -15,13 +24,9 @@
   +6%) and hurt on reasoning (−8%); not adopted without repeated measurement.
 - **MTP n=3, first measured at 128K fill (272 W)**: strongly content-dependent — +17% on literal
   copy, ≈ on code, small essay gain — but acceptance drops 11 points vs. n=2 (75% → 64%). At that
-  depth it was **not adopted** as the default. `--spec-draft-p-min 0.3` is within noise of plain
-  n=2 at the same depth — not adopted. See "`-ub` and MTP screening at 128K fill" below.
-- **MTP n=3, confirmed at 190K and 240K fill (2026-09-26)**: **now adopted as the default** for
-  both long-context profiles — at these deeper fills it wins across all three task types, +9% mean
-  tg at 190K (224K profile) and +11% at 240K (262K profile), unlike the 128K-fill result above
-  where only copy favored it. `--spec-draft-p-min 0.8` (a community config) raises acceptance
-  (67%→96%) but not speed — not adopted on its own. See "MTP n=3 confirmed at depth" below.
+  depth it was **not adopted** as the default (later superseded — see above).
+  `--spec-draft-p-min 0.3` is within noise of plain n=2 at the same depth — not adopted. See
+  "`-ub` and MTP screening at 128K fill" below.
 - The **root cause of MTP's depth slowdown is identified but not fully explained**: verifying ≥3
   tokens per step (MTP n≥2) routes through the FlashAttention TILE kernel, which converts the whole
   KV cache to f16 on every step; a fork that removes that conversion only recovered ~2.5% of the

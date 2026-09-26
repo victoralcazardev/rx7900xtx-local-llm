@@ -38,10 +38,10 @@ driver notes, the P-state bug, the NTFS mount caveats).
    for the backend you have under `[engines]`.
 2. Run the smoke test for the reference model/profile:
    ```
-   python scripts/smoke.py qwen38-iq3s-mtp --profile 262k-q8q8
+   python scripts/smoke.py qwen38-iq3s-mtp --profile 262k-q8q51-mtp
    ```
-3. If it answers with real content and tok/s, continue with the rest of the ladder in
-   `docs/models/qwen38-27b-quants.md` §6 (`262k-q8q8-mtp`, `262k-q8q51-mtp`, ...).
+3. If it answers with real content and tok/s, the install is verified against the adopted default
+   profile — see `docs/models/qwen38-27b-quants.md` §6 and `docs/STATUS.md` for how it got there.
 
 ## How to verify
 

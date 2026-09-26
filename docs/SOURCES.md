@@ -90,7 +90,7 @@ particular coding-agent harness. These entries are recorded as context, not a re
 Verdict for this section: **verified** (matches a primary source read directly), **unverified**
 (post/thread not fetchable, or no independent reproduction found), **not applicable** (accurate but
 doesn't cover this repository's stack or operating depth). Full test plan for the candidates below:
-Engram `rx7900xtx/research/community-claims-2026-09-26` (private working notes).
+private working notes (not published).
 
 | Claim | Source | Status | Note |
 |---|---|---|---|

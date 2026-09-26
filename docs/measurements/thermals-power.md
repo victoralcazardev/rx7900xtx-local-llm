@@ -115,21 +115,36 @@ deep run (depth or `-c` ≥ 128K). It never writes `power1_cap` itself. See `ben
 
 ### Making it permanent: a systemd oneshot unit
 
-Since the manual command above has to be re-run after every reboot, the 272 W cap is now applied
-by a `systemd` oneshot unit that runs once at boot, instead of relying on the operator to remember
-it. Described generically here (no personal machine paths):
+Since the manual command above has to be re-run after every reboot, the 272 W cap is applied by a
+`systemd` oneshot unit that runs once at boot, instead of relying on the operator to remember it.
+Both files are tracked in this repository, generic and with no personal machine paths:
+[`scripts/systemd/gpu-power-cap.sh`](../../scripts/systemd/gpu-power-cap.sh) and
+[`scripts/systemd/gpu-power-cap.service`](../../scripts/systemd/gpu-power-cap.service).
 
 - Targets the card by **PCI device ID** (`1002:744c`, this GPU's vendor:device ID — stable across
-  reboots and hwmon index renumbering, unlike `card*`/`hwmon*`), resolving the matching
-  `power1_cap` sysfs path at run time the same way `find_power_cap_paths()` does (see
-  `bench/depth_bench.py`).
+  reboots and hwmon index renumbering, unlike `card*`/`hwmon*`), scanning every `card*/device` for
+  that vendor/device pair instead of assuming a fixed card index.
 - Writes the cap **only if it falls within the resolved `power1_cap_min`/`power1_cap_max` bounds**
   read from sysfs at run time — never a value hardcoded past what the card itself reports as valid.
-- Runs once at boot (`Type=oneshot`, no `Restart=`), after the GPU driver has bound
-  (`After=multi-user.target` or the equivalent udev-settle target), and exits — it does not stay
-  resident or re-apply the cap while the machine is running (a later manual `echo` still takes
+- Runs once at boot (`Type=oneshot`, `RemainAfterExit=yes`, no `Restart=`), and exits — it does not
+  stay resident or re-apply the cap while the machine is running (a later manual `echo` still takes
   effect until the next boot).
-- Verify it applied with the same read-only command as above: `cat "$cap_path"`.
+
+Install (run as separate commands; the card index, e.g. `card1`, and the hwmon index vary per
+machine — the script scans for them, don't hardcode either):
+
+```bash
+sudo install -m755 scripts/systemd/gpu-power-cap.sh /usr/local/bin/
+sudo install -m644 scripts/systemd/gpu-power-cap.service /etc/systemd/system/
+sudo systemctl enable --now gpu-power-cap.service
+```
+
+Verify:
+
+```bash
+cat /sys/class/drm/card*/device/hwmon/hwmon*/power1_cap   # expect 272000000
+journalctl -u gpu-power-cap
+```
 
 ## Open questions (future work, not prioritized this session)
 

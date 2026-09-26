@@ -47,6 +47,11 @@ These hashes are of this repository's own local copy, not the upstream repo's pu
 (HF doesn't publish one for this file) — use them to confirm your download matches what this
 repository measured against, not as an upstream-signed value.
 
+Expected layout, under whatever `models_root` you set in `local.toml` (see step 3):
+`<models_root>/Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp/<gguf>` — one folder per model, matching the `gguf`
+path in `models.toml` (`Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp/Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp.gguf`, plus
+`mmproj-Qwen3.8-27B-BF16.gguf` for vision, same folder).
+
 See `docs/models/qwen38-27b-quants.md` for the other candidate quants (IQ3_S, IQ3_XXS-mtp, RVN) and
 their provenance.
 
@@ -56,7 +61,15 @@ Build or download a **single-backend** llama.cpp binary (never Vulkan+HIP in the
 `docs/ENGINES.md` for why). Pinned commits, build flags and SHA256 for every engine used in this
 repository's measurements are in `docs/ENGINES.md`.
 
-### 3. Configure and launch
+### 3. Cap the power to 272 W
+
+Every headline number in this repository (tok/s, VRAM, thermals) was measured under a 272 W power
+cap, not the card's factory 303 W default — at 303 W the same 190K-fill prefill runs about 6%
+faster but the hotspot reaches up to 106°C, vs. 98-99°C at 272 W. Install the cap once, at boot, via
+the systemd unit tracked in this repository: `docs/measurements/thermals-power.md` §"Making it
+permanent".
+
+### 4. Configure and launch
 
 ```bash
 cp local.example.toml local.toml   # then edit models_root and [engines] for this machine
@@ -68,7 +81,8 @@ python3 scripts/launch.py
 Then connect any OpenAI-compatible client to `http://127.0.0.1:8080`. To load a different
 model/profile instead of the default, pass them explicitly:
 `python3 scripts/launch.py <alias> --profile <profile>` (see `docs/models/models.md` for what's
-in the manifest). Full walkthrough: `docs/sop/launch-model.md`.
+in the manifest). Full walkthrough: `docs/sop/launch-model.md`, which also covers the optional
+`ia` shell wrapper for a shorter command line.
 
 ## Token usage ledger
 

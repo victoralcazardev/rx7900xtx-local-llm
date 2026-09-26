@@ -249,11 +249,13 @@ adopted configuration lives in `models.toml`; the resolution, for reference:
 
 The original goal was the full native 262,144-token context at the best quality that fits in 24 GB.
 The test ladder that was actually run (IQ3_S-mtp + 262K sweep → KV mix trade-offs → the eventual
-190-200K daily profile) is documented with real numbers in `docs/measurements/depth.md` and
+single daily profile) is documented with real numbers in `docs/measurements/depth.md` and
 `docs/measurements/speculative.md`. Summary of the resolution: 262K with q8/q8 + MTP does not fit
-safely (see `docs/measurements/memory.md`); the adopted daily profile trades some context (200K
-instead of 262K) for headroom and depth throughput. The **long-context quality test (RULER-style
-retrieval) is still pending** at the time of writing — see `docs/measurements/depth.md#open-questions`.
+safely (see `docs/measurements/memory.md`); the adopted profile is `262k-q8q51-mtp` (`-c 262144`,
+KV q8_0/q5_1, MTP n=3), which reaches the full native 262K context after all, at 22,630 MiB process
+VRAM. The **long-context quality test (RULER-style retrieval) is done**: 60/60 exact match from
+32K to 240K fill (q8_0/q8_0 up to 220K, q8_0/q5_1 at 240K on the adopted profile) — see
+[`docs/measurements/depth.md`](../measurements/depth.md) and [`docs/STATUS.md`](../STATUS.md).
 
 ## Open questions
 

@@ -66,7 +66,7 @@ and verify it.
 | Script | Old name (still in historical `command.json` files) | Measures |
 |---|---|---|
 | `depth_bench.py` | `validacion262.py` | Cold matrix: tok/s and acceptance at fixed input depths (128K/200K/240K), KV q8_0/q8_0 vs. q8_0/q5_1+MTP2, plus a warm second turn reusing the KV cache. |
-| `longctx_quality.py` | `calidad262.py` | Long-context retrieval quality (RULER-style needle test) across the same depths and KV/MTP variants. **Not yet run at the time of writing** — see `docs/measurements/` for status. |
+| `longctx_quality.py` | `calidad262.py` | Long-context retrieval quality (RULER-style needle test) across the same depths and KV/MTP variants. Run 32K-240K, 60/60 exact match cumulative — see [`../results/20260925-longctx-quality-200k/`](../results/20260925-longctx-quality-200k/), [`../results/20260926-longctx-quality-224k/`](../results/20260926-longctx-quality-224k/), [`../results/20260926-longctx-quality-262k/`](../results/20260926-longctx-quality-262k/), and `docs/measurements/depth.md`. |
 | `spec_bench.py` | `mtp262.py` | Paired comparison of speculative-decoding variants (no draft, MTP n=2/n=3, n-gram map/mod) across six task types. |
 | `spec_depth_bench.py` | `mtpprof262.py` | Speculative-decoding draft-n sweep (including DFlash) at a fixed deep context (default 240K), to see which draft length wins once the KV read dominates. |
 | `summarize.py` | `resumen262.py` | Turns a `depth_bench.py` output folder into a Markdown table (throughput, warm-turn reuse, VRAM/GTT/thermal peaks per phase). |
