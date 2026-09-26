@@ -8,7 +8,7 @@ local `llama-server` process. By default that server binds to `127.0.0.1:8080` (
 
 Please do not open a public issue for a security concern. Instead:
 
-- Use [GitHub's private vulnerability reporting](https://github.com/valcazar57/rx7900xtx-local-llm/security/advisories/new)
+- Use [GitHub's private vulnerability reporting](https://github.com/victoralcazardev/rx7900xtx-local-llm/security/advisories/new)
   for this repository, or
 - Reach out privately via the author's website: <https://victoralcazar.com>.
 

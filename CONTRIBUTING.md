@@ -5,7 +5,7 @@ dependency-free (Python stdlib only) — please keep that in mind for scripts.
 
 ## Reporting an issue
 
-Open a [GitHub issue](https://github.com/valcazar57/rx7900xtx-local-llm/issues). Use the
+Open a [GitHub issue](https://github.com/victoralcazardev/rx7900xtx-local-llm/issues). Use the
 [bug report form](.github/ISSUE_TEMPLATE/bug_report.yml) for something broken, or the
 [share your results form](.github/ISSUE_TEMPLATE/share_results.yml) if you want to contribute a
 new measurement (see below for the full process).

@@ -4,7 +4,7 @@ This repository uses two licenses, depending on the kind of file.
 
 Applies to all source code: `scripts/`, `bench/`, and any other `.py`/`.sh` file.
 
-Copyright (c) 2026 valcazar57
+Copyright (c) 2026 Victor Alcazar
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -29,7 +29,7 @@ THE SOFTWARE.
 Applies to documentation and data: everything under `docs/`, `results/`, and
 any `README.md`, plus raw and summarized measurement data.
 
-Copyright (c) 2026 valcazar57
+Copyright (c) 2026 Victor Alcazar
 
 This work is licensed under the Creative Commons Attribution 4.0 International
 License. To view a copy of this license, visit
