@@ -226,7 +226,7 @@ Prefill ~455 tok/s (224K) / 400 tok/s (262K), hotspot 98-99°C, 0 evicted in eve
   `docs/SOURCES.md`) raises acceptance substantially (67%→96% at 190K) but not speed (26.6→26.3,
   within noise) — **not adopted on its own**.
 - The 262K profile's 240K mean tg (23.4, later 23.3 with `-ub 256` — see `memory.md`) meets the
-  user's floor (≥15 tok/s, target ≥17) with 0 evicted, one of the criteria for adopting
+  floor (≥15 tok/s, target ≥17) with 0 evicted, one of the criteria for adopting
   `262k-q8q51-mtp` as the new default profile (see `docs/DECISIONS.md`).
 
 ## Investigation notes on nearby forks (not adopted)

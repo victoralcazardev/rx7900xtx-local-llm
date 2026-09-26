@@ -18,7 +18,7 @@
 - **272 W is now set via a systemd oneshot unit** (see "Power limit" below) instead of a manual
   per-boot command, so it survives a reboot without the operator remembering to re-run anything.
 - Care for the GPU (lower power limit, undervolt) is **explicitly deprioritized** as a standalone
-  work item — the user's ordering is context > model quality > cache quality > speed — but the
+  work item — the priority ordering is context > model quality > cache quality > speed — but the
   190K/106°C event above makes a conservative, permanent power cap the working default, not a
   broader tuning effort.
 
