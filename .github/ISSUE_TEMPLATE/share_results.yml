@@ -1,0 +1,46 @@
+name: Share your results
+description: Contribute a reproducible measurement from your own RX 7900 XTX (or similar GPU).
+labels: ["results"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for sharing a result. Read `docs/BENCHMARK-FORMAT.md` and `CONTRIBUTING.md` first
+        — this form collects the same fields a `results/YYYYMMDD-topic-variant/README.md` needs.
+  - type: input
+    id: topic
+    attributes:
+      label: What does this measure?
+      placeholder: e.g. MTP acceptance at temperature 1, or a different GPU's depth matrix
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: >
+        GPU model/VRAM/board, power cap, OS/kernel, Mesa version, ROCm runtime + compiler,
+        llama.cpp commit and build flags, model file name and SHA256.
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Exact launch/benchmark command
+      render: bash
+    validations:
+      required: true
+  - type: textarea
+    id: method
+    attributes:
+      label: Depth/fill, temperature, repetitions
+      placeholder: e.g. 240K fill, temperature 0, 2 repetitions
+    validations:
+      required: true
+  - type: textarea
+    id: results
+    attributes:
+      label: Results / summary
+      description: A small summary table, or a link to a branch/gist with your `summary.md`/`summary.jsonl`.
+    validations:
+      required: true

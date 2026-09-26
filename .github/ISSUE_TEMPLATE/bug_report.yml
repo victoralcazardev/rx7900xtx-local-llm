@@ -1,0 +1,47 @@
+name: Bug report
+description: Something in the scripts, launcher, or docs is broken or wrong.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. Please fill in as much as you can — see
+        `CONTRIBUTING.md` for the full list of environment fields this project tracks.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug, and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: The exact command(s) you ran.
+      render: bash
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: >
+        GPU model/VRAM/board, power cap, OS/kernel, Mesa version, ROCm runtime + compiler,
+        llama.cpp commit/build, Python version.
+      placeholder: |
+        GPU: AMD Radeon RX 7900 XTX, 24 GB
+        Power cap: 272 W
+        OS/kernel: CachyOS, kernel 7.2.7
+        Mesa: 26.2.3
+        ROCm runtime: 7.2.4
+        llama.cpp: b11160 (70c4e1582)
+        Python: 3.12
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant output
+      description: Console output, stack trace, or `check-repo.py`/test failure output.
+      render: text
