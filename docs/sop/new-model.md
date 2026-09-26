@@ -32,8 +32,10 @@
    python scripts/smoke.py <alias> --profile <profile>
    ```
 
-6. **Harness wiring**: usually nothing to change — the two fixed providers (`local-128k`,
-   `local-262k`) don't depend on the alias. Only touch harness config if the family uses a thinking
+6. **Harness wiring**: usually nothing to change — the one fixed provider (`local-262k`) doesn't
+   depend on the alias, but only covers a profile with `context = 262144`; a profile at a
+   different context has no harness entry wired (`scripts/manifest.py`'s `harness_entry` returns
+   `None`) unless you wire a new one. Only touch harness config if the family uses a thinking
    format other than `<think>`/channels already covered (check `tokenizer.chat_template` with
    `gguf_info.py`) — document it in `AGENTS.md` before changing anything.
 

@@ -31,8 +31,8 @@ benchmark scripts and measurement write-ups with pinned versions and reproducibl
   every model/profile in `models.toml` (GGUF path present, context ≥ 128K, K/V combination
   supported by the backend). A backend with no engine configured in `local.toml` is only a
   WARNING; anything else fails the exit code. Optionally, if `local.toml` has a `[harness]`
-  table, it also checks that your own coding-agent harness is wired to the two fixed
-  `local-*` providers this launcher expects on `:8080` — see below.
+  table, it also checks that your own coding-agent harness is wired to the one fixed
+  `local-262k` provider this launcher expects on `:8080` — see below.
 - **Smoke-test a model/profile**: `python3 scripts/smoke.py <alias> [--profile P]` — starts
   the server, waits for `/health`, sends one real chat request, and kills the server.
 - **GGUF metadata**: `python3 scripts/gguf_info.py <path-or-folder>` — architecture, native
@@ -57,12 +57,12 @@ benchmark scripts and measurement write-ups with pinned versions and reproducibl
 ## Coding-agent harness (optional)
 
 If you drive this server from a coding-agent harness (any tool that reads an OpenAI-compatible
-`baseUrl` + `contextWindow` provider list), wire it to exactly two fixed entries pointing at
-`:8080` — `local-128k` (contextWindow 131072) and `local-262k` (contextWindow 262144) — and let
-`launch.py` decide which alias/profile is actually loaded there, instead of adding one entry
-per model. `check-sync.py` can verify this wiring, but it is off by default: this repository
-doesn't assume you use any particular harness. Enable it locally with a `[harness]` table in
-your git-ignored `local.toml` (see `local.example.toml`).
+`baseUrl` + `contextWindow` provider list), wire it to exactly one fixed entry pointing at
+`:8080` — `local-262k` (contextWindow 262144) — and let `launch.py` decide which alias/profile is
+actually loaded there, instead of adding one entry per model. `check-sync.py` can verify this
+wiring, but it is off by default: this repository doesn't assume you use any particular harness.
+Enable it locally with a `[harness]` table in your git-ignored `local.toml` (see
+`local.example.toml`).
 
 ## What still holds, regardless of hardware
 

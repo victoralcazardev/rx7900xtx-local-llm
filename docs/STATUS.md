@@ -15,29 +15,23 @@ Engine `hip-kvmix`, `-c 262144`, KV `q8_0/q5_1`, MTP `--spec-draft-n-max 3`, `-u
 disabled, measured under a 272 W power cap (this card's driver minimum, now the permanent
 setting — see `measurements/thermals-power.md`).
 
-`224k-q8q8-mtp` is the **alternative** long-context profile (`-c 229376`, KV `q8_0/q8_0`, MTP n=3,
-`-ub 512` default):
-
-```
-python scripts/launch.py qwen38-iq3s-mtp --profile 224k-q8q8-mtp
-```
+`models.toml` ships this single model/profile by design (2026-09-26, `docs/DECISIONS.md`): one
+best default, overlapping alternatives removed. The former `224k-q8q8-mtp` alternative and the
+`128k-q8q8-mtp`/`262k-q8q8` profiles were removed from the manifest that day; their measurements
+stay as historical evidence in `docs/measurements/`.
 
 ## Key figures
 
 - **262K default**: 18.6-26.9 tok/s at 240K fill across three task types (essay/copy/code),
-  process VRAM peak **22,630 MiB**, 0 evicted. **224K alternative**: 21.4-32.2 tok/s at 190K fill,
-  process VRAM peak **22,883 MiB**. See
+  process VRAM peak **22,630 MiB**, 0 evicted. See
   [`measurements/speculative.md`](measurements/speculative.md)'s "MTP n=3 confirmed at depth" and
   [`measurements/memory.md`](measurements/memory.md)'s "`-ub 256`" section.
-- **128K daily-use profile** (`128k-q8q8-mtp`, vision on): ~58-69 tok/s empty context, ~31 tok/s at
-  104K. VRAM 19.6 GiB. See [`measurements/depth.md`](measurements/depth.md).
-- **262K official-binary profile** (`262k-q8q8`, no MTP): ~39 tok/s empty, ~19 tok/s at 182K. VRAM
-  21.4 GiB.
 - **MTP n=3 adopted as the default draft length (2026-09-26)**: confirmed at depth on both
-  long-context profiles — +9% mean tg at 190K (224K profile), +11% at 240K (262K profile), across
-  all three task types. This supersedes the 2026-09-25 128K-fill screening, which only found n=3
-  favorable on literal copy at that shallower depth. `--spec-draft-p-min 0.8` raises acceptance but
-  not speed — not adopted. See [`measurements/speculative.md`](measurements/speculative.md).
+  long-context profiles measured that day — +9% mean tg at 190K (`224k-q8q8-mtp`, removed
+  2026-09-26), +11% at 240K (262K profile), across all three task types. This supersedes the
+  2026-09-25 128K-fill screening, which only found n=3 favorable on literal copy at that shallower
+  depth. `--spec-draft-p-min 0.8` raises acceptance but not speed — not adopted. See
+  [`measurements/speculative.md`](measurements/speculative.md).
 - **`-ub 256` adopted for the 262K default (2026-09-26)**: -350 MiB process VRAM for a small pp
   cost (-5%), no generation-speed cost. This differs from the 2026-09-25 128K-fill screening where
   `-ub 512` was optimal — the effect of `-ub` depends on profile and depth. See
@@ -89,8 +83,8 @@ parked by the user), 220K 8/8 (2026-09-26, the `224k-q8q8-mtp` operating depth),
      read-only audit done, no code/license blocker found — see `docs/ENGINES.md`/`docs/SOURCES.md`).
   5. **P5/P5b/P5c 262K decision — done, adopted.** q8/q5_1 quality 8/8 exact at 240K fill (P5);
      MTP n=3 +11% mean tg at 240K, meeting the user's floor (P5b); `262k-q8q51-mtp` adopted as the
-     new default profile, `224k-q8q8-mtp` kept as the alternative (P5c). See `measurements/depth.md`,
-     `measurements/speculative.md`.
+     new default profile, `224k-q8q8-mtp` kept as the alternative (P5c; removed 2026-09-26, see
+     `docs/DECISIONS.md`). See `measurements/depth.md`, `measurements/speculative.md`.
   6. **P6 MTP n=3 + `--spec-draft-p-min 0.8` — done.** n=3 wins at 190K depth (+9% mean tg,
      `224k-q8q8-mtp`); p-min 0.8 raises acceptance (67%→96%) but not speed — not adopted on its own.
      See `measurements/speculative.md`.

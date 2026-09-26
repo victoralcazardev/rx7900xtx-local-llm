@@ -8,11 +8,16 @@ and adopted.
 Files covered (GGUF, relative to `models_root`):
 
 - `Qwen3.8-27B-Uncensored-HauhauCS-Aggressive-IQ4_XS.gguf` (15.7 GB) — not adopted (see below)
-- `Qwen3.8-27B-GSQ-RCO-IQ3_S.gguf` (11.8 GB) — `qwen38-iq3s`, no MTP
+- `Qwen3.8-27B-GSQ-RCO-IQ3_S.gguf` (11.8 GB) — was `qwen38-iq3s`, no MTP
 - `Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp.gguf` (12.1 GB) — `qwen38-iq3s-mtp`, **adopted model**
-- `Qwen3.8-27B-GSQ-RCO-IQ3_XXS-mtp.gguf` (10.4 GB) — `qwen38-iq3xxs-mtp`
-- `RVN-Q4_K_M-multilingual-mtp.gguf` (17.0 GB) — `qwen38-rvn-mtp`
+- `Qwen3.8-27B-GSQ-RCO-IQ3_XXS-mtp.gguf` (10.4 GB) — was `qwen38-iq3xxs-mtp`
+- `RVN-Q4_K_M-multilingual-mtp.gguf` (17.0 GB) — was `qwen38-rvn-mtp`
 - `mmproj-Qwen3.8-27B-BF16.gguf` (vision projector, 0.93 GB)
+
+**2026-09-26**: `models.toml` now carries only `qwen38-iq3s-mtp` (single model, single profile —
+one best default, no overlapping alternatives, see `docs/DECISIONS.md`). The other three text
+models above were removed from the manifest; they stay documented here for quant-comparison
+provenance.
 
 ## 1. Local metadata (all text models share the base architecture)
 

@@ -12,8 +12,10 @@ driver minimum — see `thermals-power.md`).
   `speculative.md`/`memory.md`, and
   [`../../results/20260926-mtp-n3-depth/`](../../results/20260926-mtp-n3-depth/),
   [`../../results/20260926-ubatch256-262k/`](../../results/20260926-ubatch256-262k/).
-- **`224k-q8q8-mtp` stays as the alternative profile** (`-c 229376`, KV q8_0/q8_0, MTP n=3,
-  `-ub 512` default): 21.4-32.2 tok/s at 190K fill, process VRAM peak 22,883 MiB.
+- **`224k-q8q8-mtp` was the alternative profile** (`-c 229376`, KV q8_0/q8_0, MTP n=3,
+  `-ub 512` default): 21.4-32.2 tok/s at 190K fill, process VRAM peak 22,883 MiB. **Removed
+  2026-09-26** from `models.toml` — one best default, no overlapping alternatives (see
+  `docs/DECISIONS.md`); the measurement stands as evidence.
 - **Long-context quality validated up to 240K fill (60/60 exact match total)**: 52/52 up to 220K
   (see below) plus 8/8 at 240K on the adopted `262k-q8q51-mtp` profile (KV q8_0/q5_1) — the +27%
   KLD of q8_0/q5_1 over q8_0/q8_0 does not show up as a retrieval error at this depth. See
@@ -172,7 +174,8 @@ VRAM margin even with another light GPU client running. 240K was the measured ma
 **Superseded 2026-09-26**: 262K with KV `q8_0/q5_1` was measured directly (below and in
 `speculative.md`/`memory.md`) and adopted as the new default (`262k-q8q51-mtp`), fitting more
 context than 240K at less process VRAM; `200k-q8q8-mtp` and `240k-q8q8-mtp` were removed from
-`models.toml`. `224k-q8q8-mtp` stays as the alternative profile. The ~1.8 GiB system VRAM margin
+`models.toml`. `224k-q8q8-mtp` stayed as the alternative profile (removed 2026-09-26, see
+`docs/DECISIONS.md`). The ~1.8 GiB system VRAM margin
 figure above was measured with a lighter desktop than later sessions — see `memory.md`'s
 `-ub 256`/system-VRAM finding for the corrected reading.
 

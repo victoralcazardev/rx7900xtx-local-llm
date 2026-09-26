@@ -52,7 +52,7 @@ disabled). One single-backend binary per download/build.
 
 5. **Smoke-test one representative model** per architecture in use:
    ```
-   python scripts/smoke.py qwen38-iq3s-mtp --profile 128k-q8q8-mtp --backend hip
+   python scripts/smoke.py qwen38-iq3s-mtp --profile 262k-q8q51-mtp --backend hip-kvmix
    ```
 
 ## How to verify

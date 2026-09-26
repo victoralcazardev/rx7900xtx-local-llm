@@ -40,3 +40,7 @@ running. **240K is the measured maximum on this card** (`240k-q8q8-mtp`) — onl
 left, so close other GPU applications before using it. 262K (`q8_0/q5_1`, no MTP headroom left for
 q8/q8) was not attempted in this ladder — see `../../docs/measurements/depth.md`'s existing
 `262k-q8q8`/`262k-q8q51-mtp` profiles for that end of the range.
+
+**(2026-09-26 update)**: `262k-q8q51-mtp` superseded `224k-q8q8-mtp` as the default (see
+`docs/DECISIONS.md`), and `224k-q8q8-mtp`/`240k-q8q8-mtp` were later removed from `models.toml` —
+one best default, no overlapping alternatives. The measurements above stand as evidence.

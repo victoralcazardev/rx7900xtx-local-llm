@@ -18,20 +18,16 @@ uses `python3`.
 - **IS NOT** a multi-GPU or datacenter guide — everything here is measured on one card.
 - **IS NOT a vLLM/Ollama guide** — this repository only uses `llama-server` from llama.cpp.
 - **IS NOT an NVIDIA/CUDA guide** — this repository is 7900 XTX only; NVIDIA/CUDA is out of scope.
-- **IS NOT a harness/agent-wiring guide** — connect any OpenAI-compatible client to the two fixed
-  local endpoints described in `AGENTS.md`; this repository doesn't assume a particular coding-agent
+- **IS NOT a harness/agent-wiring guide** — connect any OpenAI-compatible client to the fixed
+  local endpoint described in `AGENTS.md`; this repository doesn't assume a particular coding-agent
   tool.
 
-## The 30-second chooser
+## The default profile
 
-| Profile | Goal | Context | Headline tok/s at depth | Details |
-|---|---|---|---|---|
-| `128k-q8q8-mtp` | Daily use, with vision | 131,072 | **~58-69** empty context, **~31** at 104K | [`measurements/depth.md`](docs/measurements/depth.md) |
-| `262k-q8q51-mtp` | **Default** — max context + MTP n=3, best measured margin | 262,144 | **18.6-26.9** at 240K fill | [`measurements/depth.md`](docs/measurements/depth.md) |
-| `224k-q8q8-mtp` | Alternative long context | 229,376 | **21.4-32.2** at 190K fill (n=3) | [`measurements/depth.md`](docs/measurements/depth.md) |
-| `262k-q8q8` | Max native context, no MTP, official binary | 262,144 | **~39** empty, **~19** at 182K | [`measurements/depth.md`](docs/measurements/depth.md) |
-
-See `docs/STATUS.md` for the current recommended profile and its exact command.
+`models.toml` ships a single model and profile, `qwen38-iq3s-mtp` / `262k-q8q51-mtp` (the one
+`scripts/launch.py` loads with no alias): 262,144 context, KV `q8_0/q5_1`, MTP n=3, `-ub 256`,
+vision disabled — **18.6-26.9 tok/s at 240K fill**. See `docs/STATUS.md` for the exact command and
+key figures, and [`measurements/depth.md`](docs/measurements/depth.md) for the full measurement.
 
 ## Quick start
 
@@ -71,8 +67,8 @@ python3 scripts/launch.py
 
 Then connect any OpenAI-compatible client to `http://127.0.0.1:8080`. To load a different
 model/profile instead of the default, pass them explicitly:
-`python3 scripts/launch.py <alias> --profile <profile>` (see the table above for the available
-profiles). Full walkthrough: `docs/sop/launch-model.md`.
+`python3 scripts/launch.py <alias> --profile <profile>` (see `docs/models/models.md` for what's
+in the manifest). Full walkthrough: `docs/sop/launch-model.md`.
 
 ## Token usage ledger
 

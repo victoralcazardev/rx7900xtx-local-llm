@@ -3,14 +3,14 @@
 For models already in `models.toml` (see `docs/models/models.md`). If the model doesn't exist in
 the manifest yet, use `docs/sop/new-model.md` first.
 
-## Recommended profiles (`qwen38-iq3s-mtp`, measured in `docs/measurements/`)
+## Recommended profile (`qwen38-iq3s-mtp`, measured in `docs/measurements/`)
+
+`models.toml` ships a single model/profile — one best default, no overlapping alternatives (see
+`docs/DECISIONS.md`, 2026-09-26):
 
 | Profile | For | Generation | VRAM peak |
 |---|---|---|---:|
-| `128k-q8q8-mtp` | **Daily use**, with vision | ~58-69 tok/s (empty ctx), ~31 at 104K | 19.6 GiB |
 | `262k-q8q51-mtp` | **Default** (`scripts/launch.py` with no alias) — max context + MTP n=3, `-ub 256`, no vision | 18.6-26.9 at 240K fill | 22.2 GiB |
-| `224k-q8q8-mtp` | Alternative long context, no vision | 21.4-32.2 at 190K fill (n=3) | 22.9 GiB |
-| `262k-q8q8` | Max context, official binary, no vision | ~39 (empty), ~19 at 182K | 21.4 GiB |
 
 `launch.py` **blocks system suspend** while the server runs (`systemd-inhibit`): suspending with a
 full VRAM has been observed to hang the machine on resume (see `docs/measurements/coexistence.md`).
@@ -52,12 +52,12 @@ shorthand for the `launch.py` invocation below.
    ```
    python scripts/launch.py --dry-run
    ```
-   To pick a different alias/profile explicitly, if the model has more than one profile,
-   `--profile` is required:
+   To pick a different alias/profile explicitly (once one exists — the manifest currently has
+   only one), `--profile` is required if the model has more than one profile:
    ```
-   python scripts/launch.py qwen38-iq3s-mtp --profile 224k-q8q8-mtp --dry-run
+   python scripts/launch.py qwen38-iq3s-mtp --profile 262k-q8q51-mtp --dry-run
    ```
-   Check the printed command and the "Harness provider: local-XXXk" line.
+   Check the printed command and the "Harness provider: local-262k" line.
 
 3. **Launch for real** (foreground, stays attached to the console):
    ```
@@ -70,8 +70,8 @@ shorthand for the `launch.py` invocation below.
    The log goes to `_tmp/logs/<alias>-<profile>-<timestamp>.log`. Pass an explicit
    `<alias> --profile <profile>` (see the table above) to load something other than the default.
 
-4. **In your coding-agent harness (if any), select the provider printed in step 2** (`local-128k`
-   or `local-262k`). A harness doesn't know the model alias, only the `:8080` endpoint — see
+4. **In your coding-agent harness (if any), select the provider printed in step 2**
+   (`local-262k`). A harness doesn't know the model alias, only the `:8080` endpoint — see
    `AGENTS.md`.
 
 ## How to verify
