@@ -238,11 +238,11 @@ adopted configuration lives in `models.toml`; the resolution, for reference:
 
 - **Adopted model**: `Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp.gguf` (`qwen38-iq3s-mtp`) — best perplexity/MTP
   trade-off of the GSQ-RCO family (see `docs/measurements/kv-quality.md`).
-- **KV type**: `q8_0/q8_0` for the current daily profile (`224k-q8q8-mtp`); `q8_0/q5_1` was measured
-  and works but is slower at depth and was not adopted as the default (see
-  `docs/measurements/speculative.md`); `q4_0/q4_0` was ruled out on quality grounds (see
-  `docs/measurements/kv-quality.md`).
-- **MTP**: `--spec-draft-n-max 2` — the measured sweet spot (see `docs/measurements/speculative.md`).
+- **KV type**: `q8_0/q5_1` in the single profile (`262k-q8q51-mtp`, 262,144 context): 8/8 exact
+  retrieval at 240K fill, same as `q8_0/q8_0` up to 220K (see `docs/measurements/depth.md`);
+  `q4_0/q4_0` was ruled out on quality grounds (see `docs/measurements/kv-quality.md`).
+- **MTP**: `--spec-draft-n-max 3` — fastest at 190-240K depth; n=4 is slower (see
+  `docs/measurements/speculative.md`).
 - **Backend**: `hip`/`hip-kvmix` — see `docs/measurements/engines.md` and `docs/ENGINES.md`.
 
 ## 6. 262K test ladder (historical plan, resolved)
