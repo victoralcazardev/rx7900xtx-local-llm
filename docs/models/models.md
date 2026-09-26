@@ -48,4 +48,4 @@ its context isn't 262144. Verify wiring with `python scripts/check-sync.py` (onl
 ## Operate
 
 See `docs/sop/launch-model.md`, `docs/sop/new-model.md`, `docs/sop/update-engine.md`,
-`docs/sop/measure-backend.md` and `docs/sop/install-day.md`.
+`docs/sop/measure-backend.md` and `docs/sop/install.md`.

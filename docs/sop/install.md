@@ -1,4 +1,4 @@
-# SOP: RX 7900 XTX install day
+# SOP: RX 7900 XTX install and initial setup
 
 Canonical step list, for both a Linux-only machine and a Windows dual-boot setup. See
 `docs/hardware/gpu-7900xtx.md` for the background detail and sources behind each step (specs,

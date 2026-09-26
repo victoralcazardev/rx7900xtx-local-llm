@@ -132,7 +132,7 @@ from the new one's `README.md` if relevant (`docs/BENCHMARK-FORMAT.md` "Immutabl
 | `docs/STATUS.md` | Current recommended profile, key figures, next steps |
 | `docs/DECISIONS.md` | Append-only decision log with evidence links |
 | `docs/SOURCES.md` | External claims checked against this repository's own measurements |
-| `docs/hardware/` | RX 7900 XTX specs, driver setup, install-day background |
+| `docs/hardware/` | RX 7900 XTX specs, driver setup, install background |
 | `docs/models/` | Model table and quant provenance |
 | `docs/ENGINES.md` | llama.cpp build inventory: commits, flags, SHA256 |
 | `docs/measurements/` | Benchmark results and conclusions, by topic (engines, kv-quality, memory, coexistence, depth, speculative, thermals-power, concurrency) |

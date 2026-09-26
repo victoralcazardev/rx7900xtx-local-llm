@@ -1,7 +1,7 @@
 # RX 7900 XTX — hardware, driver and OS
 
 Research notes written before the GPU was installed, since confirmed or superseded by real
-measurements. Read this for specs, driver setup and the install-day checklist; read
+measurements. Read this for specs, driver setup and the install checklist; read
 `docs/measurements/` for what was actually measured on this GPU (throughput, thermals, VRAM).
 This doc does not cover llama.cpp build flags — see `docs/ENGINES.md`.
 
@@ -120,9 +120,9 @@ If model weights live on a Windows partition shared with a dual-boot Linux insta
   `ntfs3`/`ntfs-3g` for large (15-20 GB) GGUF files. llama.cpp uses `mmap` by default on Linux; test
   directly by loading a large GGUF and confirming it doesn't degrade to swap or fail.
 
-## 5. Install-day checklist
+## 5. Install checklist
 
-See `docs/sop/install-day.md` for the ordered step list (Windows and Linux).
+See `docs/sop/install.md` for the ordered step list (Windows and Linux).
 
 ## Open questions (not resolved by this hardware's measurements either)
 
