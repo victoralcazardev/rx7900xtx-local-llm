@@ -40,6 +40,31 @@ binary ships no FlashAttention kernels for the mixed types.
   This KLD measures the KV error itself, but **not the numerical path actually used during
   generation**. Possible follow-up: KLD with `-ub 2` on the VEC engine.
 
+## BeeLlama KVarN KLD (2026-09-26)
+
+BeeLlama v0.4.7's KVarN KV cache (per-head Hadamard rotation + per-axis normalization over
+128-token tiles), measured with the same protocol as above but on the BeeLlama binary itself (base
+PPL 6.2628 ± 0.0815, f16 KV — **not comparable in absolute terms** to the table above, different
+engine/kernels). Raw data:
+[`../../results/20260926-beellama-kvarn/`](../../results/20260926-beellama-kvarn/).
+
+| K/V | Mean KLD | Max KLD | PPL(Q)/PPL(base) |
+|---|---:|---:|---:|
+| q8_0/q8_0 | 0.000754 | 0.131 | 1.00038 |
+| q8_0/q6_0 | 0.000785 | 0.147 | 1.00038 |
+| q8_0/q5_1 | 0.000905 | 0.273 | 1.00103 |
+| kvarn8/kvarn8 | 0.002022 | 0.501 | 1.00006 |
+| kvarn6/kvarn6 | 0.002041 | 0.556 | 1.00024 |
+| kvarn5/kvarn5 | 0.002168 | 0.372 | 1.00048 |
+
+`q8_0/kvarnN` is rejected by the binary (forces K to `kvarnN`) — K/V mixes with KVarN don't exist.
+
+**KVarN discarded**: ~2.7x the KLD of q8/q8 at every bit width (an error floor independent of
+bits), worse than q8/q5_1; KLD exercises the prefill path, which writes nearly all KV in agent
+use; BeeLlama is also ~20% slower than our engine even with standard KV (see `engines.md`). Depth
+tests skipped. **Side finding**: `q8_0/q6_0` is near-lossless (+4% KLD vs. q8/q8) but q6_0 KV
+exists only in BeeLlama/ik_llama.cpp — idea, not scheduled.
+
 ## Weight quantization matrix (perplexity, tok/s)
 
 ROCm, KV q8_0/q8_0. `llama-bench` + `llama-perplexity` (wikitext-2-raw, ci corpus from ggml-org),
@@ -93,3 +118,5 @@ quantization effect on the finetuned variants (HauhauCS, RVN).
   for KV; IQ3_S-mtp selected as the model.
 - **2026-09-25**: VEC-vs-TILE numerical path caveat added (see above); does not change the KLD
   conclusion, flags a caveat for future work.
+- **2026-09-26**: BeeLlama v0.4.7 KVarN KLD measured — discarded (~2.7x the KLD of q8/q8 at every
+  bit width); `q8_0/q6_0` noted as near-lossless but not adopted (BeeLlama-only KV type).

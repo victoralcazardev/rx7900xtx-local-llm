@@ -102,18 +102,23 @@ no F16 copy); `=0` means the old F16 path. Verified with
 only -2.5% ms/step at ~190K depth vs. `kvmix` — not worth maintaining a separate fork for that gain.
 See `docs/measurements/speculative.md`.
 
-## Candidate engines (not yet measured)
+## Candidate engines, round-3 outcome (2026-09-26)
 
-Community claims reviewed 2026-09-26 (`docs/SOURCES.md`) surfaced four candidates, none measured on
-this hardware yet — see `odd/tasks/rx7900xtx-tuning-round3.md` for the test plan:
+Community claims reviewed 2026-09-26 (`docs/SOURCES.md`) surfaced four candidates:
 
-- **BeeLlama v0.4.7** (ROCm 7.2 prebuilt, `beellama-v0.4.7-bin-ubuntu-rocm-7.2-x64.tar.gz`) — adds
-  the KVarN KV cache quantization.
+- **ROCm 10.0.0 runtime libraries** (TheRock, vs. the system ROCm 7.2.4 runtime, ROCm 10 compiler
+  held constant) — **tested, rejected**: 1-2% slower tg, ~5% slower pp, higher variance. See
+  `docs/measurements/engines.md`.
+- **BeeLlama v0.4.7** (ROCm 7.2 prebuilt, `beellama-v0.4.7-bin-ubuntu-rocm-7.2-x64.tar.gz`, KVarN
+  KV cache) — **tested, rejected**: KVarN's KLD is ~2.7x q8/q8's at every bit width; the binary
+  itself is ~18-22% slower than `hip-kvmix`. See `docs/measurements/kv-quality.md`.
 - **exllamav3-rocm** (+ patched TabbyAPI) — HIP port of ExLlamaV3, highest-risk candidate.
-- **A `kvmix` rebuild against the system ROCm 7.2.4 compiler and runtime together** — isolates
-  compiler codegen from the runtime-library question above.
+  **Parked by the user** after a read-only audit (fork of turboderp exllamav3 @6b84a21b, MIT, no
+  CI, no security red flags; README numbers use synthetic prompts and random-token prefill, not
+  comparable to ours) — least interest of the candidates, 15.3 GB EXL3 model leaves less VRAM
+  headroom. See `docs/SOURCES.md`.
 - **Latest-master Vulkan build**, re-tested with the GPU memory clock pinned (see
-  `docs/measurements/engines.md`'s 772 MHz vs. 1249 MHz finding).
+  `docs/measurements/engines.md`'s 772 MHz vs. 1249 MHz finding) — **still pending** (round-3 P7).
 
 ## Not included here
 

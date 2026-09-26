@@ -13,9 +13,10 @@ minimum — see `thermals-power.md`).
 - **`240k-q8q8-mtp` is the measured maximum on this card**: 22.5-24.4 tok/s at 237K fill, process
   VRAM peak 23,407 MiB, only ~0.3 GiB of margin left — tight, close other GPU applications before
   using it.
-- **Long-context quality validated up to 190K fill of the 200K window (partial at 190K)**: 44/44
-  exact match (32K 20/20, 128K 20/20, 190K 4/4 on one of five planned documents), 0 loop
-  detections. See "Quality (RULER-style)" below.
+- **Long-context quality validated up to 220K fill (52/52 exact match total)**: 44/44 up to 190K
+  (32K 20/20, 128K 20/20, 190K 4/4 partial on one of five planned documents) plus 8/8 at 220K on
+  the real `224k-q8q8-mtp` operating depth, 0 loop detections total. See "Quality (RULER-style)"
+  below.
 - The narrower `200k-q8q8-mtp` profile (`-c 204800`) stays in `models.toml` as a candidate;
   `224k-q8q8-mtp` supersedes it as the default because it fits ~24K more tokens of context at a
   comparable measured margin and throughput (see "Context-window ladder" below).
@@ -186,6 +187,20 @@ stopped by the operator when the hotspot reached 106°C (see `thermals-power.md`
 one 190K document were judged sufficient evidence. The 272 W prefill at 190K (459 tok/s) is ~6%
 slower than the 303 W reference at the same depth (487 tok/s, see `speculative.md`'s 190K A/B).
 
+### 220K, `224k-q8q8-mtp` (2026-09-26)
+
+Same script, the real operating depth of the adopted `224k-q8q8-mtp` profile (`-c 229376`, KV
+q8/q8, MTP n=2, 272 W). 2 documents × 4 questions, temperature 0. Raw data:
+[`../../results/20260926-longctx-quality-224k/`](../../results/20260926-longctx-quality-224k/).
+
+**8/8 exact match, field accuracy 1.0, 0 loops, 0 truncated.** Prompt 220,109 tokens, cold prefill
+420.3 tok/s (~8.7 min); warm turns reuse 219,593 tokens, generation 25.1-26.1 tok/s. Peak process
+VRAM 22,702 MiB, 0 evicted, hotspot 98°C.
+
+**Cumulative: 52/52 exact match, 32K-220K fill** (44/44 above + this 8/8). Closes the "no
+validation at the real 220K depth" gap; anecdotal "q8 KV amnesia beyond 150K" claims (`SOURCES.md`)
+do not reproduce here.
+
 ## Open questions / pending (priority order)
 
 1. A broader 190K quality sample (the remaining 4 of 5 planned documents, 16 of 20 questions) —
@@ -224,3 +239,5 @@ slower than the 303 W reference at the same depth (487 tok/s, see `speculative.m
   0 loops. Context-window ladder measured 224K and 240K (both fit, 18-25 tok/s); 224K adopted as
   the new default profile (`224k-q8q8-mtp`), 240K as the measured maximum (`240k-q8q8-mtp`),
   superseding `200k-q8q8-mtp` as the recommended daily default (kept as a narrower candidate).
+- **2026-09-26**: quality re-tested at 220K fill, the real `224k-q8q8-mtp` operating depth — 8/8
+  exact match, 0 loops. Cumulative 52/52 exact match from 32K to 220K.

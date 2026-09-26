@@ -56,10 +56,9 @@ python scripts/launch.py qwen38-iq3s-mtp --profile 240k-q8q8-mtp
 
 ## Quality validation
 
-**44/44 exact match, 0 loop detections**, up to 190K fill of the 200K window (`bench/longctx_quality.py`,
-RULER-style multi-key retrieval): 32K 20/20, 128K 20/20, 190K 4/4 (one of five planned documents —
-partial, parked by the user after this result; not required for the 224K/240K profiles above,
-which inherit this validation at the same KV/MTP configuration). See
+**52/52 exact match, 0 loop detections**, up to 220K fill (`bench/longctx_quality.py`, RULER-style
+multi-key retrieval): 32K 20/20, 128K 20/20, 190K 4/4 (one of five planned documents, partial,
+parked by the user), 220K 8/8 (2026-09-26, the real `224k-q8q8-mtp` operating depth). See
 [`measurements/depth.md`](measurements/depth.md#quality-ruler-style-200k-q8q8-mtp).
 
 ## Open hypotheses to re-validate
@@ -68,17 +67,21 @@ which inherit this validation at the same KV/MTP configuration). See
   the user, not blocking. See `measurements/depth.md`.
 - **Round-3 test queue** (2026-09-26 community-claims review, see `docs/SOURCES.md`'s "Community
   claims reviewed 2026-09-26"), priority order:
-  1. **P1 ROCm toolchain A/B** — the runtime already uses system ROCm 7.2.4; untested: compiler
-     codegen (7.2.4 vs. 10) and the ROCm 10 runtime libraries. See `docs/ENGINES.md`.
-  2. **P2 Quality at the real ~220K operating depth** — current validation stops at 190K fill.
-  3. **P3 BeeLlama v0.4.7 + KVarN KV cache** — KLD @32K, VRAM at 262K, tok/s at 240K fill.
-  4. **P4 exllamav3-rocm** (+ TabbyAPI) — audit first (determinism, license); highest potential and
-     highest risk of the candidates.
-  5. **P5 262K decision** — q8/q5_1 @240K vs. q8/q8 @220K (P2) vs. the best KVarN mix (P3).
+  1. **P1 ROCm toolchain/runtime A/B — done, rejected.** ROCm 10 runtime is 1-2% slower on tg, ~5%
+     on pp, higher variance vs. the system ROCm 7.2.4 runtime. Current ROCm-10-compiler +
+     ROCm-7.2.4-runtime combo stays. See `measurements/engines.md`.
+  2. **P2 Quality at the real ~220K operating depth — done.** 8/8 exact match at 220K fill;
+     cumulative 52/52 exact match 32K-220K. See `measurements/depth.md`.
+  3. **P3 BeeLlama v0.4.7 + KVarN KV cache — done, rejected.** KVarN's KLD is ~2.7x q8/q8 at every
+     bit width; BeeLlama itself is ~18-22% slower than `hip-kvmix`. See `measurements/kv-quality.md`.
+  4. **P4 exllamav3-rocm** (+ TabbyAPI) — **parked by the user** (least interest of the candidates;
+     read-only audit done, no code/license blocker found — see `docs/ENGINES.md`/`docs/SOURCES.md`).
+  5. **P5 262K decision — running.** q8/q5_1 quality at 240K fill vs. q8/q8 @220K (P2, done) vs. the
+     best KVarN mix (P3, rejected — dropped from this comparison).
   6. **P6 MTP n=3 + `--spec-draft-p-min 0.8`** at 190K fill (from the @SergioSV96 config, minus its
-     q4_0 KV).
-  7. **P7 Vulkan re-test with the GPU memory clock pinned** — our Vulkan loss coincided with the
-     memory clock at 772 MHz vs. 1249 MHz on ROCm, not necessarily the backend itself — see
+     q4_0 KV) — pending.
+  7. **P7 Vulkan re-test with the GPU memory clock pinned** — pending; our Vulkan loss coincided with
+     the memory clock at 772 MHz vs. 1249 MHz on ROCm, not necessarily the backend itself — see
      [`measurements/engines.md`](measurements/engines.md).
 - **llama.cpp hypotheses to re-validate on the next engine update** (see
   [`sop/update-engine.md`](sop/update-engine.md) and `SOURCES.md`): PR
@@ -120,6 +123,10 @@ which inherit this validation at the same KV/MTP configuration). See
 - Lemonade-sdk/llamacpp-rocm and nasone32/llama.cpp-RDNA3-7900xtx-opt — re-checked 2026-09-26:
   Lemonade's latest build is just a current-master rebuild, nasone32 has no commits since
   ~2026-09-10. See `docs/SOURCES.md`.
+- ROCm 10.0.0 runtime libraries (TheRock, ROCm 10 compiler kept) — 1-2% slower tg, ~5% slower pp,
+  higher variance vs. the system ROCm 7.2.4 runtime. See `measurements/engines.md`.
+- BeeLlama v0.4.7 + KVarN KV cache — KVarN's KLD is ~2.7x q8/q8's at every bit width (worse than
+  q8/q5_1); BeeLlama itself is ~18-22% slower than `hip-kvmix`. See `measurements/kv-quality.md`.
 
 ## Next steps (priority order)
 

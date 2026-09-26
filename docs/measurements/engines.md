@@ -135,6 +135,35 @@ the compiler, not the source: see the corrected engine matrix below.
 - Current `hip-kvmix` engine = the ROCm-10-compiled build. The ROCm-7.2.4-compiled build is
   obsolete.
 
+## ROCm runtime A/B (TheRock 10.0.0 vs. system 7.2.4, 2026-09-26)
+
+Closes the runtime-library question left open above. Same `hip-kvmix` binary (ROCm 10 compiler),
+`llama-bench`, q8_0/q8_0, `-fa 1`, ABA order. Raw data:
+[`../../results/20260926-rocm-runtime-ab/`](../../results/20260926-rocm-runtime-ab/).
+
+| Variant | tg128 | tg128 @16K |
+|---|---:|---:|
+| Reference A1 (system ROCm 7.2.4 runtime) | 37.90 ± 0.05 | 35.75 ± 0.06 |
+| ROCm 10 runtime (TheRock `_rocm_sdk_core`, `LD_LIBRARY_PATH`) | 37.20 ± 0.12 | 35.41 ± 0.42 |
+| Reference A2 | 38.10 ± 0.08 | 35.74 ± 0.04 |
+
+**Rejected**: ROCm 10 runtime is 1-2% slower on tg, ~5% slower on pp, with much higher variance —
+below the +3% adoption bar. The current combo (ROCm 10 compiler + ROCm 7.2.4 runtime) remains the
+best of the three tested (compiler, runtime, combo). Pitfalls: the full ROCm 10 venv
+`_rocm_sdk_devel/lib` aborts at init (rocBLAS has no gfx1100 `TensileLibrary`); a partial
+`LD_LIBRARY_PATH` missing `rocm_sysdeps` silently falls back to CPU (2.8 tok/s) — always check
+`--list-devices`.
+
+## BeeLlama v0.4.7 parity (2026-09-26)
+
+`llama-bench`, same args as above, against BeeLlama v0.4.7's Linux ROCm 7.2 prebuilt (links system
+ROCm 7.2.4, ships gfx1100 kernels): pp512 912.60 ± 3.16, tg128 31.08 ± 0.06, tg128 @16K 27.74 ±
+0.01 — **-18% tg, -22% tg @16K, -18% pp @16K** vs. `hip-kvmix` (likely the ROCm 7.2 compiler and
+older base ~b10830, hypothesis, not isolated — see
+[Anbeeld/beellama.cpp#111](https://github.com/Anbeeld/beellama.cpp/issues/111)). KLD/KVarN
+verdict in [`kv-quality.md`](kv-quality.md#beellama-kvarn-kld-2026-09-26); raw data in
+[`../../results/20260926-beellama-kvarn/`](../../results/20260926-beellama-kvarn/).
+
 ## Upstream research: build flags, feature parity, protocol
 
 Read directly from `ggml-org/llama.cpp` source and docs (2026-09-22, before the GPU was installed;
@@ -238,3 +267,6 @@ a separate, additive effect on top of (or against) this kernel-level gap.
 - **2026-09-24, night**: engine matrix repeated with the ROCm 10 toolchain — corrects the "own build
   is slower" reading; the compiler, not the source, explained the gap. Current `hip-kvmix` engine
   pinned to the ROCm-10-compiled build.
+- **2026-09-26**: ROCm 10 runtime tested against the ROCm 7.2.4 runtime (same ROCm 10 compiler) —
+  rejected, -1..-2% tg / -5% pp with higher variance. BeeLlama v0.4.7 measured for parity — -18%
+  tg vs. `hip-kvmix`.
