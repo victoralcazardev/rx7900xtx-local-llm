@@ -27,7 +27,7 @@ REPO = pathlib.Path(__file__).resolve().parent.parent
 IS_WINDOWS = platform.system() == "Windows"
 
 MIN_CONTEXT = 131072  # 128K: below this it isn't worth it for this batch (see AGENTS.md)
-LOCAL_224K_CONTEXT = 229376  # single source of truth for the local-224k harness provider's
+LOCAL_262K_CONTEXT = 262144  # single source of truth for the local-262k harness provider's
                               # contextWindow; scripts/check-sync.py imports this too
 
 # HIP/ROCm: only these K/V combinations have a FlashAttention kernel compiled into the
@@ -159,8 +159,8 @@ def resolve(m: Manifest, alias: str | None, profile: str | None) -> tuple[Model,
 
 def harness_entry(context: int) -> str:
     """Name of the fixed local provider entry for the given profile's context (see AGENTS.md)."""
-    if context >= LOCAL_224K_CONTEXT:
-        return "local-224k"
+    if context >= LOCAL_262K_CONTEXT:
+        return "local-262k"
     if context >= MIN_CONTEXT:
         return "local-128k"
     raise ManifestError(f"context {context} < {MIN_CONTEXT}: doesn't match any provider entry")

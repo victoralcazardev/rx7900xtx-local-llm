@@ -217,14 +217,14 @@ class TestResolve(ManifestFixture):
 
 
 class TestHarnessEntry(unittest.TestCase):
-    def test_at_or_above_224k_context(self):
-        self.assertEqual(manifest.harness_entry(manifest.LOCAL_224K_CONTEXT), "local-224k")
-        self.assertEqual(manifest.harness_entry(manifest.LOCAL_224K_CONTEXT + 1), "local-224k")
+    def test_at_or_above_262k_context(self):
+        self.assertEqual(manifest.harness_entry(manifest.LOCAL_262K_CONTEXT), "local-262k")
+        self.assertEqual(manifest.harness_entry(manifest.LOCAL_262K_CONTEXT + 1), "local-262k")
 
-    def test_between_128k_and_224k(self):
+    def test_between_128k_and_262k(self):
         self.assertEqual(manifest.harness_entry(manifest.MIN_CONTEXT), "local-128k")
         self.assertEqual(
-            manifest.harness_entry(manifest.LOCAL_224K_CONTEXT - 1), "local-128k"
+            manifest.harness_entry(manifest.LOCAL_262K_CONTEXT - 1), "local-128k"
         )
 
     def test_below_min_context_raises(self):

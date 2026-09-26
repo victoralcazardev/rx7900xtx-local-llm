@@ -19,7 +19,7 @@
 port = 8080
 flags = ["-fa", "on", "-np", "1", "--ctx-checkpoints", "4", "-ngl", "all", "--metrics"]
 default_alias = "qwen38-iq3s-mtp"
-default_profile = "224k-q8q8-mtp"
+default_profile = "262k-q8q51-mtp"
 
 # ---------------------------------------------------------------------------
 # Qwen3.8-27B GSQ-RCO IQ3_S-mtp (native NextN head).
@@ -56,58 +56,36 @@ kv = ["q8_0", "q8_0"]
 vision = false
 vram_gib = 21.4
 
-# Max context + MTP (EXPERIMENTAL, docs/measurements/): ~27.5 tok/s at 128K and ~23.8 at
-# 240K. V in q5_1 (+27% KLD over q8/q8). hip-kvmix = own build with ROCm 10. Draft-MTP
-# KV in f16 (default): -ctkd q8_0 USES MORE VRAM. Tight VRAM margin.
+# Recommended daily long-context default (2026-09-26, docs/measurements/): quality 8/8 exact at
+# 240K fill (0 loops); MTP n=3 +11% tg over n=2 (240K fill, 272 W: essay/copy/code 25.7/26.9/17.6,
+# mean 23.4, accept 71%); `-ub 256` trims process VRAM peak to 22,630 MiB (-350 MiB vs. -ub 512)
+# for -5% pp, 0 evicted. This is `scripts/launch.py`'s default (see `[defaults]` above) when no
+# alias is given. V in q5_1 (+27% KLD over q8/q8, doesn't show up in retrieval quality at 240K).
 [models.qwen38-iq3s-mtp.profiles."262k-q8q51-mtp"]
 backend = "hip-kvmix"
 context = 262144
 kv = ["q8_0", "q5_1"]
-spec_n_max = 2
+spec_n_max = 3
 vision = false
-vram_gib = 23.0
-
-# Main-profile candidate (2026-09-25, docs/measurements/): at 190K depth,
-# 22-30 tok/s depending on the task (temperature 0), process peak 21,679 MiB, GTT 8 MiB,
-# 0 evicted. KV q8/q8 (better than q8/q5_1). PENDING: the long-context quality test.
-[models.qwen38-iq3s-mtp.profiles."200k-q8q8-mtp"]
-backend = "hip-kvmix"
-context = 204800
-kv = ["q8_0", "q8_0"]
-spec_n_max = 2
-vision = false
-vram_gib = 21.5
+vram_gib = 22.2
 # Qwen3.8 card: reasoning_effort xhigh (template default) / medium / low. xhigh injects "think
 # carefully, validate assumptions, consider alternatives" -> overthinking. medium = no extra
-# instruction (balanced, per the card). low = "keep your thinking brief". Flag verified in
-# --help.
-flags = ["--reasoning-effort", "medium"]
+# instruction (balanced, per the card). low = "keep your thinking brief". `-ub 256` measured
+# 2026-09-26 (docs/measurements/memory.md): less VRAM margin pressure than the `-ub 512` default,
+# small pp cost. Both flags verified in --help.
+flags = ["-ub", "256", "--reasoning-effort", "medium"]
 
-# Recommended daily long-context default (2026-09-25, docs/measurements/): fill 221,167 at
-# 272 W, 22.3/25.1/18.7 tok/s (essay/copy/code), process VRAM peak 22,700 MiB, 0 evicted,
-# hotspot 98C -- leaves ~1.8 GiB of system VRAM margin (measured with another GPU app using
-# ~0.8 GiB). This is `scripts/launch.py`'s default (see `[defaults]` above) when no alias is
-# given.
+# Alternative long-context profile (2026-09-25/26, docs/measurements/): fill 221,167 at 272 W,
+# 22.3/25.1/18.7 tok/s n=2 (essay/copy/code); MTP n=3 measured at 190K fill: 26.1/32.2/21.4
+# (mean +9% over n=2), accept 67%, process VRAM peak 22,883 MiB. `-ub 512` (default) kept here --
+# measured at that batch size.
 [models.qwen38-iq3s-mtp.profiles."224k-q8q8-mtp"]
 backend = "hip-kvmix"
 context = 229376
 kv = ["q8_0", "q8_0"]
-spec_n_max = 2
+spec_n_max = 3
 vision = false
-vram_gib = 22.7
-flags = ["--reasoning-effort", "medium"]
-
-# Maximum context measured on this card (2026-09-25, docs/measurements/): fill 237,551 at
-# 272 W, 22.5/24.4/18.7 tok/s (essay/copy/code), process VRAM peak 23,407 MiB, 0 evicted,
-# hotspot 101C -- only ~0.3 GiB of system VRAM margin left, tight: close other GPU apps
-# (e.g. a video player) before using this profile.
-[models.qwen38-iq3s-mtp.profiles."240k-q8q8-mtp"]
-backend = "hip-kvmix"
-context = 245760
-kv = ["q8_0", "q8_0"]
-spec_n_max = 2
-vision = false
-vram_gib = 23.4
+vram_gib = 22.9
 flags = ["--reasoning-effort", "medium"]
 
 # ---------------------------------------------------------------------------

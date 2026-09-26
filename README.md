@@ -27,11 +27,9 @@ uses `python3`.
 | Profile | Goal | Context | Headline tok/s at depth | Details |
 |---|---|---|---|---|
 | `128k-q8q8-mtp` | Daily use, with vision | 131,072 | **~58-69** empty context, **~31** at 104K | [`measurements/depth.md`](docs/measurements/depth.md) |
-| `224k-q8q8-mtp` | **Default** — long context, best measured margin | 229,376 | **22.3-25.1** at 221K fill | [`measurements/depth.md`](docs/measurements/depth.md) |
-| `240k-q8q8-mtp` | Measured maximum, tight VRAM margin | 245,760 | **22.5-24.4** at 237K fill | [`measurements/depth.md`](docs/measurements/depth.md) |
-| `200k-q8q8-mtp` | Narrower long-context candidate | 204,800 | **22-30** at 190K | [`measurements/depth.md`](docs/measurements/depth.md) |
+| `262k-q8q51-mtp` | **Default** — max context + MTP n=3, best measured margin | 262,144 | **18.6-26.9** at 240K fill | [`measurements/depth.md`](docs/measurements/depth.md) |
+| `224k-q8q8-mtp` | Alternative long context | 229,376 | **21.4-32.2** at 190K fill (n=3) | [`measurements/depth.md`](docs/measurements/depth.md) |
 | `262k-q8q8` | Max native context, no MTP, official binary | 262,144 | **~39** empty, **~19** at 182K | [`measurements/depth.md`](docs/measurements/depth.md) |
-| `262k-q8q51-mtp` | Max context + MTP, tight VRAM margin | 262,144 | **~18.4** at 240K | [`measurements/speculative.md`](docs/measurements/speculative.md) |
 
 See `docs/STATUS.md` for the current recommended profile and its exact command.
 
@@ -67,7 +65,7 @@ repository's measurements are in `docs/ENGINES.md`.
 ```bash
 cp local.example.toml local.toml   # then edit models_root and [engines] for this machine
 python3 scripts/check-sync.py       # validate the manifest
-python3 scripts/launch.py --dry-run # no alias: loads the current best config (224k-q8q8-mtp)
+python3 scripts/launch.py --dry-run # no alias: loads the current best config (262k-q8q51-mtp)
 python3 scripts/launch.py
 ```
 

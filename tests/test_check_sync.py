@@ -48,14 +48,14 @@ class TestValidateHarness(unittest.TestCase):
     def test_exact_match_has_no_problems(self):
         entries = self._entries(
             ("p1", "local-128k", 131072, "http://127.0.0.1:8080/v1"),
-            ("p1", "local-224k", 229376, "http://127.0.0.1:8080/v1"),
+            ("p1", "local-262k", 262144, "http://127.0.0.1:8080/v1"),
         )
         self.assertEqual(check_sync.validate_harness("t", entries), [])
 
     def test_remote_entries_are_ignored(self):
         entries = self._entries(
             ("p1", "local-128k", 131072, "http://127.0.0.1:8080/v1"),
-            ("p1", "local-224k", 229376, "http://127.0.0.1:8080/v1"),
+            ("p1", "local-262k", 262144, "http://127.0.0.1:8080/v1"),
             ("p2", "gpt-4", 128000, "https://api.openai.com/v1"),
         )
         self.assertEqual(check_sync.validate_harness("t", entries), [])
@@ -66,12 +66,12 @@ class TestValidateHarness(unittest.TestCase):
         )
         problems = check_sync.validate_harness("t", entries)
         self.assertEqual(len(problems), 1)
-        self.assertIn("missing local provider 'local-224k'", problems[0])
+        self.assertIn("missing local provider 'local-262k'", problems[0])
 
     def test_wrong_port_reported(self):
         entries = self._entries(
             ("p1", "local-128k", 131072, "http://127.0.0.1:9999/v1"),
-            ("p1", "local-224k", 229376, "http://127.0.0.1:8080/v1"),
+            ("p1", "local-262k", 262144, "http://127.0.0.1:8080/v1"),
         )
         problems = check_sync.validate_harness("t", entries)
         self.assertEqual(len(problems), 1)
@@ -80,7 +80,7 @@ class TestValidateHarness(unittest.TestCase):
     def test_wrong_context_window_reported(self):
         entries = self._entries(
             ("p1", "local-128k", 8192, "http://127.0.0.1:8080/v1"),
-            ("p1", "local-224k", 229376, "http://127.0.0.1:8080/v1"),
+            ("p1", "local-262k", 262144, "http://127.0.0.1:8080/v1"),
         )
         problems = check_sync.validate_harness("t", entries)
         self.assertEqual(len(problems), 1)
@@ -89,7 +89,7 @@ class TestValidateHarness(unittest.TestCase):
     def test_orphaned_local_provider_reported(self):
         entries = self._entries(
             ("p1", "local-128k", 131072, "http://127.0.0.1:8080/v1"),
-            ("p1", "local-224k", 229376, "http://127.0.0.1:8080/v1"),
+            ("p1", "local-262k", 262144, "http://127.0.0.1:8080/v1"),
             ("p1", "old-local-model", 131072, "http://127.0.0.1:8080/v1"),
         )
         problems = check_sync.validate_harness("t", entries)
@@ -99,7 +99,7 @@ class TestValidateHarness(unittest.TestCase):
     def test_port_in_middle_of_url_accepted(self):
         entries = self._entries(
             ("p1", "local-128k", 131072, "http://127.0.0.1:8080/some/path"),
-            ("p1", "local-224k", 229376, "http://127.0.0.1:8080/some/path"),
+            ("p1", "local-262k", 262144, "http://127.0.0.1:8080/some/path"),
         )
         self.assertEqual(check_sync.validate_harness("t", entries), [])
 
@@ -120,7 +120,7 @@ class TestHarnessEntries(unittest.TestCase):
                         "baseUrl": "http://127.0.0.1:8080/v1",
                         "models": [
                             {"id": "local-128k", "contextWindow": 131072},
-                            {"id": "local-224k", "contextWindow": 229376},
+                            {"id": "local-262k", "contextWindow": 262144},
                         ],
                     }
                 }

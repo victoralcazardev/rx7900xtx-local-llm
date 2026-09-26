@@ -58,7 +58,7 @@ benchmark scripts and measurement write-ups with pinned versions and reproducibl
 
 If you drive this server from a coding-agent harness (any tool that reads an OpenAI-compatible
 `baseUrl` + `contextWindow` provider list), wire it to exactly two fixed entries pointing at
-`:8080` — `local-128k` (contextWindow 131072) and `local-224k` (contextWindow 229376) — and let
+`:8080` — `local-128k` (contextWindow 131072) and `local-262k` (contextWindow 262144) — and let
 `launch.py` decide which alias/profile is actually loaded there, instead of adding one entry
 per model. `check-sync.py` can verify this wiring, but it is off by default: this repository
 doesn't assume you use any particular harness. Enable it locally with a `[harness]` table in

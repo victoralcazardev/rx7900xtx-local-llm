@@ -8,11 +8,9 @@ the manifest yet, use `docs/sop/new-model.md` first.
 | Profile | For | Generation | VRAM peak |
 |---|---|---|---:|
 | `128k-q8q8-mtp` | **Daily use**, with vision | ~58-69 tok/s (empty ctx), ~31 at 104K | 19.6 GiB |
-| `224k-q8q8-mtp` | **Default** (`scripts/launch.py` with no alias) — long context, no vision | ~22.3-25.1 at 221K fill | 22.7 GiB (~1.8 GiB margin) |
-| `240k-q8q8-mtp` | Measured maximum, no vision | ~22.5-24.4 at 237K fill | 23.4 GiB (~0.3 GiB margin, tight) |
+| `262k-q8q51-mtp` | **Default** (`scripts/launch.py` with no alias) — max context + MTP n=3, `-ub 256`, no vision | 18.6-26.9 at 240K fill | 22.2 GiB |
+| `224k-q8q8-mtp` | Alternative long context, no vision | 21.4-32.2 at 190K fill (n=3) | 22.9 GiB |
 | `262k-q8q8` | Max context, official binary, no vision | ~39 (empty), ~19 at 182K | 21.4 GiB |
-| `200k-q8q8-mtp` | Narrower long-context candidate, no vision | ~22-30 at 190K | 21.7 GiB |
-| `262k-q8q51-mtp` | Max context + MTP (`hip-kvmix` engine), no vision | ~18.4 at 240K | 23.0 GiB (tight margin) |
 
 `launch.py` **blocks system suspend** while the server runs (`systemd-inhibit`): suspending with a
 full VRAM has been observed to hang the machine on resume (see `docs/measurements/coexistence.md`).
@@ -50,14 +48,14 @@ shorthand for the `launch.py` invocation below.
 
 2. **Pick alias and profile, or use the default.** With no alias, `scripts/launch.py` loads
    `models.toml`'s `[defaults] default_alias`/`default_profile` (currently `qwen38-iq3s-mtp` /
-   `224k-q8q8-mtp` — see `docs/STATUS.md`):
+   `262k-q8q51-mtp` — see `docs/STATUS.md`):
    ```
    python scripts/launch.py --dry-run
    ```
    To pick a different alias/profile explicitly, if the model has more than one profile,
    `--profile` is required:
    ```
-   python scripts/launch.py qwen38-iq3s-mtp --profile 240k-q8q8-mtp --dry-run
+   python scripts/launch.py qwen38-iq3s-mtp --profile 224k-q8q8-mtp --dry-run
    ```
    Check the printed command and the "Harness provider: local-XXXk" line.
 
@@ -73,7 +71,7 @@ shorthand for the `launch.py` invocation below.
    `<alias> --profile <profile>` (see the table above) to load something other than the default.
 
 4. **In your coding-agent harness (if any), select the provider printed in step 2** (`local-128k`
-   or `local-224k`). A harness doesn't know the model alias, only the `:8080` endpoint — see
+   or `local-262k`). A harness doesn't know the model alias, only the `:8080` endpoint — see
    `AGENTS.md`.
 
 ## How to verify

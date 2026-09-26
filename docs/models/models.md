@@ -5,7 +5,7 @@ disagrees with the TOML, the TOML wins.
 
 | Alias | GGUF | Backend | MTP | Profiles |
 |---|---|---|---|---|
-| `qwen38-iq3s-mtp` | `Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp.gguf` | hip / hip-kvmix | yes | `128k-q8q8-mtp`, `262k-q8q8`, `262k-q8q51-mtp`, `200k-q8q8-mtp`, `224k-q8q8-mtp`, `240k-q8q8-mtp` |
+| `qwen38-iq3s-mtp` | `Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp.gguf` | hip / hip-kvmix | yes | `128k-q8q8-mtp`, `262k-q8q8`, `262k-q8q51-mtp`, `224k-q8q8-mtp` |
 | `qwen38-iq3s` | `Qwen3.8-27B-GSQ-RCO-IQ3_S.gguf` | hip | no | `128k-q8q8`, `262k-q8q8` |
 | `qwen38-iq3xxs-mtp` | `Qwen3.8-27B-GSQ-RCO-IQ3_XXS-mtp.gguf` | hip | yes | `128k-q8q8`, `262k-q8q8-mtp` (unmeasured, may not fit) |
 | `qwen38-rvn-mtp` | `RVN-Q4_K_M-multilingual-mtp.gguf` | hip | yes | `128k-q8q8`, `262k-q8q8-mtp` (unmeasured, may not fit) |
@@ -22,13 +22,12 @@ Vulkan supports every K/V mix out of the box and stays as a reference/fallback b
 
 ## Recommended profile
 
-`qwen38-iq3s-mtp` / `224k-q8q8-mtp` is the current daily-driver default (`scripts/launch.py`'s
-`[defaults]` when no alias is given): fill 221,167 tokens, 22.3/25.1/18.7 tok/s
-(essay/copy/code), KV q8_0/q8_0, MTP n=2, process VRAM peak 22,700 MiB, ~1.8 GiB system VRAM
-margin. `240k-q8q8-mtp` is the maximum measured on this card (23,407 MiB peak, ~0.3 GiB margin
-— tight). See `docs/STATUS.md` for the exact launch command and `docs/measurements/depth.md` for
-the full matrix. `200k-q8q8-mtp` stays as a candidate profile; **its long-context quality test
-covers only 32K/128K/a single 190K document** — see `docs/measurements/depth.md`.
+`qwen38-iq3s-mtp` / `262k-q8q51-mtp` is the current daily-driver default (`scripts/launch.py`'s
+`[defaults]` when no alias is given): fill 240K, quality 8/8 exact (0 loops), KV q8_0/q5_1, MTP
+n=3, `-ub 256`, process VRAM peak 22,630 MiB, 0 evicted. `224k-q8q8-mtp` (KV q8_0/q8_0, MTP n=3,
+`-ub 512` default) stays as the alternative — fill 221,167, process VRAM peak 22,883 MiB. See
+`docs/STATUS.md` for the exact launch command and `docs/measurements/depth.md` for the full
+matrix.
 
 ## Harness wiring
 
@@ -38,8 +37,8 @@ is actually loaded there:
 
 | Provider | contextWindow | When it applies |
 |---|---|---|
-| `local-128k` | 131072 | any profile with `context >= 131072` and `< 229376` |
-| `local-224k` | 229376 | profiles with `context >= 229376` |
+| `local-128k` | 131072 | any profile with `context >= 131072` and `< 262144` |
+| `local-262k` | 262144 | profiles with `context >= 262144` |
 
 `scripts/launch.py` prints which of the two to use for the chosen profile. Verify wiring with
 `python scripts/check-sync.py` (only checked if `local.toml` has `[harness] enabled = true` — see

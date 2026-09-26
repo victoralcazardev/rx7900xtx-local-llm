@@ -12,7 +12,7 @@ hip-kvmix = ""
 
 # Optional: verify this launcher is wired into your own coding-agent harness. Off unless
 # harness.enabled = true. Each target's config file is checked for EXACTLY two providers,
-# local-128k and local-224k, pointing at :8080 with the right contextWindow -- see
+# local-128k and local-262k, pointing at :8080 with the right contextWindow -- see
 # scripts/check-sync.py and AGENTS.md.
 # [harness]
 # enabled = true

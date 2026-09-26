@@ -33,7 +33,7 @@
    ```
 
 6. **Harness wiring**: usually nothing to change — the two fixed providers (`local-128k`,
-   `local-224k`) don't depend on the alias. Only touch harness config if the family uses a thinking
+   `local-262k`) don't depend on the alias. Only touch harness config if the family uses a thinking
    format other than `<think>`/channels already covered (check `tokenizer.chat_template` with
    `gguf_info.py`) — document it in `AGENTS.md` before changing anything.
 
