@@ -3,14 +3,13 @@
 Config + docs for running long-context LLMs locally on an **AMD Radeon RX 7900 XTX (24 GB,
 RDNA3, gfx1100)** via `llama-server`, on Linux (Vulkan/ROCm) and, where noted, on Windows.
 
-**Talk to the user in Spanish in chat. Every file in this repository is written in English**
+**Reply in the user's language in chat; every file in this repository is written in English**
 (code, comments, docs, CLI help, program output). See `docs/STYLE.md` for the full language
 and number-format rules.
 
-This repository is a curated, public-facing subset of a private local setup. **Private
-campaigns, personal machine paths and one-off/exploratory material do not belong here.**
-Only content another RX 7900 XTX owner can reuse or verify gets published: config, launcher,
-benchmark scripts and measurement write-ups with pinned versions and reproducible commands.
+**Personal machine paths and one-off/exploratory material do not belong here.** Only content
+another RX 7900 XTX owner can reuse or verify gets published: config, launcher, benchmark
+scripts and measurement write-ups with pinned versions and reproducible commands.
 
 - Requires **Python 3.11+** (stdlib only, no dependencies — `scripts/check-sync.py` and
   `scripts/manifest.py` use `tomllib`, added to the standard library in 3.11). Every command below
