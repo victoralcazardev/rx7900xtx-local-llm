@@ -6,7 +6,7 @@ depths of the 224K and 262K profiles. `bench/spec_depth_bench.py`, three task ty
 (essay/copy/code), temperature 0, 400 forced output tokens, 1 repetition (cold + warm identical),
 272 W power cap.
 
-## P6 — 224K window (`-c 229376`, KV q8_0/q8_0), 190K fill
+## MTP depth sweep — 224K window (`-c 229376`, KV q8_0/q8_0), 190K fill
 
 Also includes `--spec-draft-p-min 0.8` (the @SergioSV96 community config, minus its q4_0 KV — see
 `docs/SOURCES.md`).
@@ -23,7 +23,7 @@ Prefill ~455 tok/s all variants. Hotspot 98°C, 0 evicted.
 `bench/res/spec-depth-20260926-111916-p6-n3/`,
 `bench/res/spec-depth-20260926-112925-p6-n3-pmin08/` (local only, `bench/res` is git-ignored).
 
-## P5b — 262K window (`-c 262144`, KV q8_0/q5_1), 240K fill
+## MTP depth sweep — 262K window (`-c 262144`, KV q8_0/q5_1), 240K fill
 
 | Variant | Essay | Copy | Code | Mean | Accept | Peak process VRAM |
 |---|---:|---:|---:|---:|---:|---:|
@@ -38,8 +38,8 @@ Prefill 400 tok/s, hotspot 99°C, 0 evicted.
 **Conclusion**: **n=3 wins at depth on both profiles** (+9-11% mean tg), unlike the 128K-fill
 screening in `speculative.md` where only literal copy favored n=3 — the earlier "content-dependent,
 not adopted" call was scoped to that shallower depth. `--spec-draft-p-min 0.8` raises acceptance
-(67%→96%) but not speed (26.6→26.3, within noise) — not adopted on its own. P5b's 240K mean tg
-(23.4, later 23.3 with `-ub 256` — see `20260926-ubatch256-262k/`) meets the user's floor of ≥15
-(target ≥17) with 0 evicted, closing the P5c decision criterion for the 262K default switch. See
+(67%→96%) but not speed (26.6→26.3, within noise) — not adopted on its own. The 262K window's 240K
+mean tg (23.4, later 23.3 with `-ub 256` — see `20260926-ubatch256-262k/`) meets the floor of ≥15
+(target ≥17) with 0 evicted, one of the criteria for the 262K default switch. See
 [`../../docs/measurements/speculative.md`](../../docs/measurements/speculative.md) and
 [`../../docs/DECISIONS.md`](../../docs/DECISIONS.md).

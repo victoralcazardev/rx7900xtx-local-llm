@@ -6,11 +6,11 @@ once the desktop's own usage is accounted for. Same method as `20260926-mtp-n3-d
 (`bench/spec_depth_bench.py`, essay/copy/code, temperature 0, 400 forced output tokens, 1
 repetition, 262,144 context, KV q8_0/q5_1, MTP n=3, 240K fill, 272 W).
 
-## P10 — `-ub 256` vs. the `-ub 512` default (P5b n=3)
+## `-ub 256` vs. the `-ub 512` default (MTP n=3)
 
 | Variant | Essay | Copy | Code | Mean | Accept | Peak process VRAM | pp | Hotspot |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| n=3, `-ub 512` (P5b) | 25.7 | 26.9 | 17.6 | 23.4 | 71% | 22,980 MiB | 400 | 99°C |
+| n=3, `-ub 512` (default) | 25.7 | 26.9 | 17.6 | 23.4 | 71% | 22,980 MiB | 400 | 99°C |
 | **n=3, `-ub 256`** | 24.4 | 26.9 | 18.6 | 23.3 | 71% | **22,630 MiB (-350)** | 380 (-5%) | 99°C |
 
 0 evicted in both. **Raw data**: `bench/res/spec-depth-20260926-120803-p10-262k-n3-ub256/` (local

@@ -1,7 +1,7 @@
 # 2026-09-26 — long-context retrieval quality at 240K, `262k-q8q51-mtp`
 
 **Measures**: whether retrieval quality holds at 240K fill on the 262K-context, KV q8_0/q5_1
-profile — the P5 input to the 262K-vs-224K default decision (`docs/STATUS.md`). Same method as
+profile — input to the 262K-vs-224K default decision (`docs/STATUS.md`). Same method as
 the 2026-09-26 220K run: `bench/longctx_quality.py`, the Spanish-language multi-key retrieval
 corpus (deliberately Spanish — see the script's own docstring and
 [`../../docs/STYLE.md`](../../docs/STYLE.md) §1), 2 documents × 4 questions, temperature 0.

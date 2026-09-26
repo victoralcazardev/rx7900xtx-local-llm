@@ -112,7 +112,7 @@ env IA_BENCH_INHIBITED=1 python bench/concurrency_bench.py --run --inhibitor-ok 
 | Old name | Successor / status |
 |---|---|
 | `spec.py` | Superseded by `spec_bench.py` / `spec_depth_bench.py` |
-| `archivar-validacion.py` | Not moved (marked unsafe in the private project's logbook) |
+| `archivar-validacion.py` | Not moved (marked unsafe during triage) |
 | `*.orig*` copies | Not ported (history lives in git, not in parallel files) |
 | `estres.sh`, `kld-kv.sh`, `matriz.sh`, `memoria.sh`, `motores.sh`, `profundo.sh`, `convivencia.sh` | Not ported (one-off, machine-specific shell diagnostics); conclusions are written up in `docs/measurements/` |
 | `download_models.py` | Not ported (no entries in the current RX 7900 XTX model batch, see the root `AGENTS.md`) |

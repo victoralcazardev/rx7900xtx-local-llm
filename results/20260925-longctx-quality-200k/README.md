@@ -38,10 +38,10 @@ SSE streams are not published — only the extracted per-question fields, matchi
 
 **Conclusion**: retrieval quality does not collapse anywhere measured from 32K to 190K fill of
 the 200K window — every question answered exactly, no output loops. The 190K sample is partial
-(1 of 5 planned documents, 4 of 20 planned questions) — parked by the user after this document
-("si 200K funciona bien, podemos dejar 190K aparcado") rather than run to completion, since the
-32K/128K result plus this single 190K document were judged sufficient evidence to stop chasing
-190K specifically. The 272 W prefill at 190K is **~6% slower** than the 303 W reference at the
+(1 of 5 planned documents, 4 of 20 planned questions) — deprioritized after this document rather
+than run to completion, since the 32K/128K result plus this single 190K document were judged
+sufficient evidence to stop chasing 190K specifically. The 272 W prefill at 190K is **~6% slower**
+than the 303 W reference at the
 same depth (459 vs. ~487 tok/s — see
 [`../../docs/measurements/speculative.md`](../../docs/measurements/speculative.md)'s 190K A/B at
 303 W) and peaks the hotspot at 99°C instead of 100-106°C (see
@@ -51,6 +51,6 @@ same depth (459 vs. ~487 tok/s — see
 
 **Caveats**: single sample per question (no repetition); the 190K result covers only 1 of the 5
 planned documents (a broader sample at 190K, and the remaining 16 questions, were not run — see
-"parked" above); 32K/128K and 190K were measured under different power caps (303 W vs. 272 W),
+"deprioritized" above); 32K/128K and 190K were measured under different power caps (303 W vs. 272 W),
 so throughput isn't directly comparable across the three rows above (thermal/power effects on
 speed are covered separately in `thermals-power.md`, not by this quality test).
