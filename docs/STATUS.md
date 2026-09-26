@@ -66,10 +66,25 @@ which inherit this validation at the same KV/MTP configuration). See
 
 - **A broader 190K quality sample** (remaining 4 of 5 documents, 16 of 20 questions) — parked by
   the user, not blocking. See `measurements/depth.md`.
+- **Round-3 test queue** (2026-09-26 community-claims review, see `docs/SOURCES.md`'s "Community
+  claims reviewed 2026-09-26"), priority order:
+  1. **P1 ROCm toolchain A/B** — the runtime already uses system ROCm 7.2.4; untested: compiler
+     codegen (7.2.4 vs. 10) and the ROCm 10 runtime libraries. See `docs/ENGINES.md`.
+  2. **P2 Quality at the real ~220K operating depth** — current validation stops at 190K fill.
+  3. **P3 BeeLlama v0.4.7 + KVarN KV cache** — KLD @32K, VRAM at 262K, tok/s at 240K fill.
+  4. **P4 exllamav3-rocm** (+ TabbyAPI) — audit first (determinism, license); highest potential and
+     highest risk of the candidates.
+  5. **P5 262K decision** — q8/q5_1 @240K vs. q8/q8 @220K (P2) vs. the best KVarN mix (P3).
+  6. **P6 MTP n=3 + `--spec-draft-p-min 0.8`** at 190K fill (from the @SergioSV96 config, minus its
+     q4_0 KV).
+  7. **P7 Vulkan re-test with the GPU memory clock pinned** — our Vulkan loss coincided with the
+     memory clock at 772 MHz vs. 1249 MHz on ROCm, not necessarily the backend itself — see
+     [`measurements/engines.md`](measurements/engines.md).
 - **llama.cpp hypotheses to re-validate on the next engine update** (see
   [`sop/update-engine.md`](sop/update-engine.md) and `SOURCES.md`): PR
-  [#28102](https://github.com/ggml-org/llama.cpp/pull/28102) may regress gfx1100 deep-prefill
-  FlashAttention tuning; issue
+  [#28102](https://github.com/ggml-org/llama.cpp/pull/28102) targets gfx1201 (RDNA4) — a follow-up
+  forced stream-K back on for gfx1100 after a regression, so this is resolved, not a re-validation
+  item; issue
   [#26648](https://github.com/ggml-org/llama.cpp/issues/26648) is an MTP sampler assert at long
   context on HIP; [halo-box/strix-llama.cpp#56](https://github.com/halo-box/strix-llama.cpp/pull/56)
   is an RDNA3 IQ2/IQ3 MMVQ scale-multiply change; the
@@ -88,7 +103,8 @@ which inherit this validation at the same KV/MTP configuration). See
 
 ## Discarded / not adopted
 
-- Vulkan as primary backend — 2-3.5x slower generation than ROCm on this system.
+- Vulkan as primary backend — 2-3.5x slower generation than ROCm on this system (re-test pending,
+  P7).
 - KV `q4_0/q4_0` — 4x KLD of q8/q8, only mix below 98% same-top-1.
 - `kvmix-vec4` patch — +20% ms/step at depth vs. plain `kvmix`.
 - `stew675/llama-cpp-rdna-boosts` native-q8-KV fork — only -2.5% ms/step, not worth a fork.
@@ -99,6 +115,11 @@ which inherit this validation at the same KV/MTP configuration). See
   copy/refactor-heavy work, not a blanket default); p-min 0.3 is within noise.
 - GPU power-limit / undervolt tuning beyond the permanent 272 W cap — deprioritized (see
   `docs/DECISIONS.md`).
+- Third-party KV `q4_0` recipes (llm-bench.io guide, community posts) — matches this repo's own
+  KLD result: `q4_0` costs ~4x the KLD of q8/q8. See `docs/SOURCES.md`.
+- Lemonade-sdk/llamacpp-rocm and nasone32/llama.cpp-RDNA3-7900xtx-opt — re-checked 2026-09-26:
+  Lemonade's latest build is just a current-master rebuild, nasone32 has no commits since
+  ~2026-09-10. See `docs/SOURCES.md`.
 
 ## Next steps (priority order)
 

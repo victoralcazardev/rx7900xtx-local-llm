@@ -56,6 +56,14 @@ FlashAttention kernels compiled for the K `q8_0` + V `q5_1`/`q4_1` mix, which th
 doesn't ship. At runtime it uses the system's ROCm 7.2.4 libraries by default
 (`/opt/rocm/lib`) — the ROCm 10 venv above is a **build-time** toolchain only.
 
+**Compiled vs. runtime ROCm, explicit**: `hip-kvmix` is compiled with ROCm 10.0.0 (the venv above)
+but at runtime resolves `libamdhip64.so.7`, `librocblas.so.5`, `libhipblas.so.3` and
+`libhsa-runtime64.so.1` to the system's ROCm 7.2.4 install (`/opt/rocm/lib`, distro packages
+`rocm-core`/`hip-runtime-amd`/`rocblas`/`hipblas`, all 7.2.4). Community advice to "use ROCm 7.x"
+already applies to this runtime; what's untested is the *compiler* codegen (ROCm 7.2.4 vs. 10 —
+see `llama-b11160-linux-rocm-gfx1100-kvmix` above, ~9% slower) and the ROCm 10 *runtime* libraries
+(fails to load today, see `docs/measurements/engines.md`).
+
 ### `llama-b11160-linux-rocm10-gfx1100-kvmix-vec4` (discarded)
 
 Same as `kvmix` above, plus a 1-line patch to `ggml/src/ggml-cuda/fattn.cu` (the AMD branch, no
@@ -93,6 +101,19 @@ no F16 copy); `=0` means the old F16 path. Verified with
 `test-backend-ops -o FLASH_ATTN_EXT -p 'hsk=256.*q8_0'`: 10/10 passed. **Measured and not adopted**:
 only -2.5% ms/step at ~190K depth vs. `kvmix` — not worth maintaining a separate fork for that gain.
 See `docs/measurements/speculative.md`.
+
+## Candidate engines (not yet measured)
+
+Community claims reviewed 2026-09-26 (`docs/SOURCES.md`) surfaced four candidates, none measured on
+this hardware yet — see `odd/tasks/rx7900xtx-tuning-round3.md` for the test plan:
+
+- **BeeLlama v0.4.7** (ROCm 7.2 prebuilt, `beellama-v0.4.7-bin-ubuntu-rocm-7.2-x64.tar.gz`) — adds
+  the KVarN KV cache quantization.
+- **exllamav3-rocm** (+ patched TabbyAPI) — HIP port of ExLlamaV3, highest-risk candidate.
+- **A `kvmix` rebuild against the system ROCm 7.2.4 compiler and runtime together** — isolates
+  compiler codegen from the runtime-library question above.
+- **Latest-master Vulkan build**, re-tested with the GPU memory clock pinned (see
+  `docs/measurements/engines.md`'s 772 MHz vs. 1249 MHz finding).
 
 ## Not included here
 

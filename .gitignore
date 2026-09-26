@@ -22,3 +22,6 @@ bench/res/
 *.token
 hf_token*
 
+
+# Private ODD working notes (never published)
+odd/

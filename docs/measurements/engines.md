@@ -123,6 +123,15 @@ the compiler, not the source: see the corrected engine matrix below.
   `LD_LIBRARY_PATH` at runtime **fails** with `rocBLAS error: Could not initialize Tensile host`
   (missing gfx1100 kernel package for rocBLAS) — not investigated further; every engine here uses
   the system's ROCm 7.2.4 runtime at run time, only the ROCm 10 toolchain at *compile* time.
+- **Explicit compile-vs-runtime split** (2026-09-26): `hip-kvmix` is **compiled** against ROCm
+  10.0.0 (the TheRock wheels above) but at **runtime** loads the system's ROCm 7.2.4 shared
+  libraries — `libamdhip64.so.7`, `librocblas.so.5`, `libhipblas.so.3` and `libhsa-runtime64.so.1`
+  from `/opt/rocm/lib`, provided by the distro packages `rocm-core`, `hip-runtime-amd`, `rocblas`
+  and `hipblas` (all 7.2.4). Community advice to "use ROCm 7.x" therefore already applies to this
+  engine's runtime; the untested parts are the *compiler* codegen (ROCm 7.2.4 vs. 10 — see the
+  engine matrix above, ~9% slower with the 7.2.4 compiler) and the ROCm 10 *runtime* libraries
+  (untested — the venv's `LD_LIBRARY_PATH` fails to load, see above). See `docs/ENGINES.md`'s
+  "Candidate engines" for what this motivates.
 - Current `hip-kvmix` engine = the ROCm-10-compiled build. The ROCm-7.2.4-compiled build is
   obsolete.
 
