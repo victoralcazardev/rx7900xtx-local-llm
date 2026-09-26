@@ -2,24 +2,30 @@
 
 ## Current conclusion
 
-**Profile: `224k-q8q8-mtp`** (`models.toml`) — recommended daily long-context default
-(`scripts/launch.py`'s default when no alias is given): engine `hip-kvmix`, `-c 229376`, KV
-q8_0/q8_0, MTP n=2, vision disabled, measured under a 272 W power cap (this card's driver
-minimum — see `thermals-power.md`).
+**Profile: `262k-q8q51-mtp`** (`models.toml`) — recommended daily long-context default
+(`scripts/launch.py`'s default when no alias is given): engine `hip-kvmix`, `-c 262144`, KV
+q8_0/q5_1, MTP n=3, `-ub 256`, vision disabled, measured under a 272 W power cap (this card's
+driver minimum — see `thermals-power.md`).
 
-- **22.3-25.1 tok/s at 221K fill** across three task types (essay/copy/code, temperature 1),
-  process VRAM peak **22,700 MiB**, 0 evicted, ~1.8 GiB of system VRAM margin. See "Context-window
-  ladder" below and [`../../results/20260925-context-window-ladder/`](../../results/20260925-context-window-ladder/).
-- **`240k-q8q8-mtp` is the measured maximum on this card**: 22.5-24.4 tok/s at 237K fill, process
-  VRAM peak 23,407 MiB, only ~0.3 GiB of margin left — tight, close other GPU applications before
-  using it.
-- **Long-context quality validated up to 220K fill (52/52 exact match total)**: 44/44 up to 190K
-  (32K 20/20, 128K 20/20, 190K 4/4 partial on one of five planned documents) plus 8/8 at 220K on
-  the real `224k-q8q8-mtp` operating depth, 0 loop detections total. See "Quality (RULER-style)"
-  below.
-- The narrower `200k-q8q8-mtp` profile (`-c 204800`) stays in `models.toml` as a candidate;
-  `224k-q8q8-mtp` supersedes it as the default because it fits ~24K more tokens of context at a
-  comparable measured margin and throughput (see "Context-window ladder" below).
+- **18.6-26.9 tok/s at 240K fill** across three task types (essay/copy/code, temperature 0),
+  process VRAM peak **22,630 MiB**, 0 evicted. See "MTP n=3 confirmed at depth" and "`-ub 256`" in
+  `speculative.md`/`memory.md`, and
+  [`../../results/20260926-mtp-n3-depth/`](../../results/20260926-mtp-n3-depth/),
+  [`../../results/20260926-ubatch256-262k/`](../../results/20260926-ubatch256-262k/).
+- **`224k-q8q8-mtp` stays as the alternative profile** (`-c 229376`, KV q8_0/q8_0, MTP n=3,
+  `-ub 512` default): 21.4-32.2 tok/s at 190K fill, process VRAM peak 22,883 MiB.
+- **Long-context quality validated up to 240K fill (60/60 exact match total)**: 52/52 up to 220K
+  (see below) plus 8/8 at 240K on the adopted `262k-q8q51-mtp` profile (KV q8_0/q5_1) — the +27%
+  KLD of q8_0/q5_1 over q8_0/q8_0 does not show up as a retrieval error at this depth. See
+  "Quality (RULER-style)" below.
+- The `200k-q8q8-mtp` and `240k-q8q8-mtp` profiles were **removed from `models.toml`**: 262K
+  q8_0/q5_1 now gives more context than either at the same validated quality and less process VRAM
+  than 240K q8/q8 (see "Context-window ladder" below).
+- **System VRAM margin depends on the desktop's own usage, not just the profile**: a corrected
+  reading found only ~0.2-0.3 GiB of total system headroom across every long-context configuration
+  measured on 2026-09-26 (vs. the ~1.8 GiB figure below, measured with a lighter desktop) — see
+  `memory.md`. Close heavy GPU applications (video players, browsers with GPU video) before
+  long-context work, regardless of profile.
 - All of the above is measured under the 272 W power cap adopted after a 303 W run overheated
   (see `thermals-power.md`) — about 6% slower prefill than the older 303 W measurements at a
   comparable depth, with more thermal margin (hotspot 98-101°C vs. 100-106°C at 303 W). The 303 W
@@ -158,12 +164,17 @@ repetitions). Raw data and exact commands:
 | 240K (`-c 245760`) | 237,551 | 410 | 22.5 | 24.4 | 18.7 | 23,407 MiB | ~0.3 GiB margin | 101°C |
 
 GTT stayed at 8 MiB and evicted at 0 MiB in both cases. **Both fit and clear 18 tok/s on every
-task.** 224K is adopted as the new default profile (`224k-q8q8-mtp`) — ~1.8 GiB of system VRAM
-margin even with another light GPU client running. 240K is the measured maximum
-(`240k-q8q8-mtp`) — only ~0.3 GiB margin, tight; close other GPU applications first. The ladder
-was stopped by the user after 240K (262K, which would need KV `q8_0/q5_1` to fit, was not
-attempted here — see the existing `262k-q8q8`/`262k-q8q51-mtp` profiles above for that end of the
-range).
+task.** 224K was adopted as the default profile (`224k-q8q8-mtp`) at the time — ~1.8 GiB of system
+VRAM margin even with another light GPU client running. 240K was the measured maximum
+(`240k-q8q8-mtp`) — only ~0.3 GiB margin, tight. The ladder was stopped by the user after 240K
+(262K, which would need KV `q8_0/q5_1` to fit, was not attempted in this ladder).
+
+**Superseded 2026-09-26**: 262K with KV `q8_0/q5_1` was measured directly (below and in
+`speculative.md`/`memory.md`) and adopted as the new default (`262k-q8q51-mtp`), fitting more
+context than 240K at less process VRAM; `200k-q8q8-mtp` and `240k-q8q8-mtp` were removed from
+`models.toml`. `224k-q8q8-mtp` stays as the alternative profile. The ~1.8 GiB system VRAM margin
+figure above was measured with a lighter desktop than later sessions — see `memory.md`'s
+`-ub 256`/system-VRAM finding for the corrected reading.
 
 ## Quality (RULER-style), `200k-q8q8-mtp`
 
@@ -201,11 +212,26 @@ VRAM 22,702 MiB, 0 evicted, hotspot 98°C.
 validation at the real 220K depth" gap; anecdotal "q8 KV amnesia beyond 150K" claims (`SOURCES.md`)
 do not reproduce here.
 
+### 240K, `262k-q8q51-mtp` (2026-09-26)
+
+Same script, the real operating depth of the newly adopted `262k-q8q51-mtp` profile (`-c 262144`,
+KV q8_0/q5_1, MTP n=2, 272 W). 2 documents × 4 questions, temperature 0. Raw data:
+[`../../results/20260926-longctx-quality-262k/`](../../results/20260926-longctx-quality-262k/).
+
+**8/8 exact match, 0 loops, 0 truncated.** Prompt 240,111 tokens, cold prefill 400 tok/s;
+follow-up turns reuse 239,595 cached tokens, generation 23.0-24.0 tok/s. Peak process VRAM 22,830
+MiB, 0 evicted, hotspot 98°C.
+
+**Cumulative: 60/60 exact match, 32K-240K fill** (52/52 above + this 8/8). The +27% KLD of KV
+q8_0/q5_1 over q8_0/q8_0 (`kv-quality.md`) does not show up as a retrieval error at this depth —
+one of the criteria that closed the P5c decision to adopt `262k-q8q51-mtp` as the default profile
+(`docs/DECISIONS.md`).
+
 ## Open questions / pending (priority order)
 
 1. A broader 190K quality sample (the remaining 4 of 5 planned documents, 16 of 20 questions) —
-   parked by the user, not required to promote `224k-q8q8-mtp`/`240k-q8q8-mtp` (32K/128K are fully
-   validated, and the one 190K document validated exactly).
+   parked by the user, not required to keep `224k-q8q8-mtp`/`262k-q8q51-mtp` adopted (32K/128K are
+   fully validated, and the one 190K document validated exactly).
 2. Real agent-usage MTP acceptance at depth (temperature 1, 3 seeds): the synthetic benchmark above is
    pessimistic — a third-party report (`sweeps/radeon.md`,
    [sudoingX/qwen38-mtp](https://github.com/sudoingX/qwen38-mtp/blob/master/sweeps/radeon.md))
@@ -219,8 +245,8 @@ do not reproduce here.
    with MTP ([sudoingX/qwen38-mtp](https://github.com/sudoingX/qwen38-mtp)) — not reproduced here
    (Linux only so far); Windows/Vulkan doesn't appear to suffer the Linux memory-clock throttling
    described in `engines.md`.
-6. 262K with KV `q8_0/q5_1` (the only way to reach it with MTP headroom) was not attempted in the
-   224K/240K ladder above.
+6. ~~262K with KV `q8_0/q5_1` was not attempted in the 224K/240K ladder above~~ — done 2026-09-26,
+   see "240K, `262k-q8q51-mtp`" above and `speculative.md`'s "MTP n=3 confirmed at depth".
 
 ## History
 
@@ -241,3 +267,9 @@ do not reproduce here.
   superseding `200k-q8q8-mtp` as the recommended daily default (kept as a narrower candidate).
 - **2026-09-26**: quality re-tested at 220K fill, the real `224k-q8q8-mtp` operating depth — 8/8
   exact match, 0 loops. Cumulative 52/52 exact match from 32K to 220K.
+- **2026-09-26, later**: quality re-tested at 240K fill on `262k-q8q51-mtp` (KV q8_0/q5_1) — 8/8
+  exact match, 0 loops, cumulative 60/60 from 32K to 240K. MTP n=3 confirmed at depth (190K/240K,
+  +9-11% mean tg) and adopted for both long-context profiles. `262k-q8q51-mtp` (MTP n=3, `-ub 256`)
+  adopted as the new default, superseding `224k-q8q8-mtp` (kept as the alternative);
+  `200k-q8q8-mtp` and `240k-q8q8-mtp` removed from `models.toml`. See `speculative.md` and
+  `memory.md` for the full evidence.

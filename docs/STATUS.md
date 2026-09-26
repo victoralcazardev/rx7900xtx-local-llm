@@ -2,46 +2,56 @@
 
 ## Current profile
 
-`qwen38-iq3s-mtp` / `224k-q8q8-mtp` — **default** (`scripts/launch.py`'s `[defaults]` when no
+`qwen38-iq3s-mtp` / `262k-q8q51-mtp` — **default** (`scripts/launch.py`'s `[defaults]` when no
 alias is given, i.e. `ia` with no arguments).
 
 ```
 python scripts/launch.py
 # equivalent, explicit form:
+python scripts/launch.py qwen38-iq3s-mtp --profile 262k-q8q51-mtp
+```
+
+Engine `hip-kvmix`, `-c 262144`, KV `q8_0/q5_1`, MTP `--spec-draft-n-max 3`, `-ub 256`, vision
+disabled, measured under a 272 W power cap (this card's driver minimum, now the permanent
+setting — see `measurements/thermals-power.md`).
+
+`224k-q8q8-mtp` is the **alternative** long-context profile (`-c 229376`, KV `q8_0/q8_0`, MTP n=3,
+`-ub 512` default):
+
+```
 python scripts/launch.py qwen38-iq3s-mtp --profile 224k-q8q8-mtp
-```
-
-Engine `hip-kvmix`, `-c 229376`, KV `q8_0/q8_0`, MTP `--spec-draft-n-max 2`, vision disabled,
-measured under a 272 W power cap (this card's driver minimum, now the permanent setting — see
-`measurements/thermals-power.md`).
-
-`240k-q8q8-mtp` is the **measured maximum** on this card — only ~0.3 GiB of system VRAM margin
-left, tight: close other GPU applications (e.g. a video player) before using it.
-
-```
-python scripts/launch.py qwen38-iq3s-mtp --profile 240k-q8q8-mtp
 ```
 
 ## Key figures
 
-- **224K default**: 22.3-25.1 tok/s at 221K fill across three task types (essay/copy/code),
-  process VRAM peak **22,700 MiB**, 0 evicted, ~1.8 GiB system VRAM margin. **240K max**: 22.5-24.4
-  tok/s at 237K fill, process VRAM peak **23,407 MiB**, ~0.3 GiB margin. See
-  [`measurements/depth.md`](measurements/depth.md)'s "Context-window ladder".
+- **262K default**: 18.6-26.9 tok/s at 240K fill across three task types (essay/copy/code),
+  process VRAM peak **22,630 MiB**, 0 evicted. **224K alternative**: 21.4-32.2 tok/s at 190K fill,
+  process VRAM peak **22,883 MiB**. See
+  [`measurements/speculative.md`](measurements/speculative.md)'s "MTP n=3 confirmed at depth" and
+  [`measurements/memory.md`](measurements/memory.md)'s "`-ub 256`" section.
 - **128K daily-use profile** (`128k-q8q8-mtp`, vision on): ~58-69 tok/s empty context, ~31 tok/s at
   104K. VRAM 19.6 GiB. See [`measurements/depth.md`](measurements/depth.md).
 - **262K official-binary profile** (`262k-q8q8`, no MTP): ~39 tok/s empty, ~19 tok/s at 182K. VRAM
   21.4 GiB.
-- **`-ub 512` (the default) confirmed optimal at depth** (128K fill, 272 W): `-ub 1024`/`-ub 2048`
-  cost 590 MiB/1.8 GiB VRAM for no speed gain (`-ub 2048` is strictly worse). Supersedes the
-  earlier empty-context-only reading. See [`measurements/engines.md`](measurements/engines.md).
-- **MTP n=3 measured at depth for the first time** (128K fill): content-dependent, +17% on literal
-  copy, ≈ on code, but −11 points of acceptance vs. n=2 — not adopted as the default.
-  `--spec-draft-p-min 0.3` is within noise of n=2 — not adopted. See
-  [`measurements/speculative.md`](measurements/speculative.md).
+- **MTP n=3 adopted as the default draft length (2026-09-26)**: confirmed at depth on both
+  long-context profiles — +9% mean tg at 190K (224K profile), +11% at 240K (262K profile), across
+  all three task types. This supersedes the 2026-09-25 128K-fill screening, which only found n=3
+  favorable on literal copy at that shallower depth. `--spec-draft-p-min 0.8` raises acceptance but
+  not speed — not adopted. See [`measurements/speculative.md`](measurements/speculative.md).
+- **`-ub 256` adopted for the 262K default (2026-09-26)**: -350 MiB process VRAM for a small pp
+  cost (-5%), no generation-speed cost. This differs from the 2026-09-25 128K-fill screening where
+  `-ub 512` was optimal — the effect of `-ub` depends on profile and depth. See
+  [`measurements/memory.md`](measurements/memory.md).
 - **KV quality**: q8_0/q8_0 is effectively free (KLD 0.000587 vs. f16); q8_0/q5_1 costs 27% more but
-  is still small. q4_0/q4_0 discarded (4x KLD). See
+  is still small and doesn't show up as a retrieval-quality loss at 240K (see "Quality validation"
+  below). q4_0/q4_0 discarded (4x KLD). See
   [`measurements/kv-quality.md`](measurements/kv-quality.md).
+- **System VRAM margin depends on the desktop's own usage, not just the profile (2026-09-26)**:
+  total system VRAM left only 12-190 MiB free across every long-context configuration measured that
+  day (desktop idle ~1.5 GiB, vs. ~0.8 GiB on other days) — corrects the earlier "~1.8 GiB margin"
+  figure for the 224K profile, measured with a lighter desktop. Close heavy GPU applications
+  (video players, browsers with GPU video) before long-context work, regardless of profile. See
+  [`measurements/memory.md`](measurements/memory.md).
 - **Thermals and power**: **272 W (this card's driver minimum) is now the permanent power cap**,
   applied via a systemd unit at boot, not just for deep-prefill tests — measured directly at 190K
   vs. the factory 303 W default: ~6% slower prefill (459 vs. 487 tok/s), but the hotspot peaks
@@ -56,9 +66,10 @@ python scripts/launch.py qwen38-iq3s-mtp --profile 240k-q8q8-mtp
 
 ## Quality validation
 
-**52/52 exact match, 0 loop detections**, up to 220K fill (`bench/longctx_quality.py`, RULER-style
+**60/60 exact match, 0 loop detections**, up to 240K fill (`bench/longctx_quality.py`, RULER-style
 multi-key retrieval): 32K 20/20, 128K 20/20, 190K 4/4 (one of five planned documents, partial,
-parked by the user), 220K 8/8 (2026-09-26, the real `224k-q8q8-mtp` operating depth). See
+parked by the user), 220K 8/8 (2026-09-26, the `224k-q8q8-mtp` operating depth), 240K 8/8
+(2026-09-26, the adopted `262k-q8q51-mtp` operating depth, KV q8_0/q5_1). See
 [`measurements/depth.md`](measurements/depth.md#quality-ruler-style-200k-q8q8-mtp).
 
 ## Open hypotheses to re-validate
@@ -76,13 +87,21 @@ parked by the user), 220K 8/8 (2026-09-26, the real `224k-q8q8-mtp` operating de
      bit width; BeeLlama itself is ~18-22% slower than `hip-kvmix`. See `measurements/kv-quality.md`.
   4. **P4 exllamav3-rocm** (+ TabbyAPI) — **parked by the user** (least interest of the candidates;
      read-only audit done, no code/license blocker found — see `docs/ENGINES.md`/`docs/SOURCES.md`).
-  5. **P5 262K decision — running.** q8/q5_1 quality at 240K fill vs. q8/q8 @220K (P2, done) vs. the
-     best KVarN mix (P3, rejected — dropped from this comparison).
-  6. **P6 MTP n=3 + `--spec-draft-p-min 0.8`** at 190K fill (from the @SergioSV96 config, minus its
-     q4_0 KV) — pending.
-  7. **P7 Vulkan re-test with the GPU memory clock pinned** — pending; our Vulkan loss coincided with
-     the memory clock at 772 MHz vs. 1249 MHz on ROCm, not necessarily the backend itself — see
+  5. **P5/P5b/P5c 262K decision — done, adopted.** q8/q5_1 quality 8/8 exact at 240K fill (P5);
+     MTP n=3 +11% mean tg at 240K, meeting the user's floor (P5b); `262k-q8q51-mtp` adopted as the
+     new default profile, `224k-q8q8-mtp` kept as the alternative (P5c). See `measurements/depth.md`,
+     `measurements/speculative.md`.
+  6. **P6 MTP n=3 + `--spec-draft-p-min 0.8` — done.** n=3 wins at 190K depth (+9% mean tg,
+     `224k-q8q8-mtp`); p-min 0.8 raises acceptance (67%→96%) but not speed — not adopted on its own.
+     See `measurements/speculative.md`.
+  7. **P7 Vulkan re-test with the GPU memory clock pinned** — **pending, needs sudo** (to pin
+     `power_dpm_force_performance_level`, user present); our Vulkan loss coincided with the memory
+     clock at 772 MHz vs. 1249 MHz on ROCm, not necessarily the backend itself — see
      [`measurements/engines.md`](measurements/engines.md).
+  8. **P9 (later) Speed research at depth for the 262K profile** — open, user interest, not started.
+  9. **P10 `-ub 256` on the 262K default — done, adopted.** -350 MiB process VRAM, small pp cost,
+     no speed cost; also measured system VRAM headroom across configurations. See
+     `measurements/memory.md`.
 - **llama.cpp hypotheses to re-validate on the next engine update** (see
   [`sop/update-engine.md`](sop/update-engine.md) and `SOURCES.md`): PR
   [#28102](https://github.com/ggml-org/llama.cpp/pull/28102) targets gfx1201 (RDNA4) — a follow-up
@@ -100,9 +119,10 @@ parked by the user), 220K 8/8 (2026-09-26, the real `224k-q8q8-mtp` operating de
   [#27282](https://github.com/ggml-org/llama.cpp/issues/27282) and
   [#28433](https://github.com/ggml-org/llama.cpp/issues/28433) (MTP compute/draft-ctx sizing on
   HIP) are open as of b11178. See [`sop/update-engine.md`](sop/update-engine.md).
-- **MTP n=3 and `--spec-draft-p-min` at 190-240K depth**: only measured at 128K fill so far (single
-  sample per task) — see `measurements/speculative.md`.
-- **262K with KV `q8_0/q5_1`** was not attempted in the 224K/240K context-window ladder.
+- ~~MTP n=3 and `--spec-draft-p-min` at 190-240K depth: only measured at 128K fill so far~~ — done
+  2026-09-26 (P6/P5b), n=3 adopted for both long-context profiles. See `measurements/speculative.md`.
+- ~~262K with KV `q8_0/q5_1` was not attempted in the 224K/240K context-window ladder~~ — done
+  2026-09-26 (P5), adopted as the new default (`262k-q8q51-mtp`). See `measurements/depth.md`.
 
 ## Discarded / not adopted
 
@@ -114,8 +134,10 @@ parked by the user), 220K 8/8 (2026-09-26, the real `224k-q8q8-mtp` operating de
 - DFlash2 speculative decoding — slower than MTP n=2 at 190K on most task types, more VRAM.
 - Vision at 200K/224K/240K/262K context — VRAM/context cost not worth it; deprioritized by the user.
 - `-ub 1024`/`-ub 2048` — no speed gain at depth, cost 590 MiB/1.8 GiB more VRAM.
-- MTP n=3 and `--spec-draft-p-min 0.3` as the default — n=3 is content-dependent (candidate for
-  copy/refactor-heavy work, not a blanket default); p-min 0.3 is within noise.
+- MTP n=3 as the default at 128K fill — content-dependent at that shallower depth (only literal
+  copy favored it); n=3 **is** adopted at the 190-240K operating depths of the long-context
+  profiles (see "Key figures" above). `--spec-draft-p-min 0.3`/`0.8` — within noise of plain n=3 on
+  speed at every depth measured (0.8 raises acceptance only).
 - GPU power-limit / undervolt tuning beyond the permanent 272 W cap — deprioritized (see
   `docs/DECISIONS.md`).
 - Third-party KV `q4_0` recipes (llm-bench.io guide, community posts) — matches this repo's own
@@ -130,6 +152,6 @@ parked by the user), 220K 8/8 (2026-09-26, the real `224k-q8q8-mtp` operating de
 
 ## Next steps (priority order)
 
-1. Confirm MTP n=3 at 190-240K depth if a copy/refactor-heavy profile is ever wanted (currently
-   not adopted as the default — see `measurements/speculative.md`).
-2. GPU care beyond the permanent 272 W cap (undervolt) — deferred, see `docs/DECISIONS.md`.
+1. **P7** Vulkan re-test with the GPU memory clock pinned — needs sudo, user present.
+2. **P9** Speed research at depth for the 262K profile — open, user interest.
+3. GPU care beyond the permanent 272 W cap (undervolt) — deferred, see `docs/DECISIONS.md`.

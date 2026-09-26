@@ -16,6 +16,16 @@
 - No flag exists in b11160 to limit the MTP draft's own context or compute footprint. Smaller `-ub`
   reduces the declared compute buffers but doesn't consistently lower real VRAM use, and at 240K
   causes GTT overflow instead (see `depth.md`, case P5).
+- **Update, 2026-09-26**: on the current `262k-q8q51-mtp` profile (MTP n=3), `-ub 256` *does*
+  lower real process VRAM (-350 MiB vs. the `-ub 512` default) with only a small prefill cost —
+  see "`-ub 256`" below; this differs from the 2026-09-25 128K-fill screening (`speculative.md`)
+  where `-ub 512` was optimal, and from the P5 case above (GTT overflow) — the effect of `-ub`
+  depends on profile and depth, re-measure rather than assume.
+- **System VRAM headroom depends on the desktop's own usage, measured directly 2026-09-26**: total
+  system VRAM (not just the process) left only 12-190 MiB free across every long-context
+  configuration measured that day, with desktop idle usage at ~1.5 GiB (vs. ~0.8 GiB on other
+  days) — see "`-ub 256`" below. The process itself was never evicted, but system-wide headroom is
+  thin regardless of profile; close other heavy GPU applications before long-context work.
 
 ## VRAM breakdown at load (`-lv 4` log, 262K context, MiB)
 
@@ -50,6 +60,34 @@ doesn't mean zero, and 0.2 s sampling can miss brief spikes.
 Total VRAM including the desktop, on a 24,560 MiB card. See `depth.md` for the full stress-test
 table and its conclusion (VRAM margin is the actual failure mode at 262K + MTP, not a driver bug).
 
+## `-ub 256` on the 262K default, and system VRAM headroom (2026-09-26)
+
+`bench/spec_depth_bench.py`, `262k-q8q51-mtp` (MTP n=3), 240K fill, essay/copy/code, temperature
+0, 272 W. Raw data and exact commands:
+[`../../results/20260926-ubatch256-262k/`](../../results/20260926-ubatch256-262k/).
+
+| Variant | Peak process VRAM | pp |
+|---|---:|---:|
+| `-ub 512` (default) | 22,980 MiB | 400 |
+| **`-ub 256`** | **22,630 MiB (-350)** | 380 (-5%) |
+
+Generation tok/s was within noise (mean 23.3 vs. 23.4, see `speculative.md`). **Adopted**: the
+VRAM saving is worth the small prefill cost.
+
+System VRAM (all processes, `mem_info_vram_used`, 24,560 MiB total), peak:
+
+| Configuration | Peak used | Free |
+|---|---:|---:|
+| 224K, n=2, `-ub 512` | 24,426 MiB | 134 MiB |
+| 262K, n=2, `-ub 512` | 24,548 MiB | 12 MiB |
+| 262K, n=3, `-ub 512` | 24,534 MiB | 26 MiB |
+| 262K, n=3, `-ub 256` | 24,370 MiB | 190 MiB |
+
+0 evicted throughout. Desktop idle VRAM this session was ~1.5 GiB (other days ~0.8 GiB) — the
+**"~1.8 GiB system VRAM margin" figure for the 224K profile in `depth.md` was measured with a
+lighter desktop and doesn't generalize**; actual headroom depends on what else is using the GPU at
+the time, not just the profile.
+
 ## Open questions
 
 - fdinfo instrumentation was not yet wired into every benchmark script at the time of the earlier
@@ -64,3 +102,7 @@ table and its conclusion (VRAM margin is the actual failure mode at 262K + MTP, 
 - **2026-09-24/25**: fdinfo instrumentation adopted across the depth-measurement scripts (see
   `depth.md`'s 128K/240K and 190K results), replacing total-VRAM readings for anything used to judge
   margin.
+- **2026-09-26**: `-ub 256` measured on the newly adopted `262k-q8q51-mtp` (MTP n=3) profile —
+  -350 MiB process VRAM for a small pp cost, adopted. System VRAM (not just the process) measured
+  directly across every long-context configuration that day: only 12-190 MiB free at the platform
+  limit, correcting the earlier ~1.8 GiB margin figure that was measured with a lighter desktop.

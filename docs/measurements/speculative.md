@@ -13,11 +13,15 @@
   different GPU (RTX 3090) does not reproduce here.
 - **n-gram stacked on MTP**: a single sample suggests it can help on repetitive content (code edits,
   +6%) and hurt on reasoning (−8%); not adopted without repeated measurement.
-- **MTP n=3, measured at depth for the first time (128K fill, 272 W)**: strongly content-dependent
-  — +17% on literal copy, ≈ on code, small essay gain — but acceptance drops 11 points vs. n=2 (75%
-  → 64%). **Not adopted as the default** (n=2 stays); candidate for a copy/refactor-heavy profile.
-  `--spec-draft-p-min 0.3` is within noise of plain n=2 at the same depth — not adopted. See
-  "`-ub` and MTP screening at 128K fill" below.
+- **MTP n=3, first measured at 128K fill (272 W)**: strongly content-dependent — +17% on literal
+  copy, ≈ on code, small essay gain — but acceptance drops 11 points vs. n=2 (75% → 64%). At that
+  depth it was **not adopted** as the default. `--spec-draft-p-min 0.3` is within noise of plain
+  n=2 at the same depth — not adopted. See "`-ub` and MTP screening at 128K fill" below.
+- **MTP n=3, confirmed at 190K and 240K fill (2026-09-26)**: **now adopted as the default** for
+  both long-context profiles — at these deeper fills it wins across all three task types, +9% mean
+  tg at 190K (224K profile) and +11% at 240K (262K profile), unlike the 128K-fill result above
+  where only copy favored it. `--spec-draft-p-min 0.8` (a community config) raises acceptance
+  (67%→96%) but not speed — not adopted on its own. See "MTP n=3 confirmed at depth" below.
 - The **root cause of MTP's depth slowdown is identified but not fully explained**: verifying ≥3
   tokens per step (MTP n≥2) routes through the FlashAttention TILE kernel, which converts the whole
   KV cache to f16 on every step; a fork that removes that conversion only recovered ~2.5% of the
@@ -186,6 +190,40 @@ exact commands: [`../../results/20260925-ubatch-mtp-screening-128k/`](../../resu
   before any such profile is added (TILE-kernel cost grows with depth — see the VEC/TILE section
   above).
 
+## MTP n=3 confirmed at depth (190K and 240K fill, 2026-09-26)
+
+The 128K-fill screening above left n=3 as "content-dependent, not adopted". Repeated at the two
+long-context profiles' actual operating depths (`bench/spec_depth_bench.py`, essay/copy/code,
+temperature 0, 400 forced output tokens, 1 repetition, 272 W). Raw data and exact commands:
+[`../../results/20260926-mtp-n3-depth/`](../../results/20260926-mtp-n3-depth/).
+
+**224K profile (`-c 229376`, KV q8_0/q8_0), 190K fill:**
+
+| Variant | Essay | Copy | Code | Mean | Accept | Peak process VRAM |
+|---|---:|---:|---:|---:|---:|---:|
+| n=2 | 24.0 | 28.0 | 21.1 | 24.4 | 76% | 22,733 MiB |
+| **n=3** | **26.1** | **32.2** | **21.4** | **26.6 (+9%)** | 67% | 22,883 MiB |
+| n=3 + `--spec-draft-p-min 0.8` | 26.7 | 31.6 | 20.6 | 26.3 | 96% | 22,883 MiB |
+
+**262K profile (`-c 262144`, KV q8_0/q5_1), 240K fill:**
+
+| Variant | Essay | Copy | Code | Mean | Accept | Peak process VRAM |
+|---|---:|---:|---:|---:|---:|---:|
+| n=2 | 22.2 | 22.9 | 18.0 | 21.0 | 81% | 22,830 MiB |
+| **n=3** | **25.7** | **26.9** | **17.6** | **23.4 (+11%)** | 71% | 22,980 MiB |
+
+Prefill ~455 tok/s (224K) / 400 tok/s (262K), hotspot 98-99°C, 0 evicted in every case.
+
+- **n=3 wins at both depths, across all three task types** — unlike the 128K-fill screening,
+  where only literal copy favored it. **Adopted as the default MTP draft length** for both
+  long-context profiles, superseding the 2026-09-25 "not adopted" call at this depth.
+  `--spec-draft-p-min 0.8` (the @SergioSV96 community config, minus its q4_0 KV — see
+  `docs/SOURCES.md`) raises acceptance substantially (67%→96% at 190K) but not speed (26.6→26.3,
+  within noise) — **not adopted on its own**.
+- The 262K profile's 240K mean tg (23.4, later 23.3 with `-ub 256` — see `memory.md`) meets the
+  user's floor (≥15 tok/s, target ≥17) with 0 evicted, one of the criteria for adopting
+  `262k-q8q51-mtp` as the new default profile (see `docs/DECISIONS.md`).
+
 ## Investigation notes on nearby forks (not adopted)
 
 - **Lemonade b1331** (llama.cpp base ≈ b11170): its build workflow does not enable
@@ -219,3 +257,6 @@ exact commands: [`../../results/20260925-ubatch-mtp-screening-128k/`](../../resu
 - **2026-09-25, evening**: `-ub` and MTP n=3/`--spec-draft-p-min` measured at depth (128K fill,
   272 W) for the first time — `-ub 512` confirmed optimal, p-min 0.3 within noise, n=3
   content-dependent and not adopted as the default.
+- **2026-09-26**: MTP n=3 re-measured at 190K and 240K fill (the two long-context profiles' actual
+  operating depths) — wins across all three task types at both depths (+9-11% mean tg), superseding
+  the 128K-fill "content-dependent, not adopted" call; adopted as the new default MTP draft length.
