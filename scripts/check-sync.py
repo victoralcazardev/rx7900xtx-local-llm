@@ -6,10 +6,10 @@ Two independent checks:
      A backend with no engine in local.toml is only a WARNING (not installed
      yet) -- it does not fail the check.
   2. If local.toml has a `[harness]` table with `targets`, each target's
-     config file is checked for EXACTLY the 2 local providers (local-128k,
-     local-262k) with the right port and contextWindow, and no other
-     provider pointing at 127.0.0.1 (an orphan from an earlier setup).
-     This check is off by default -- see local.example.toml.
+     config file is checked for EXACTLY the local provider (local-262k) with
+     the right port and contextWindow, and no other provider pointing at
+     127.0.0.1 (an orphan from an earlier setup). This check is off by
+     default -- see local.example.toml.
 
 Usage: python scripts/check-sync.py
 Exit: 0 = all OK (pending-engine warnings don't count) - 1 = problems found.
@@ -23,10 +23,9 @@ import sys
 import tomllib
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-from manifest import LOCAL_262K_CONTEXT, MIN_CONTEXT, ManifestError, backend_for, load, validate  # noqa: E402
+from manifest import LOCAL_262K_CONTEXT, ManifestError, backend_for, load, validate  # noqa: E402
 
 EXPECTED_ENTRIES = {
-    "local-128k": MIN_CONTEXT,
     "local-262k": LOCAL_262K_CONTEXT,
 }
 EXPECTED_PORT = 8080
@@ -184,7 +183,7 @@ def main() -> int:
                 for p in probs:
                     print(f"  PROBLEM: {p}")
             else:
-                print(f"  OK: {target['name']} has exactly local-128k and local-262k on :{EXPECTED_PORT}.")
+                print(f"  OK: {target['name']} has exactly local-262k on :{EXPECTED_PORT}.")
 
     if manifest_problems or harness_problems:
         return 1

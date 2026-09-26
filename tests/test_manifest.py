@@ -221,15 +221,9 @@ class TestHarnessEntry(unittest.TestCase):
         self.assertEqual(manifest.harness_entry(manifest.LOCAL_262K_CONTEXT), "local-262k")
         self.assertEqual(manifest.harness_entry(manifest.LOCAL_262K_CONTEXT + 1), "local-262k")
 
-    def test_between_128k_and_262k(self):
-        self.assertEqual(manifest.harness_entry(manifest.MIN_CONTEXT), "local-128k")
-        self.assertEqual(
-            manifest.harness_entry(manifest.LOCAL_262K_CONTEXT - 1), "local-128k"
-        )
-
-    def test_below_min_context_raises(self):
-        with self.assertRaises(manifest.ManifestError):
-            manifest.harness_entry(manifest.MIN_CONTEXT - 1)
+    def test_below_262k_context_has_no_entry(self):
+        self.assertIsNone(manifest.harness_entry(manifest.MIN_CONTEXT))
+        self.assertIsNone(manifest.harness_entry(manifest.LOCAL_262K_CONTEXT - 1))
 
 
 class TestBackendFor(unittest.TestCase):

@@ -74,15 +74,9 @@ def main() -> int:
         return 1
 
     argv = build_argv(m, model, profile_name, profile, backend, port=m.default_port)
-    try:
-        entry = harness_entry(profile["context"])
-    except ManifestError as e:
-        if not m.allow_low_context:
-            print(f"ERROR: {e}", file=sys.stderr)
-            return 1
-        # A test manifest explicitly allows contexts below 128K (allow_low_context); validate()
-        # above already accepted it, so this profile just has no fixed harness provider entry.
-        entry = "none (context below 128K, allow_low_context test manifest)"
+    entry = harness_entry(profile["context"]) or (
+        "none (no harness entry wired for this context; only local-262k/262144 is wired)"
+    )
     print(f"backend: {backend}")
     print("command:", " ".join(["llama-server"] + argv))
     print(f"Harness provider: {entry}")

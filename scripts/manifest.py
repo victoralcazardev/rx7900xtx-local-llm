@@ -7,7 +7,7 @@ Uses a single TOML manifest (models.toml) plus a per-machine local.toml
 Use as a library:
     from manifest import load, resolve, build_argv, harness_entry
     m = load()
-    model, profile_name, profile = resolve(m, "qwen38-iq3s-mtp", "262k-q8q8")
+    model, profile_name, profile = resolve(m, "qwen38-iq3s-mtp", "262k-q8q51-mtp")
     argv = build_argv(m, model, profile_name, profile, backend="vulkan")
 
 Environment variables:
@@ -157,13 +157,12 @@ def resolve(m: Manifest, alias: str | None, profile: str | None) -> tuple[Model,
     return model, profile, model.profiles[profile]
 
 
-def harness_entry(context: int) -> str:
-    """Name of the fixed local provider entry for the given profile's context (see AGENTS.md)."""
+def harness_entry(context: int) -> str | None:
+    """Name of the fixed local provider entry for the given profile's context, or None if no
+    harness entry is wired for it (see AGENTS.md: only the 262K default is wired)."""
     if context >= LOCAL_262K_CONTEXT:
         return "local-262k"
-    if context >= MIN_CONTEXT:
-        return "local-128k"
-    raise ManifestError(f"context {context} < {MIN_CONTEXT}: doesn't match any provider entry")
+    return None
 
 
 def backend_for(model: Model, profile: dict, override: str | None = None) -> str:

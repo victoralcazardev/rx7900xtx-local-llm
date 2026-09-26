@@ -14,6 +14,8 @@
 #   docs/measurements/.
 # - `default_alias`/`default_profile`: what `scripts/launch.py` loads when called with no
 #   alias (see docs/STATUS.md for why this is the current best configuration).
+# - Single model, single profile by design (2026-09-26, docs/DECISIONS.md): one best default,
+#   overlapping alternatives removed. Add a new model/profile per docs/sop/new-model.md.
 
 [defaults]
 port = 8080
@@ -38,29 +40,11 @@ top_p = 0.95
 top_k = 20
 min_p = 0.0
 
-# Profiles measured on 2026-09-24 (docs/measurements/). Ladder from
-# docs/models/qwen38-27b-quants.md resolved: 262K q8/q8 + MTP doesn't fit safely (99.7% of
-# VRAM, llama.cpp bug #28433); KV q4_x ruled out on quality grounds.
-
-# Daily driver: ~58-69 tok/s with an empty context, ~31 tok/s at 104K. Vision included.
-[models.qwen38-iq3s-mtp.profiles."128k-q8q8-mtp"]
-context = 131072
-kv = ["q8_0", "q8_0"]
-spec_n_max = 2
-vram_gib = 19.6
-
-# Max context with the official binary: ~39 tok/s with an empty context, ~19 tok/s at 182K.
-[models.qwen38-iq3s-mtp.profiles."262k-q8q8"]
-context = 262144
-kv = ["q8_0", "q8_0"]
-vision = false
-vram_gib = 21.4
-
-# Recommended daily long-context default (2026-09-26, docs/measurements/): quality 8/8 exact at
-# 240K fill (0 loops); MTP n=3 +11% tg over n=2 (240K fill, 272 W: essay/copy/code 25.7/26.9/17.6,
-# mean 23.4, accept 71%); `-ub 256` trims process VRAM peak to 22,630 MiB (-350 MiB vs. -ub 512)
-# for -5% pp, 0 evicted. This is `scripts/launch.py`'s default (see `[defaults]` above) when no
-# alias is given. V in q5_1 (+27% KLD over q8/q8, doesn't show up in retrieval quality at 240K).
+# Recommended daily long-context default (2026-09-26, docs/measurements/): validated 60/60 exact
+# match, 32K-240K, 0 loops. At 240K fill: 24.4/26.9/18.6 tok/s essay/copy/code, pp 380, process
+# VRAM 22,630 MiB, under a 272 W power cap (this card's driver minimum). `hip-kvmix` engine, KV
+# q8_0/q5_1 (+27% KLD over q8/q8, doesn't show up in retrieval quality at 240K), MTP n=3, `-ub
+# 256`. This is `scripts/launch.py`'s default (see `[defaults]` above) when no alias is given.
 [models.qwen38-iq3s-mtp.profiles."262k-q8q51-mtp"]
 backend = "hip-kvmix"
 context = 262144
@@ -74,94 +58,3 @@ vram_gib = 22.2
 # 2026-09-26 (docs/measurements/memory.md): less VRAM margin pressure than the `-ub 512` default,
 # small pp cost. Both flags verified in --help.
 flags = ["-ub", "256", "--reasoning-effort", "medium"]
-
-# Alternative long-context profile (2026-09-25/26, docs/measurements/): fill 221,167 at 272 W,
-# 22.3/25.1/18.7 tok/s n=2 (essay/copy/code); MTP n=3 measured at 190K fill: 26.1/32.2/21.4
-# (mean +9% over n=2), accept 67%, process VRAM peak 22,883 MiB. `-ub 512` (default) kept here --
-# measured at that batch size.
-[models.qwen38-iq3s-mtp.profiles."224k-q8q8-mtp"]
-backend = "hip-kvmix"
-context = 229376
-kv = ["q8_0", "q8_0"]
-spec_n_max = 3
-vision = false
-vram_gib = 22.9
-flags = ["--reasoning-effort", "medium"]
-
-# ---------------------------------------------------------------------------
-# Qwen3.8-27B GSQ-RCO IQ3_S (no MTP head: general.file_type has no nextn_predict_layers).
-[models.qwen38-iq3s]
-gguf = "Qwen3.8-27B-GSQ-RCO-IQ3_S/Qwen3.8-27B-GSQ-RCO-IQ3_S.gguf"
-backend = "hip"
-mtp = false
-mmproj = "Qwen3.8-27B-GSQ-RCO-IQ3_S/mmproj-Qwen3.8-27B-BF16.gguf"
-
-[models.qwen38-iq3s.sampling]
-temp = 1.0
-top_p = 0.95
-top_k = 20
-min_p = 0.0
-
-[models.qwen38-iq3s.profiles."128k-q8q8"]
-context = 131072
-kv = ["q8_0", "q8_0"]
-
-[models.qwen38-iq3s.profiles."262k-q8q8"]
-context = 262144
-kv = ["q8_0", "q8_0"]
-
-# ---------------------------------------------------------------------------
-# Qwen3.8-27B GSQ-RCO IQ3_XXS-mtp (VRAM headroom, last rung of the ladder).
-[models.qwen38-iq3xxs-mtp]
-gguf = "Qwen3.8-27B-GSQ-RCO-IQ3_XXS-mtp/Qwen3.8-27B-GSQ-RCO-IQ3_XXS-mtp.gguf"
-backend = "hip"
-mtp = true
-mmproj = "Qwen3.8-27B-GSQ-RCO-IQ3_XXS-mtp/mmproj-Qwen3.8-27B-BF16.gguf"
-
-[models.qwen38-iq3xxs-mtp.sampling]
-temp = 1.0
-top_p = 0.95
-top_k = 20
-min_p = 0.0
-
-[models.qwen38-iq3xxs-mtp.profiles."128k-q8q8"]
-context = 131072
-kv = ["q8_0", "q8_0"]
-
-# Unmeasured / may not fit: this repo's own measurement for 262K q8/q8 + MTP on
-# qwen38-iq3s-mtp found it doesn't fit safely (99.7% of VRAM, llama.cpp bug #28433); this
-# quant hasn't been measured at this depth/MTP combination. Named "-mtp" (not bare
-# "262k-q8q8") to avoid the ambiguity of the same profile name meaning "no MTP" elsewhere.
-[models.qwen38-iq3xxs-mtp.profiles."262k-q8q8-mtp"]
-context = 262144
-kv = ["q8_0", "q8_0"]
-spec_n_max = 2
-
-# ---------------------------------------------------------------------------
-# RVN-Q4_K_M-multilingual-mtp (0bserverx/Qwen3.8-27B-Heretic-Abliterated-Uncensored-GGUF).
-# The README does NOT set its own sampling nor does its metadata carry min_p
-# (docs/models/qwen38-27b-quants.md): the official Qwen card is used, with an explicit
-# min_p 0.0 added (AGENTS.md rule).
-[models.qwen38-rvn-mtp]
-gguf = "RVN-Q4_K_M-multilingual-mtp/RVN-Q4_K_M-multilingual-mtp.gguf"
-backend = "hip"
-mtp = true
-mmproj = "RVN-Q4_K_M-multilingual-mtp/mmproj-Qwen3.8-27B-BF16.gguf"
-
-[models.qwen38-rvn-mtp.sampling]
-temp = 1.0
-top_p = 0.95
-top_k = 20
-min_p = 0.0  # not in the GGUF; the binary's default is 0.05, can't assume 0
-
-[models.qwen38-rvn-mtp.profiles."128k-q8q8"]
-context = 131072
-kv = ["q8_0", "q8_0"]
-
-# Unmeasured / may not fit: same caveat as qwen38-iq3xxs-mtp above -- 262K q8/q8 + MTP is not
-# known to fit safely on this GPU and hasn't been measured for this quant. Named "-mtp" (not
-# bare "262k-q8q8") to avoid the ambiguity of the same profile name meaning "no MTP" elsewhere.
-[models.qwen38-rvn-mtp.profiles."262k-q8q8-mtp"]
-context = 262144
-kv = ["q8_0", "q8_0"]
-spec_n_max = 2
