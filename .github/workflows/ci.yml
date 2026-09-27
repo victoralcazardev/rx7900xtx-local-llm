@@ -7,12 +7,61 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python-version }}
       - name: Run unit tests
-        run: python -m unittest discover -s tests
+        run: python3 -m unittest discover -s tests
       - name: Check repo hygiene
-        run: python scripts/check-repo.py
+        run: python3 scripts/check-repo.py
+      - name: Check manifest consistency (fixture)
+        run: |
+          # check-sync.py validates models.toml against a machine-local config; CI builds a
+          # minimal fixture (stub GGUF, stub engine, one harness target) via the
+          # MODELS_MANIFEST/LOCAL_MANIFEST env vars, so no weights or GPU are needed.
+          FIX=$(mktemp -d)
+          trap 'rm -rf "$FIX"' EXIT
+          mkdir -p "$FIX/models/solo" "$FIX/engines/hip"
+          touch "$FIX/models/solo/solo.gguf" "$FIX/engines/hip/llama-server"
+          cat > "$FIX/models.toml" <<'EOF'
+          [defaults]
+          port = 8080
+          flags = ["-fa", "on"]
+
+          [models.solo]
+          gguf = "solo/solo.gguf"
+          backend = "hip"
+
+          [models.solo.profiles.default]
+          context = 131072
+          kv = ["q8_0", "q8_0"]
+          EOF
+          cat > "$FIX/local.toml" <<EOF
+          models_root = "$FIX/models"
+
+          [engines]
+          hip = "$FIX/engines/hip"
+
+          [harness]
+          enabled = true
+          targets = [
+            { name = "ci", path = "$FIX/harness.json", format = "json", root = [] },
+          ]
+          EOF
+          cat > "$FIX/harness.json" <<'EOF'
+          {"providers": {"ci": {"baseUrl": "http://127.0.0.1:8080/v1", "models": [{"id": "local-262k", "contextWindow": 262144}]}}}
+          EOF
+          MODELS_MANIFEST="$FIX/models.toml" LOCAL_MANIFEST="$FIX/local.toml" python3 scripts/check-sync.py
+          # Negative path: a sub-128K context must fail the check.
+          sed 's/context = 131072/context = 65536/' "$FIX/models.toml" > "$FIX/bad.toml"
+          if MODELS_MANIFEST="$FIX/bad.toml" LOCAL_MANIFEST="$FIX/local.toml" python3 scripts/check-sync.py > "$FIX/bad.out" 2>&1; then
+            echo "check-sync unexpectedly passed with a sub-128K context" >&2
+            cat "$FIX/bad.out" >&2
+            exit 1
+          fi
+          grep -q "128K" "$FIX/bad.out"
