@@ -33,6 +33,13 @@ provided on the library path.
 
 ### `llama-b11160-linux-rocm10-gfx1100-kvmix` (current `hip-kvmix` engine)
 
+**Prebuilt download**: the exact build (the files above plus `BUILD.txt` and llama.cpp's MIT
+`LICENSE`, ROCm runtime not bundled) is published as the GitHub release
+[`engine-b11160-rocm10-gfx1100-kvmix`](https://github.com/victoralcazardev/rx7900xtx-local-llm/releases/tag/engine-b11160-rocm10-gfx1100-kvmix):
+`llama-b11160-rocm10-gfx1100-kvmix-linux-x64.tar.gz`, sha256
+`f1cb8e2683c94cc5891a11af7876058d50e2c0556f0ffeb92d2451bf659fc3ec`. It is the artifact the
+[local-ai-registry](https://github.com/0xSero/local-ai-registry) host launch for this profile pins.
+
 llama.cpp b11160 (commit `70c4e1582`), built locally with the **same toolchain and flags as the
 official `ubuntu-rocm-10.0` CI binary** (`release.yml`, job `ubuntu-24-rocm`): ROCm 10.0.0 installed
 as Python "TheRock" wheels in an isolated venv (does not touch the system):
