@@ -50,12 +50,14 @@ scripts and measurement write-ups with pinned versions and reproducible commands
   paths, secret-looking strings and Spanish-language leftovers (see `docs/STYLE.md` §1 for the
   deliberate-Spanish exception it honors).
 - **Unit tests**: `python3 -m unittest discover -s tests -v`. Uses stdlib `unittest`; covers
-  `scripts/manifest.py` (loading/discovery/resolve/validate), `scripts/check-sync.py`
-  (harness URL/port matching), `scripts/check-repo.py` (content scanning),
-  `scripts/token_ledger.py` (metrics parsing, delta accumulation, persistence),
-  `bench/depth_bench.py`, `bench/concurrency_bench.py`, and
-  `bench/longctx_quality.py` (`--variants` parsing, monitor-abort exception handling). No server,
-  GPU or network access.
+  `scripts/manifest.py` (loading/discovery/resolve/validate, server detection),
+  `scripts/check-sync.py` (harness URL/port matching, config resolution),
+  `scripts/check-repo.py` (content scanning), `scripts/token_ledger.py` (metrics parsing,
+  delta accumulation, persistence, CLI dispatch), `scripts/gguf_info.py` (error paths),
+  `scripts/launch.py`/`scripts/smoke.py` (command rendering, preflight) and the bench scripts
+  (`--variants` parsing, monitor-abort handling, input validation). No server, GPU or network
+  access. CI runs the same suite plus `check-repo.py` and a fixture-driven `check-sync.py`
+  on Python 3.11 and 3.12 (`.github/workflows/ci.yml`).
 
 ## Coding-agent harness (optional)
 
