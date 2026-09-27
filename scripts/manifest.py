@@ -75,55 +75,86 @@ def _manifest_path(env_name: str, default: pathlib.Path, override: pathlib.Path 
     return pathlib.Path(env) if env else default
 
 
+def local_manifest_path(override: pathlib.Path | None) -> pathlib.Path:
+    if override:
+        return override
+    env = os.environ.get("LOCAL_MANIFEST")
+    if env:
+        return pathlib.Path(env)
+    default = REPO / "local.toml"
+    if default.exists():
+        return default
+    candidates = sorted(p for p in REPO.glob("local.*.toml") if p.name != "local.example.toml")
+    if len(candidates) == 1:
+        return candidates[0]
+    if candidates:
+        preferred = REPO / ("local.windows.toml" if IS_WINDOWS else "local.linux.toml")
+        if preferred in candidates:
+            return preferred
+        raise ManifestError(
+            "multiple machine configs found; set LOCAL_MANIFEST or choose one of: "
+            + ", ".join(str(p) for p in candidates)
+        )
+    return default
+
+
 def load(manifest: pathlib.Path | None = None, local: pathlib.Path | None = None) -> Manifest:
     models_path = _manifest_path("MODELS_MANIFEST", REPO / "models.toml", manifest)
-    local_path = _manifest_path("LOCAL_MANIFEST", REPO / "local.toml", local)
+    local_path = local_manifest_path(local)
 
-    with open(models_path, "rb") as f:
-        data = tomllib.load(f)
+    try:
+        with open(models_path, "rb") as f:
+            data = tomllib.load(f)
+    except (OSError, tomllib.TOMLDecodeError) as e:
+        raise ManifestError(f"failed to read models manifest {models_path}: {e}") from e
     if not local_path.exists():
         raise ManifestError(
             f"{local_path} does not exist. Copy local.example.toml to local.toml and adjust the paths."
         )
-    with open(local_path, "rb") as f:
-        loc = tomllib.load(f)
+    try:
+        with open(local_path, "rb") as f:
+            loc = tomllib.load(f)
 
-    root = pathlib.Path(loc["models_root"])
-    engines = {k: pathlib.Path(v) for k, v in loc.get("engines", {}).items() if v}
+        root = pathlib.Path(loc["models_root"])
+        engines = {k: pathlib.Path(v) for k, v in loc["engines"].items() if v}
 
-    defaults = data.get("defaults", {})
-    models = {}
-    for alias, m in data.get("models", {}).items():
-        profiles = m.get("profiles", {})
-        if not profiles:
-            raise ManifestError(f"{alias}: has no profile in models.toml")
-        models[alias] = Model(
-            alias=alias,
-            gguf=root / m["gguf"],
-            backend=m["backend"],
-            mtp=bool(m.get("mtp", False)),
-            sampling=m.get("sampling", {}),
-            mmproj=(root / m["mmproj"]) if m.get("mmproj") else None,
-            profiles=profiles,
-        )
-
-    manifest = Manifest(
-        default_port=defaults.get("port", 8080),
-        default_flags=list(defaults.get("flags", [])),
-        models_root=root,
-        engines=engines,
-        models=models,
-        allow_low_context=bool(data.get("allow_low_context", False)),
-        default_alias=defaults.get("default_alias"),
-        default_profile=defaults.get("default_profile"),
-    )
-    if manifest.default_alias or manifest.default_profile:
-        if not manifest.default_alias or not manifest.default_profile:
-            raise ManifestError(
-                "[defaults] must set both default_alias and default_profile, or neither"
+        defaults = data.get("defaults", {})
+        models = {}
+        for alias, m in data.get("models", {}).items():
+            profiles = m.get("profiles", {})
+            if not profiles:
+                raise ManifestError(f"{alias}: has no profile in models.toml")
+            models[alias] = Model(
+                alias=alias,
+                gguf=root / m["gguf"],
+                backend=m["backend"],
+                mtp=bool(m.get("mtp", False)),
+                sampling=m.get("sampling", {}),
+                mmproj=(root / m["mmproj"]) if m.get("mmproj") else None,
+                profiles=profiles,
             )
-        resolve(manifest, manifest.default_alias, manifest.default_profile)
-    return manifest
+
+        manifest = Manifest(
+            default_port=defaults.get("port", 8080),
+            default_flags=list(defaults.get("flags", [])),
+            models_root=root,
+            engines=engines,
+            models=models,
+            allow_low_context=bool(data.get("allow_low_context", False)),
+            default_alias=defaults.get("default_alias"),
+            default_profile=defaults.get("default_profile"),
+        )
+        if manifest.default_alias or manifest.default_profile:
+            if not manifest.default_alias or not manifest.default_profile:
+                raise ManifestError(
+                    "[defaults] must set both default_alias and default_profile, or neither"
+                )
+            resolve(manifest, manifest.default_alias, manifest.default_profile)
+        return manifest
+    except ManifestError:
+        raise
+    except (OSError, tomllib.TOMLDecodeError, KeyError, TypeError, ValueError, AttributeError) as e:
+        raise ManifestError(f"invalid manifest configuration ({local_path} or {models_path}): {e}") from e
 
 
 def resolve(m: Manifest, alias: str | None, profile: str | None) -> tuple[Model, str, dict]:
@@ -264,24 +295,35 @@ def free_vram_gib() -> float | None:
     return (best[0] - best[1]) / 2**30 if best else None
 
 
-def running_servers() -> list[int]:
-    """PIDs of running llama-server processes (there can only be ONE, and for measuring: none)."""
-    pids = []
+def running_servers() -> list[int] | None:
+    """PIDs of running llama-server processes; None means process detection failed."""
     try:
         if IS_WINDOWS:
             out = subprocess.run(
                 ["tasklist", "/FI", "IMAGENAME eq llama-server.exe", "/NH", "/FO", "CSV"],
                 capture_output=True, text=True, errors="replace", timeout=20,
             )
+            if out.returncode != 0:
+                return None
+            pids = []
+            saw_no_match = False
             for line in out.stdout.splitlines():
+                if line.startswith("INFO: No tasks are running"):
+                    saw_no_match = True
+                    continue
                 parts = [p.strip('"') for p in line.split('","')]
                 if len(parts) > 1 and parts[1].isdigit():
                     pids.append(int(parts[1]))
-        else:
-            out = subprocess.run(["pgrep", "-x", "llama-server"],
-                                 capture_output=True, text=True,
-                                 errors="replace", timeout=20)
-            pids = [int(p) for p in out.stdout.split()]
+                elif line.strip():
+                    return None
+            return pids if pids or saw_no_match else None
+        out = subprocess.run(["pgrep", "-x", "llama-server"],
+                             capture_output=True, text=True,
+                             errors="replace", timeout=20)
+        if out.returncode == 1:
+            return []
+        if out.returncode != 0:
+            return None
+        return [int(p) for p in out.stdout.split()]
     except (OSError, ValueError, subprocess.SubprocessError):
-        pass
-    return pids
+        return None

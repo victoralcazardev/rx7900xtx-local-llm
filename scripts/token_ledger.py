@@ -133,24 +133,22 @@ def save_state(path: pathlib.Path, state: dict) -> None:
 
 
 def apply_sample(state: dict, sample: dict[str, int], now: datetime) -> dict:
-    """Folds one raw counter sample into `state`: accumulates the delta since the last sample
-    into the running totals and today's bucket, and records the sample as the new baseline for
-    the next delta. A counter that reads lower than last time means the server restarted
-    (counters start from 0 again) -- the new value itself is the delta in that case, which falls
-    out of `max(new - old, new)` naturally since `old` is never negative."""
+    """Folds present counters into running totals and retains their last known baselines."""
     last = state.get("last_sample") or {}
     totals = state.setdefault("totals", _zero_totals())
     day_key = now.date().isoformat()
     day_totals = state.setdefault("daily", {}).setdefault(day_key, _zero_totals())
 
     for key in CATEGORY_KEYS:
-        new_val = sample.get(key, 0)
+        if key not in sample:
+            continue
+        new_val = sample[key]
         old_val = last.get(key, 0)
         delta = new_val if new_val < old_val else new_val - old_val
         totals[key] = totals.get(key, 0) + delta
         day_totals[key] = day_totals.get(key, 0) + delta
 
-    state["last_sample"] = sample
+    state["last_sample"] = {**last, **sample}
     state["last_collected_at"] = now.isoformat(timespec="seconds")
     return state
 

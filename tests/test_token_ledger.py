@@ -100,6 +100,22 @@ class TestApplySample(unittest.TestCase):
         self.assertEqual(state["totals"]["prompt_new"], 260)
 
 
+    def test_partial_sample_then_restored_counter_uses_last_known_baseline(self):
+        state = token_ledger.default_state()
+        state = token_ledger.apply_sample(
+            state, {"prompt_new": 100, "cache_read": 50, "output": 20},
+            datetime(2026, 9, 25, 10, 0, 0),
+        )
+        state = token_ledger.apply_sample(
+            state, {"prompt_new": 150}, datetime(2026, 9, 25, 10, 1, 0),
+        )
+        self.assertEqual(state["last_sample"]["cache_read"], 50)
+        state = token_ledger.apply_sample(
+            state, {"prompt_new": 175, "cache_read": 80, "output": 40},
+            datetime(2026, 9, 25, 10, 2, 0),
+        )
+        self.assertEqual(state["totals"], {"prompt_new": 175, "cache_read": 80, "output": 40})
+
 class TestLedgerPersistence(unittest.TestCase):
     def test_save_and_load_round_trip(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -227,6 +243,56 @@ class TestGetPort(unittest.TestCase):
             path.write_text("[defaults]\nflags = []\n")
             self.assertEqual(token_ledger.get_port(path), 8080)
 
+
+
+class TestCli(unittest.TestCase):
+    """main() argument parsing and dispatch: subcommands, required arguments, text output."""
+
+    def _run(self, argv: list[str], tmp: str, fetch_return: str | None = None) -> int:
+        with mock.patch.dict("os.environ", {"LLM_USAGE_DIR": tmp}), \
+                mock.patch.object(token_ledger, "fetch_metrics", return_value=fetch_return):
+            return token_ledger.main(argv)
+
+    def test_no_command_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaises(SystemExit):
+                self._run([], tmp)
+
+    def test_seed_via_cli_writes_baseline(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            rc = self._run(
+                ["seed", "--prompt-new", "5", "--cache-read", "7",
+                 "--output", "9", "--turns", "2", "--note", "cli test"], tmp
+            )
+            self.assertEqual(rc, 0)
+            ledger = json.loads((pathlib.Path(tmp) / "ledger.json").read_text())
+            self.assertEqual(ledger["baseline"]["prompt_new"], 5)
+            self.assertEqual(ledger["baseline"]["note"], "cli test")
+
+    def test_seed_missing_required_arguments_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaises(SystemExit):
+                self._run(["seed", "--prompt-new", "5"], tmp)
+
+    def test_collect_via_cli_accumulates(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            rc = self._run(["collect"], tmp, fetch_return=SAMPLE_METRICS_TEXT)
+            self.assertEqual(rc, 0)
+            ledger = json.loads((pathlib.Path(tmp) / "ledger.json").read_text())
+            self.assertEqual(ledger["totals"]["prompt_new"], 1000)
+
+    def test_show_text_output_lists_sections(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self._run(["seed", "--prompt-new", "1", "--cache-read", "2", "--output", "3",
+                       "--turns", "1", "--note", "n"], tmp)
+            captured: list[str] = []
+            with mock.patch("builtins.print", side_effect=lambda *a: captured.append(" ".join(map(str, a)))):
+                rc = self._run(["show"], tmp)
+            self.assertEqual(rc, 0)
+            text = "\n".join(captured)
+            self.assertIn("all-time:", text)
+            self.assertIn("historical baseline:", text)
+            self.assertIn("prompt-new=1", text)
 
 def argparse_namespace(**kwargs):
     import argparse

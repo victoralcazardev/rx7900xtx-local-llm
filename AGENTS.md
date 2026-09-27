@@ -11,9 +11,11 @@ and number-format rules.
 another RX 7900 XTX owner can reuse or verify gets published: config, launcher, benchmark
 scripts and measurement write-ups with pinned versions and reproducible commands.
 
-- Requires **Python 3.11+** (stdlib only, no dependencies — `scripts/check-sync.py` and
-  `scripts/manifest.py` use `tomllib`, added to the standard library in 3.11). Every command below
-  uses `python3`.
+- Requires **Python 3.11+**. The scripts otherwise use the standard library; exceptions:
+  `scripts/gguf_info.py` requires the third-party `gguf` package (`python3 -m pip install gguf`),
+  and PyYAML is optional for YAML-format harness targets in `scripts/check-sync.py`
+  (`python3 -m pip install pyyaml`). `tomllib` is in the standard library starting with Python
+  3.11. Every command below uses `python3`.
 - `CLAUDE.md` is a symlink to `AGENTS.md`. Always edit `AGENTS.md`; never touch `CLAUDE.md`
   directly.
 - `models.toml` (repo root) is the single source of truth for models, profiles, sampling and
@@ -30,8 +32,8 @@ scripts and measurement write-ups with pinned versions and reproducible commands
   every model/profile in `models.toml` (GGUF path present, context ≥ 128K, K/V combination
   supported by the backend). A backend with no engine configured in `local.toml` is only a
   WARNING; anything else fails the exit code. Optionally, if `local.toml` has a `[harness]`
-  table, it also checks that your own coding-agent harness is wired to the one fixed
-  `local-262k` provider this launcher expects on `:8080` — see below.
+  table, it also checks that your own coding-agent harness has exactly one `local-262k` provider
+  (contextWindow 262144) pointing at the configured `[defaults].port` (8080 if absent) — see below.
 - **Smoke-test a model/profile**: `python3 scripts/smoke.py <alias> [--profile P]` — starts
   the server, waits for `/health`, sends one real chat request, and kills the server.
 - **GGUF metadata**: `python3 scripts/gguf_info.py <path-or-folder>` — architecture, native
@@ -47,18 +49,21 @@ scripts and measurement write-ups with pinned versions and reproducible commands
   every tracked file for broken relative Markdown links, files over 1 MiB, personal absolute
   paths, secret-looking strings and Spanish-language leftovers (see `docs/STYLE.md` §1 for the
   deliberate-Spanish exception it honors).
-- **Unit tests**: `python3 -m unittest discover -s tests -v`. Stdlib `unittest` only, no
-  dependencies; covers pure logic in `scripts/manifest.py` (load/resolve/validate),
-  `scripts/check-sync.py` (port/localhost matching), `scripts/check-repo.py` (personal-path and
-  Spanish-content matching) and `bench/longctx_quality.py` (`--variants` parsing, monitor-abort
-  exception handling). No server, GPU or network access.
+- **Unit tests**: `python3 -m unittest discover -s tests -v`. Uses stdlib `unittest`; covers
+  `scripts/manifest.py` (loading/discovery/resolve/validate), `scripts/check-sync.py`
+  (harness URL/port matching), `scripts/check-repo.py` (content scanning),
+  `scripts/token_ledger.py` (metrics parsing, delta accumulation, persistence),
+  `bench/depth_bench.py`, `bench/concurrency_bench.py`, and
+  `bench/longctx_quality.py` (`--variants` parsing, monitor-abort exception handling). No server,
+  GPU or network access.
 
 ## Coding-agent harness (optional)
 
 If you drive this server from a coding-agent harness (any tool that reads an OpenAI-compatible
 `baseUrl` + `contextWindow` provider list), wire it to exactly one fixed entry pointing at
-`:8080` — `local-262k` (contextWindow 262144) — and let `launch.py` decide which alias/profile is
-actually loaded there, instead of adding one entry per model. `check-sync.py` can verify this
+the configured `[defaults].port` (8080 if absent) — `local-262k` (contextWindow 262144) — and let
+`launch.py` decide which alias/profile is actually loaded there, instead of adding one entry per
+model. `check-sync.py` can verify this
 wiring, but it is off by default: this repository doesn't assume you use any particular harness.
 Enable it locally with a `[harness]` table in your git-ignored `local.toml` (see
 `local.example.toml`).

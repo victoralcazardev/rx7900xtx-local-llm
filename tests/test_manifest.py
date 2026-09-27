@@ -105,8 +105,10 @@ hip = ""
 
     def test_missing_local_toml_raises(self):
         missing = self.root / "does-not-exist.toml"
-        with self.assertRaises(manifest.ManifestError):
+        with self.assertRaises(manifest.ManifestError) as ctx:
             manifest.load(manifest=self.models_path, local=missing)
+        self.assertIn("Copy local.example.toml", str(ctx.exception))
+
 
     def test_model_without_profiles_raises(self):
         bad = MODELS_TOML_MINIMAL + "\n[models.empty]\ngguf = \"empty/e.gguf\"\nbackend = \"hip\"\n"
@@ -155,6 +157,110 @@ hip = ""
         )
         with self.assertRaises(manifest.ManifestError):
             self.load(models_toml=toml)
+
+
+class TestLocalManifestDiscovery(ManifestFixture):
+    def _discover(self, names: list[str], *, windows: bool = False, env: str | None = None):
+        for name in names:
+            _write(self.root / name, LOCAL_TOML_MINIMAL.format(root=self.root.as_posix()))
+        values = {"MODELS_MANIFEST": str(self.models_path)}
+        if env is not None:
+            values["LOCAL_MANIFEST"] = env
+        else:
+            (self.root / "local.toml").unlink(missing_ok=True)
+        with mock.patch.object(manifest, "REPO", self.root), \
+             mock.patch.object(manifest, "IS_WINDOWS", windows), \
+             mock.patch.dict("os.environ", values, clear=True):
+            return manifest.load()
+
+    def test_single_machine_config_is_discovered(self):
+        _write(self.root / "local.toml", "")
+        (self.root / "local.toml").unlink()
+        m = self._discover(["local.workstation.toml", "local.example.toml"])
+        self.assertEqual(m.models_root, self.root)
+
+    def test_platform_preferred_machine_config_is_discovered(self):
+        _write(self.root / "local.linux.toml", 'models_root = "/linux"\n[engines]\n')
+        _write(self.root / "local.windows.toml", 'models_root = "/windows"\n[engines]\n')
+        (self.root / "local.toml").unlink(missing_ok=True)
+        values = {"MODELS_MANIFEST": str(self.models_path)}
+        with mock.patch.object(manifest, "REPO", self.root), \
+             mock.patch.object(manifest, "IS_WINDOWS", False), \
+             mock.patch.dict("os.environ", values, clear=True):
+            self.assertEqual(manifest.load().models_root, pathlib.Path("/linux"))
+        with mock.patch.object(manifest, "REPO", self.root), \
+             mock.patch.object(manifest, "IS_WINDOWS", True), \
+             mock.patch.dict("os.environ", values, clear=True):
+            self.assertEqual(manifest.load().models_root, pathlib.Path("/windows"))
+
+    def test_ambiguous_machine_configs_report_candidates(self):
+        with self.assertRaises(manifest.ManifestError) as ctx:
+            self._discover(["local.alpha.toml", "local.beta.toml"])
+        self.assertIn("local.alpha.toml", str(ctx.exception))
+        self.assertIn("local.beta.toml", str(ctx.exception))
+
+    def test_local_manifest_environment_override_beats_default_local(self):
+        _write(self.root / "local.toml", 'models_root = "/default"\n')
+        custom = _write(
+            self.root / "local.custom.toml",
+            LOCAL_TOML_MINIMAL.format(root=self.root.as_posix()),
+        )
+        m = self._discover([], env=str(custom))
+        self.assertEqual(m.models_root, self.root)
+
+    def test_toml_decode_failure_is_manifest_error(self):
+        malformed = _write(self.root / "bad-local.toml", "models_root = [\n")
+        with self.assertRaises(manifest.ManifestError) as ctx:
+            manifest.load(manifest=self.models_path, local=malformed)
+        self.assertIn("bad-local.toml", str(ctx.exception))
+
+    def test_missing_required_local_key_is_manifest_error(self):
+        missing_key = _write(self.root / "missing-root.toml", "[engines]\n")
+        with self.assertRaises(manifest.ManifestError):
+            manifest.load(manifest=self.models_path, local=missing_key)
+    def test_missing_required_engines_key_is_manifest_error(self):
+        missing_key = _write(
+            self.root / "missing-engines.toml",
+            f'models_root = "{self.root.as_posix()}"\n',
+        )
+        with self.assertRaises(manifest.ManifestError):
+            manifest.load(manifest=self.models_path, local=missing_key)
+
+
+
+class TestRunningServers(unittest.TestCase):
+    def test_pgrep_no_match_is_empty_list(self):
+        result = mock.Mock(returncode=1, stdout="", stderr="")
+        with mock.patch.object(manifest, "IS_WINDOWS", False), \
+             mock.patch.object(manifest.subprocess, "run", return_value=result):
+            self.assertEqual(manifest.running_servers(), [])
+
+    def test_command_failure_is_distinct_from_no_match(self):
+        result = mock.Mock(returncode=2, stdout="", stderr="pgrep failed")
+        with mock.patch.object(manifest, "IS_WINDOWS", False), \
+             mock.patch.object(manifest.subprocess, "run", return_value=result):
+            self.assertIsNone(manifest.running_servers())
+
+    def test_command_and_output_parse_failures_return_none(self):
+        with mock.patch.object(manifest, "IS_WINDOWS", False), \
+             mock.patch.object(manifest.subprocess, "run", side_effect=OSError("missing pgrep")):
+            self.assertIsNone(manifest.running_servers())
+        result = mock.Mock(returncode=0, stdout="not-a-pid", stderr="")
+        with mock.patch.object(manifest, "IS_WINDOWS", False), \
+             mock.patch.object(manifest.subprocess, "run", return_value=result):
+            self.assertIsNone(manifest.running_servers())
+    def test_windows_tasklist_no_match_and_parse_failure_are_distinct(self):
+        no_match = mock.Mock(
+            returncode=0, stdout="INFO: No tasks are running which match the specified criteria.\n"
+        )
+        with mock.patch.object(manifest, "IS_WINDOWS", True), \
+             mock.patch.object(manifest.subprocess, "run", return_value=no_match):
+            self.assertEqual(manifest.running_servers(), [])
+        malformed = mock.Mock(returncode=0, stdout="", stderr="")
+        with mock.patch.object(manifest, "IS_WINDOWS", True), \
+             mock.patch.object(manifest.subprocess, "run", return_value=malformed):
+            self.assertIsNone(manifest.running_servers())
+
 
 
 class TestResolve(ManifestFixture):

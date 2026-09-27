@@ -10,23 +10,36 @@ Answers at a glance the questions to check BEFORE writing a new launcher profile
   - sampling recommended by the model itself (general.sampling.*)
 
 Usage:
-    python scripts/gguf_info.py /path/to/Models/<model>/<file>.gguf
-    python scripts/gguf_info.py /path/to/Models              # walks all of them
+    python3 scripts/gguf_info.py /path/to/Models/<model>/<file>.gguf
+    python3 scripts/gguf_info.py /path/to/Models              # walks all of them
 """
-import sys
+import argparse
 import pathlib
+import sys
 
-from gguf import GGUFReader
 
-
-def describe(path: pathlib.Path):
+def describe(path: pathlib.Path) -> bool:
+    try:
+        size = path.stat().st_size
+    except OSError as e:
+        print(f"{path}: [ERROR] could not stat file: {e}", file=sys.stderr)
+        return False
     print("=" * 78)
-    print(path.name, f"({path.stat().st_size / 2**30:.2f} GB)")
+    print(path.name, f"({size / 2**30:.2f} GB)")
+    try:
+        from gguf import GGUFReader
+    except ImportError as e:
+        print(
+            "ERROR: gguf_info.py requires the 'gguf' package. Install it with "
+            "`python3 -m pip install gguf`.",
+            file=sys.stderr,
+        )
+        return False
     try:
         r = GGUFReader(str(path))
     except Exception as e:
-        print(f"  [ERROR] could not read: {e}")
-        return
+        print(f"  [ERROR] could not read: {e}", file=sys.stderr)
+        return False
     kv = {}
     for f in r.fields.values():
         try:
@@ -105,18 +118,36 @@ def describe(path: pathlib.Path):
     samp = {k.split(".")[-1]: v for k, v in kv.items() if k.startswith("general.sampling.")}
     if samp:
         print(f"  GGUF sampling: {samp}   <- use THESE, not another family's")
+    return True
 
 
-def main():
-    if len(sys.argv) < 2:
-        sys.exit(__doc__)
-    target = pathlib.Path(sys.argv[1])
-    files = sorted(target.rglob("*.gguf")) if target.is_dir() else [target]
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__,
+                                     formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("path", type=pathlib.Path, help="GGUF file or directory to inspect")
+    args = parser.parse_args(argv)
+    target = args.path
+    try:
+        is_dir = target.is_dir()
+    except OSError as e:
+        print(f"ERROR: could not inspect {target}: {e}", file=sys.stderr)
+        return 1
+    try:
+        files = sorted(target.rglob("*.gguf")) if is_dir else [target]
+    except OSError as e:
+        print(f"ERROR: could not list {target}: {e}", file=sys.stderr)
+        return 1
     if not files:
-        sys.exit(f"no .gguf in {target}")
-    for f in files:
-        describe(f)
+        print(f"ERROR: no .gguf in {target}", file=sys.stderr)
+        return 1
+    succeeded = True
+    for path in files:
+        if not describe(path):
+            succeeded = False
+    return 0 if succeeded else 1
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
+
+

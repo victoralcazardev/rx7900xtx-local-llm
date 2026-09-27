@@ -4,8 +4,8 @@ One model per invocation (it doesn't walk the whole list): in this batch
 each model weighs 10-17 GB and there's only one port, :8080.
 
 Usage:
-    python scripts/smoke.py <alias> [--profile P] [--backend vulkan|hip|cuda]
-                             [--manifest path.toml]
+    python3 scripts/smoke.py <alias> [--profile P] [--backend vulkan|hip|cuda]
+                              [--manifest path.toml]
 Exit: 0 = OK, 1 = failure, 2 = preflight (a server is already alive, or a manifest error).
 """
 from __future__ import annotations
@@ -17,6 +17,7 @@ import pathlib
 import subprocess
 import sys
 import time
+import shlex
 import urllib.error
 import urllib.request
 
@@ -92,13 +93,16 @@ def main() -> int:
         return 2
 
     alive = running_servers()
+    if alive is None:
+        print("ABORTED: could not detect running llama-server processes; cannot safely start.")
+        return 2
     if alive:
         print(f"ABORTED: llama-server is already alive (PID {alive}). Stop it first.")
         return 2
 
     argv = build_argv(m, model, profile_name, profile, backend, port=m.default_port)
     print(f">> {args.alias}/{profile_name} (:{m.default_port}, backend={backend}) ...")
-    print("command:", " ".join(["llama-server"] + argv))
+    print("command:", shlex.join(["llama-server"] + argv))
 
     logs = REPO / "_tmp" / "logs"
     logs.mkdir(parents=True, exist_ok=True)

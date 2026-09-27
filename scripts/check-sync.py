@@ -3,27 +3,27 @@
 Two independent checks:
   1. Every model/profile in models.toml validates without launching anything
      (GGUF exists, context >= 128K, K/V combination allowed by the backend).
-     A backend with no engine in local.toml is only a WARNING (not installed
-     yet) -- it does not fail the check.
-  2. If local.toml has a `[harness]` table with `targets`, each target's
+     A backend with no engine in your local machine config (local.toml) is
+     only a WARNING (not installed yet) -- it does not fail the check.
+  2. If your local machine config has a `[harness]` table with `targets`, each
      config file is checked for EXACTLY the local provider (local-262k) with
      the right port and contextWindow, and no other provider pointing at
      127.0.0.1 (an orphan from an earlier setup). This check is off by
      default -- see local.example.toml.
 
-Usage: python scripts/check-sync.py
+Usage: python3 scripts/check-sync.py
 Exit: 0 = all OK (pending-engine warnings don't count) - 1 = problems found.
 """
 from __future__ import annotations
 
 import json
-import os
 import pathlib
 import sys
 import tomllib
+from urllib.parse import urlsplit
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-from manifest import LOCAL_262K_CONTEXT, ManifestError, backend_for, load, validate  # noqa: E402
+from manifest import LOCAL_262K_CONTEXT, ManifestError, backend_for, load, local_manifest_path, validate  # noqa: E402
 
 EXPECTED_ENTRIES = {
     "local-262k": LOCAL_262K_CONTEXT,
@@ -101,11 +101,13 @@ def _harness_entries(target: dict):
 
 
 def _is_local(base_url: str) -> bool:
-    base_url = base_url or ""
-    return "127.0.0.1" in base_url or "localhost" in base_url
+    try:
+        return urlsplit(base_url or "").hostname in {"localhost", "127.0.0.1"}
+    except ValueError:
+        return False
 
 
-def validate_harness(name: str, entries) -> list[str]:
+def validate_harness(name: str, entries, expected_port: int = EXPECTED_PORT) -> list[str]:
     problems = []
     local = [e for e in entries if _is_local(e[3])]
     seen = {e[1] for e in local}
@@ -115,12 +117,17 @@ def validate_harness(name: str, entries) -> list[str]:
         if not matches:
             problems.append(f"{name}: missing local provider '{expected_id}'.")
             continue
+        if len(matches) > 1:
+            problems.append(f"{name}: expected exactly one '{expected_id}' entry, found {len(matches)}.")
         for pid, mid, ctx, base in matches:
-            port_suffix = f":{EXPECTED_PORT}"
-            if not ((base or "").endswith(port_suffix) or f"{port_suffix}/" in (base or "")):
+            try:
+                actual_port = urlsplit(base or "").port
+            except ValueError:
+                actual_port = None
+            if actual_port != expected_port:
                 problems.append(
                     f"{name}: '{mid}' (provider {pid}) points at {base}, "
-                    f"expected port :{EXPECTED_PORT}."
+                    f"expected port :{expected_port}."
                 )
             if ctx != expected_ctx:
                 problems.append(
@@ -138,19 +145,25 @@ def validate_harness(name: str, entries) -> list[str]:
 
 
 def _harness_targets() -> list[dict] | None:
-    """Reads local.toml directly (not through manifest.load) so a missing local.toml doesn't
-    also break the manifest check above."""
-    local_path = pathlib.Path(
-        os.environ.get("LOCAL_MANIFEST") or (pathlib.Path(__file__).resolve().parent.parent / "local.toml")
-    )
+    """Reads the machine-local config with the same resolution as manifest.load
+    (LOCAL_MANIFEST, then local.toml, then an auto-discovered local.*.toml)
+    instead of manifest.load itself, so a missing config doesn't also break the
+    manifest check above. Ambiguous resolution raises ManifestError, which
+    main() reports as a problem."""
+    local_path = local_manifest_path(None)
     if not local_path.exists():
         return None
-    with open(local_path, "rb") as f:
-        data = tomllib.load(f)
+    try:
+        with open(local_path, "rb") as f:
+            data = tomllib.load(f)
+    except (OSError, tomllib.TOMLDecodeError) as e:
+        raise ManifestError(f"failed to read harness config {local_path}: {e}") from e
     harness = data.get("harness") or {}
     if not harness.get("enabled"):
         return None
     return harness.get("targets", [])
+
+
 
 
 def main() -> int:
@@ -166,24 +179,33 @@ def main() -> int:
 
     harness_problems: list[str] = []
     print("\n== harness ==")
-    targets = _harness_targets()
-    if targets is None:
-        print("  disabled (set harness.enabled = true and harness.targets in local.toml to check).")
-    elif not targets:
+    try:
+        targets = _harness_targets()
+    except ManifestError as e:
+        targets = None
+        harness_problems.append(str(e))
+        print(f"  PROBLEM: {e}")
+    try:
+        port = load().default_port
+    except ManifestError:
+        port = EXPECTED_PORT
+    if targets is None and not harness_problems:
+        print("  disabled (set harness.enabled = true and harness.targets in your local config to check).")
+    elif targets == []:
         print("  harness.enabled = true but harness.targets is empty: nothing to check.")
-    else:
+    elif targets:
         for target in targets:
             entries, error = _harness_entries(target)
             if error:
                 print(f"  WARNING: {error} (skipped)")
                 continue
-            probs = validate_harness(target["name"], entries)
+            probs = validate_harness(target["name"], entries, expected_port=port)
             if probs:
                 harness_problems.extend(probs)
                 for p in probs:
                     print(f"  PROBLEM: {p}")
             else:
-                print(f"  OK: {target['name']} has exactly local-262k on :{EXPECTED_PORT}.")
+                print(f"  OK: {target['name']} has exactly local-262k on :{port}.")
 
     if manifest_problems or harness_problems:
         return 1

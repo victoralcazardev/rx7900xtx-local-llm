@@ -35,9 +35,11 @@ class TestIsLocal(unittest.TestCase):
     def test_remote_host_is_not_local(self):
         self.assertFalse(check_sync._is_local("https://api.openai.com/v1"))
 
-    def test_empty_or_none_is_not_local(self):
-        self.assertFalse(check_sync._is_local(""))
-        self.assertFalse(check_sync._is_local(None))
+    def test_remote_host_with_localhost_in_path_is_not_local(self):
+        self.assertFalse(check_sync._is_local("https://remote.example/localhost:8080"))
+
+    def test_localhost_subdomain_is_not_local(self):
+        self.assertFalse(check_sync._is_local("http://localhost.example:8080"))
 
 
 class TestValidateHarness(unittest.TestCase):
@@ -95,6 +97,30 @@ class TestValidateHarness(unittest.TestCase):
         )
         self.assertEqual(check_sync.validate_harness("t", entries), [])
 
+    def test_duplicate_local_262k_entries_are_rejected(self):
+        entries = self._entries(
+            ("p1", "local-262k", 262144, "http://127.0.0.1:8080/v1"),
+            ("p2", "local-262k", 262144, "http://localhost:8080/v1"),
+        )
+        problems = check_sync.validate_harness("t", entries)
+        self.assertTrue(any("expected exactly one" in problem for problem in problems))
+
+    def test_configured_port_is_used_by_main(self):
+        import contextlib
+        import io
+        from unittest import mock
+
+        targets = [{"name": "t", "path": "unused", "root": []}]
+        entries = [("p1", "local-262k", 262144, "http://127.0.0.1:18080/v1")]
+        output = io.StringIO()
+        with mock.patch.object(check_sync, "validate_manifest", return_value=([], [])), \
+             mock.patch.object(check_sync, "_harness_targets", return_value=targets), \
+             mock.patch.object(check_sync, "_harness_entries", return_value=(entries, None)), \
+             mock.patch.object(check_sync, "load", return_value=mock.Mock(default_port=18080)), \
+             contextlib.redirect_stdout(output):
+            self.assertEqual(check_sync.main(), 0)
+        self.assertIn("on :18080", output.getvalue())
+
 
 class TestHarnessEntries(unittest.TestCase):
     """_harness_entries reads one JSON config file: covered with a temp file,
@@ -128,6 +154,58 @@ class TestHarnessEntries(unittest.TestCase):
         self.assertIsNone(entries)
         self.assertIn("does not exist", error)
 
+    def test_local_toml_syntax_error_uses_manifest_error(self):
+        import tempfile
+        from unittest import mock
+
+        with tempfile.TemporaryDirectory() as tmp:
+            local = pathlib.Path(tmp) / "local.toml"
+            local.write_text("harness = [\n")
+            with mock.patch.dict("os.environ", {"LOCAL_MANIFEST": str(local)}):
+                with self.assertRaises(check_sync.ManifestError):
+                    check_sync._harness_targets()
+
+
+class TestHarnessTargetsResolution(unittest.TestCase):
+    """_harness_targets uses the same machine-config resolution as manifest.load."""
+
+    def test_auto_discovered_local_config_is_used_without_env_var(self):
+        import json
+        import tempfile
+        from unittest import mock
+
+        manifest_mod = sys.modules["manifest"]
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            (root / "models.json").write_text(json.dumps({
+                "providers": {
+                    "p": {
+                        "baseUrl": "http://127.0.0.1:8080/v1",
+                        "models": [{"id": "local-262k", "contextWindow": 262144}],
+                    }
+                }
+            }))
+            (root / "local.linux.toml").write_text(
+                '[harness]\nenabled = true\ntargets = [\n'
+                f'  {{ name = "t", path = "{root / "models.json"}", format = "json", root = [] }},\n'
+                "]\n"
+            )
+            with mock.patch.object(manifest_mod, "REPO", root), \
+                    mock.patch.dict("os.environ", {}, clear=True):
+                targets = check_sync._harness_targets()
+            self.assertEqual(targets, [
+                {"name": "t", "path": str(root / "models.json"), "format": "json", "root": []},
+            ])
+
+    def test_no_machine_config_reports_disabled(self):
+        import tempfile
+        from unittest import mock
+
+        manifest_mod = sys.modules["manifest"]
+        with tempfile.TemporaryDirectory() as tmp:
+            with mock.patch.object(manifest_mod, "REPO", pathlib.Path(tmp)), \
+                    mock.patch.dict("os.environ", {}, clear=True):
+                self.assertIsNone(check_sync._harness_targets())
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,8 +1,8 @@
 """Launches a model from the manifest with llama-server.
 
 Usage:
-    python scripts/launch.py [alias] [--profile P] [--backend vulkan|hip|cuda]
-                              [--dry-run] [--background] [--manifest path.toml]
+    python3 scripts/launch.py [alias] [--profile P] [--backend vulkan|hip|cuda]
+                               [--dry-run] [--background] [--manifest path.toml]
 
 Without an alias, models.toml's [defaults] default_alias/default_profile is used (the
 current best configuration -- see docs/STATUS.md). Without --profile, if the model has
@@ -21,6 +21,7 @@ import datetime
 import pathlib
 import shutil
 import subprocess
+import shlex
 import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
@@ -78,7 +79,7 @@ def main() -> int:
         "none (no harness entry wired for this context; only local-262k/262144 is wired)"
     )
     print(f"backend: {backend}")
-    print("command:", " ".join(["llama-server"] + argv))
+    print("command:", shlex.join(["llama-server"] + argv))
     print(f"Harness provider: {entry}")
 
     needed = profile.get("vram_gib")
@@ -100,6 +101,10 @@ def main() -> int:
         return 1
 
     alive = running_servers()
+    if alive is None:
+        print("ERROR: could not detect running llama-server processes; aborting preflight.",
+              file=sys.stderr)
+        return 1
     if alive:
         print(f"ERROR: llama-server is already running (PID {alive}). Stop it first.",
               file=sys.stderr)

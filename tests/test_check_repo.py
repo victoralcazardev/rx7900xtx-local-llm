@@ -203,5 +203,24 @@ class TestTrackedFiles(unittest.TestCase):
         self.assertEqual(files, [check_repo.REPO / "only.md"])
 
 
+    def test_main_scans_shell_and_systemd_content(self):
+        import contextlib
+        import io
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            for suffix in (".sh", ".service", ".timer"):
+                path = root / f"tracked{suffix}"
+                path.write_text("secret = " + "sk" + "-" + "a" * 24 + "\npath=/mnt/hdd/private\n")
+                output = io.StringIO()
+                with mock.patch.object(check_repo, "REPO", root), \
+                     mock.patch.object(check_repo, "tracked_files", return_value=[path]), \
+                     contextlib.redirect_stdout(output):
+                    self.assertEqual(check_repo.main(), 1)
+                report = output.getvalue()
+                self.assertIn("personal path", report)
+                self.assertIn("looks like a", report)
+
 if __name__ == "__main__":
     unittest.main()

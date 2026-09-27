@@ -4,7 +4,7 @@ oversized files, personal absolute paths, secret-looking strings and Spanish-lan
 Runs over `git ls-files` (only tracked files -- nothing git-ignored is scanned). Stdlib only,
 no dependencies.
 
-Usage: python scripts/check-repo.py
+Usage: python3 scripts/check-repo.py
 Exit: 0 = no problems, 1 = problems found. See AGENTS.md: "run before every push".
 """
 from __future__ import annotations
@@ -19,7 +19,7 @@ MAX_FILE_BYTES = 1_048_576  # 1 MiB
 
 # Extensions (and extension-less dotfiles/LICENSE) scanned for content problems. Anything else
 # tracked (there is none today -- no GGUF, no images) only gets the size check.
-TEXT_EXTENSIONS = {".md", ".py", ".json", ".jsonl", ".toml", ""}
+TEXT_EXTENSIONS = {".md", ".py", ".json", ".jsonl", ".toml", ".sh", ".service", ".timer", ""}
 
 # (?<!\w) keeps a URL path segment from matching: right before the leading "/" there must not
 # be a word character, as in "https://host.example/media/x" (a letter precedes "/media") or
