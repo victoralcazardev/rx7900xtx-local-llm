@@ -72,7 +72,7 @@ Generation tok/s (accepted-draft percentage in parentheses).
   before trusting "MTP is better" for long-context use — see the 190K result below, where DFlash2
   is measured directly and does not reproduce that claim on this GPU.
 
-## Why MTP's advantage shrinks with depth: VEC vs. TILE kernel selection
+## VEC vs. TILE kernel selection at depth
 
 In `ggml/src/ggml-cuda/fattn.cu` (`ggml_cuda_get_best_fattn_kernel`), the RX 7900 XTX (RDNA3: WMMA,
 no NVIDIA-style MMA or MFMA) and Qwen3.8's attention shape (head_dim 256, GQA 6 → effective GQA
@@ -337,8 +337,9 @@ Raw data: [`../../results/20260927-depth-240k-none-vs-n3/`](../../results/202609
 - MTP acceptance rate with real agent-style tool use at ~190K (temperature 1, multiple seeds): the
   synthetic Wikipedia-summarization benchmark used above is a pessimistic proxy — a third-party
   report on a different setup saw 85-93% acceptance with real agent traffic (see `depth.md`).
-- MTP n=3 and `--spec-draft-p-min` were only measured at 128K fill (272 W, single sample per task)
-  — not confirmed at 190-240K depth, and not repeated.
+- How much V q5_1 costs *with* MTP: spec-off pays 25% for it at 240K (vs. V q8_0), but MTP n=3
+  with KV q8_0/q8_0 at 262K is not reliable on this card, so it would have to be measured at a
+  smaller window (~224K), which gives up the context the default profile exists for.
 - Whether a future llama.cpp release picks up #27282 (shared MTP compute arena) or #26038, which
   would reduce MTP's VRAM/compute overhead at depth.
 

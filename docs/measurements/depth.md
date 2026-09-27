@@ -60,7 +60,7 @@ q8_0 vs. ~615 GB/s for f16 in the same kernel
 ([stew675/llama-cpp-rdna-boosts#45](https://github.com/stew675/llama-cpp-rdna-boosts/issues/45),
 reported by `overdoingism`). MTP verify batches of 3-4 tokens add a second, separate cost on top —
 routing through the TILE kernel, which converts the whole KV cache to f16 on every step — already
-covered in [`speculative.md`](speculative.md#why-mtps-advantage-shrinks-with-depth-vec-vs-tile-kernel-selection);
+covered in [`speculative.md`](speculative.md#vec-vs-tile-kernel-selection-at-depth);
 not duplicated here.
 
 **Upstream status (checked 2026-09-26)**: `ggml/src/ggml-cuda/fattn.cu` and `fattn-common.cuh` on

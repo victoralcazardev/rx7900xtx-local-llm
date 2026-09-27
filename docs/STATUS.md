@@ -24,8 +24,12 @@ best default, no overlapping alternatives.
   process VRAM **22,630 MiB**, 0 evicted. See
   [`measurements/speculative.md`](measurements/speculative.md) and
   [`measurements/memory.md`](measurements/memory.md).
-- **Empty-context generation**: ~61 tok/s from a single smoke-test sample (not a depth measurement
-  — see `measurements/depth.md`'s empty-context matrix for the fuller table).
+- **Empty-context generation**: 68.9 tok/s (37.2 without MTP, +85%), community `probe.py`, three
+  passes per arm. See
+  [`measurements/speculative.md`](measurements/speculative.md#community-probe-ab-at-262k-empty-context-2026-09-27).
+- **Without MTP at 240K fill** (same flags): 11.2 tok/s, so MTP n=3 is **+109%** at the operating
+  depth. See
+  [`measurements/speculative.md`](measurements/speculative.md#mtp-vs-spec-off-at-240k-fill-adopted-profile-2026-09-27).
 - **Quality**: **68/68 exact match, 0 loop detections** on a RULER-style multi-key retrieval test,
   32K-240K fill (`bench/longctx_quality.py`), including 8/8 on the exact adopted server flags
   (MTP n=3, `-ub 256`) at 240K. See
@@ -42,7 +46,8 @@ best default, no overlapping alternatives.
   [`measurements/kv-quality.md`](measurements/kv-quality.md).
 - **MTP `--spec-draft-n-max 3`**: confirmed at the real long-context operating depths (190K and
   240K fill), +9-11% mean tg over n=2 across essay/copy/code — unlike a shallower 128K-fill
-  screening that only favored n=3 on literal copy. See
+  screening that only favored n=3 on literal copy. Against no speculation it is +109% at 240K fill
+  and +85% at empty context (2026-09-27). See
   [`measurements/speculative.md`](measurements/speculative.md).
 - **`-ub 256`**: -350 MiB peak process VRAM for a small prefill cost (-5%), no generation-speed
   cost. See [`measurements/memory.md`](measurements/memory.md).
@@ -92,7 +97,8 @@ best default, no overlapping alternatives.
   + MTP with request queuing beats adding `-np` slots end-to-end. See
   [`measurements/concurrency.md`](measurements/concurrency.md).
 - **MTP n=4** and **`--spec-draft-p-min`** — n=4 loses acceptance vs. n=2/n=3; p-min raises
-  acceptance but not speed at any depth measured.
+  acceptance but not speed at any depth measured, and at empty context 0.60/0.75 lower it
+  (68.9 → 66.2/59.8 tok/s at n=3).
 - **`-ub 1024`/`-ub 2048`** — no speed gain at depth, cost 590 MiB/1.8 GiB more VRAM.
 - **Vision at 200K+ context** — VRAM/context cost not worth it at this depth.
 - **exllamav3-rocm** (+ patched TabbyAPI) — not pursued: a read-only audit found no code or
