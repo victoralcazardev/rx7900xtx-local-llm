@@ -154,7 +154,10 @@ on.
   measurement below. The +49% figure compares Case B (kvmix, q8/q5_1, 90% acceptance) with Case D
   (**official engine, q8/q8**) — it mixes engine, KV type and an unusually high acceptance rate, so
   it doesn't isolate MTP's effect. With 58% acceptance (see the 240K result below), it would be
-  **~+15%** vs. the same Case D. The no-MTP reference with kvmix q8/q5_1 at 240K is still missing.
+  **~+15%** vs. the same Case D. The no-MTP reference with kvmix q8/q5_1 at 240K was measured on 2026-09-27: **11.2 tok/s**
+  (vs. 23.3 with MTP n=3 on the same flags, **+109%**), and a same-engine q8/q8 spec-off control
+  read 14.9 — see `speculative.md`'s "MTP vs. spec-off at 240K fill" and
+  [`../../results/20260927-depth-240k-none-vs-n3/`](../../results/20260927-depth-240k-none-vs-n3/).
 - **Update, 2026-09-26** (current default profile, MTP n=3, q8_0/q5_1, 262K, 240K fill): `-ub 256`
   shows **no spill** — system GTT 662-678 MiB vs. 642-680 MiB with `-ub 512`, per-process GTT
   8 MiB, 0 evicted, process VRAM 22,630 MiB vs. 22,980 MiB with `-ub 512`. This supersedes the

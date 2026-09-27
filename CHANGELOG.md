@@ -5,6 +5,13 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+- Measured the missing spec-off reference at 240K fill on the adopted profile: 11.2 tok/s vs.
+  23.3 with MTP n=3 (**+109%**), correcting the earlier "MTP's gain shrinks at depth" conclusion,
+  which compared against a KV q8_0/q8_0 spec-off baseline (14.9 tok/s on the same engine: V q5_1
+  costs spec-off decode 25%). See `docs/measurements/speculative.md`.
+- Ran the sudoingX/qwen38-mtp community `probe.py` A/B on the adopted profile (empty context):
+  spec-off 37.2 → MTP n=3 68.9 tok/s (+85%); n=2 ties, n=4 and `--spec-draft-p-min` 0.60/0.75
+  lose. Added `bench/probe_ab.py`.
 - Measured MTP n=4 at 240K depth on the exact adopted flags (`-ub 256`): -8% mean tg vs. n=3
   (21.4 vs. 23.3 tok/s), 66% vs. 71% acceptance — n=3 stays adopted. Also found generated text is
   not bit-identical across n=2/n=3/`-ub 256` at temperature 0 for essay and code tasks.

@@ -11,10 +11,16 @@
   (`-ub 256`): 21.4 vs. 23.3 tok/s mean (-8%), 66% vs. 71% acceptance — see "n=4 checked again at
   240K" below. `--spec-draft-p-min 0.8` (a community config) raises acceptance
   substantially (67%→96%) but **not speed** — not adopted on its own.
-- **At depth, MTP's gain over no speculation shrinks sharply** vs. the empty-context finding below:
-  at ~190-240K context it drops to roughly +15-50% depending on the exact comparison (see
-  `depth.md`), because MTP's per-step cost also grows with depth. The mechanism is identified
-  (below) but only partially explains the slowdown.
+- **At depth, MTP's gain over no speculation grows, it does not shrink (corrected 2026-09-27)**:
+  on the adopted profile at 240K fill, spec-off decodes at 11.2 tok/s and MTP n=3 at 23.3
+  (**+109%**), vs. +85% at empty context on the same profile. The earlier "+15-50% at depth"
+  reading compared against a KV q8_0/q8_0 spec-off baseline; spec-off with the adopted V q5_1 is
+  25% slower than with V q8_0 at 240K (11.2 vs. 14.9 tok/s), so that baseline flattered spec-off.
+  See "MTP vs. spec-off at 240K fill" below.
+- **Community `probe.py` A/B, empty context, 262K profile (2026-09-27)**: spec-off 37.2 → n=2
+  68.6 / **n=3 68.9** / n=4 66.9 tok/s (n=2 and n=3 tie within noise); `--spec-draft-p-min`
+  0.60/0.75 raises acceptance (0.72 → 0.85/0.91) but lowers speed (66.2/59.8). See "Community
+  probe A/B at 262K" below.
 - **Older finding, empty context**: before the depth-specific measurements above, `--spec-draft-n-max
   2` looked like the best overall option and used the least VRAM: no separate draft model needed,
   the head ships inside the GGUF (`-mtp`). With an empty context: **+50-60%** generation speed
@@ -81,6 +87,13 @@ ratio 2) fall into the generic kernel selection path:
 This matches what's measured: MTP gains +50-60% with an empty context (converting little KV is
 cheap), but very little at 240K. It likely also explains part of the +933 MiB of VRAM seen during
 prefill (f16 conversion buffer) — see `memory.md`.
+
+**Correction (2026-09-27)**: "very little at 240K" was wrong for the adopted profile. It came
+from comparing MTP against a KV q8_0/q8_0 spec-off baseline. Against spec-off with the adopted
+KV q8_0/q5_1, MTP n=3 is **+109%** at 240K fill (see "MTP vs. spec-off at 240K fill" below): the
+VEC path spec-off uses pays the V q5_1 dequant cost (-25% vs. V q8_0), while TILE's per-step f16
+conversion is a smaller cost than this section assumed. The kernel selection described above is
+still correct; the conclusion drawn from it was not.
 
 **Experimental engine `llama-b11160-linux-rocm10-gfx1100-kvmix-vec4`**: same build with one line
 changed (`Q->ne[1] <= 2` → `<= 4` in that branch), so 3-4-token batches stay on VEC. Patch:
@@ -256,6 +269,57 @@ Prefill ~380 tok/s both, hotspot 99°C, 0 evicted. Raw data and exact command:
   differently-configured run — see the "exact adopted config" confirmation in
   [`depth.md`](depth.md#quality-ruler-style-200k-q8q8-mtp).
 
+## Community probe A/B at 262K, empty context (2026-09-27)
+
+The [sudoingX/qwen38-mtp](https://github.com/sudoingX/qwen38-mtp) community table measures MTP
+with one fixed instrument (`probe.py`: three short prompts × three runs, 400 tokens, thinking
+off) and a strict contract (same serving flags in both arms, `--parallel 1`, medians of ≥3). Ran
+it **unmodified** (commit `1e514a8`) on the adopted `262k-q8q51-mtp` flags through
+[`bench/probe_ab.py`](../../bench/probe_ab.py): three complete passes per arm, row = median of
+the three pass medians, acceptance from the server log with warm-ups excluded.
+
+| Arm | Row tok/s | Code / prose / Bash | vs. spec-off | Acceptance |
+|---|---:|---|---:|---:|
+| spec off | 37.2 | 36.9 / 37.3 / 37.1 | — | — |
+| n=2 | 68.6 | 76.5 / 59.3 / 68.6 | +84% | 0.80 |
+| **n=3** (adopted) | **68.9** | 82.1 / 51.9 / 68.9 | **+85%** | 0.72 |
+| n=4 | 66.9 | 87.1 / 46.3 / 66.9 | +80% | 0.62 |
+| n=3, p-min 0.60 | 66.2 | 78.2 / 46.7 / 66.2 | +78% | 0.85 |
+| n=3, p-min 0.75 | 59.8 | 79.2 / 45.1 / 59.8 | +61% | 0.91 |
+
+- n=2 and n=3 tie at empty context (pass-to-pass noise ±2 tok/s); n=3 remains the default
+  because it wins at the operating depth (section below and "MTP n=3 confirmed at depth").
+- Deeper drafts keep paying on code and lose on prose at every step, the same shape as the other
+  24 GB cards in that table.
+- `--spec-draft-p-min` trades speed for acceptance on this card. Not adopted.
+
+Raw data and environment: [`../../results/20260927-probe-ab-262k/`](../../results/20260927-probe-ab-262k/).
+
+## MTP vs. spec-off at 240K fill, adopted profile (2026-09-27)
+
+The spec-off reference on the exact adopted flags (`hip-kvmix`, KV q8_0/q5_1, `-ub 256`) had
+never been measured at depth (`depth.md` listed it as missing). `bench/spec_depth_bench.py`,
+240K fill, essay/copy/code, temperature 0, 400 output tokens, **3 warm repetitions** per task
+(medians), plus a spec-off KV q8_0/q8_0 control on the same engine.
+
+| Variant | Essay | Copy | Code | Mean | vs. spec-off (same KV) | Acceptance | Peak process VRAM |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| spec off, q8_0/q5_1 | 11.1 | 11.2 | 11.2 | 11.2 | — | — | 20,102 MiB |
+| **MTP n=3, q8_0/q5_1** (adopted) | **24.2** | **27.0** | **18.8** | **23.3** | **+109%** | 0.69 | 22,631 MiB |
+| spec off, q8_0/q8_0 (control) | 14.9 | 14.9 | 15.0 | 14.9 | — | — | 21,381 MiB |
+
+- **MTP more than doubles decode at the adopted profile's operating depth.** The relative gain
+  is larger than at empty context (+85%), not smaller.
+- **Spec-off pays for V q5_1**: -25% vs. V q8_0 at the same depth and engine. The n=3 figure
+  reproduces the 2026-09-26 adopted-flags measurement (23.3 tok/s mean), so the MTP arm is stable
+  across days.
+- Against the q8_0/q8_0 spec-off control, the adopted profile is still +57% at 240K while fitting
+  the full 262K window.
+- Not measured: MTP n=3 with KV q8_0/q8_0 at 240K (262K + MTP + q8/q8 is not reliable on this
+  card, see `depth.md`), so how much V q5_1 costs *with* MTP is not isolated.
+
+Raw data: [`../../results/20260927-depth-240k-none-vs-n3/`](../../results/20260927-depth-240k-none-vs-n3/).
+
 ## Investigation notes on nearby forks (not adopted)
 
 - **Lemonade b1331** (llama.cpp base ≈ b11170): its build workflow does not enable
@@ -296,3 +360,7 @@ Prefill ~380 tok/s both, hotspot 99°C, 0 evicted. Raw data and exact command:
   loses to n=3 (-8% mean tg), confirming the 128K-fill screening's call at depth too. Also found
   generated text is not bit-identical across n=2/n=3/`-ub 256` at temperature 0 for essay and
   code; retrieval quality re-validated on the exact adopted flags (`depth.md`), cumulative 68/68.
+- **2026-09-27**: ran the sudoingX/qwen38-mtp community `probe.py` A/B on the adopted profile
+  (empty context: n=3 +85%, n=2 ties, n=4 and p-min lose) and measured the missing spec-off
+  reference at 240K fill: MTP n=3 is +109% there, correcting the earlier "gain shrinks at depth"
+  conclusion (it was measured against a q8_0/q8_0 spec-off baseline).

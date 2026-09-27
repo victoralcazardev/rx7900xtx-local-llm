@@ -46,7 +46,8 @@ llama-server -m <models_root>/Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp/Qwen3.8-27B-GSQ-RCO-
 | Prefill at 240K fill | 380 tok/s |
 | Peak process VRAM at 240K fill | 22,630 MiB |
 | Long-context retrieval quality | 68/68 exact, 32K-240K fill |
-| Empty-context generation (single smoke sample) | ~61 tok/s |
+| Empty-context generation (community `probe.py`, 3 passes) | 68.9 tok/s (37.2 without MTP) |
+| Generation at 240K fill without MTP (same flags) | 11.2 tok/s (MTP n=3: +109%) |
 
 Full evidence and method: [`docs/BENCHMARK-FORMAT.md`](docs/BENCHMARK-FORMAT.md),
 [`docs/measurements/`](docs/measurements/), [`docs/STATUS.md`](docs/STATUS.md).
