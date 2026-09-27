@@ -42,7 +42,7 @@ shorthand for the `launch.py` invocation below.
 
 1. **Check that no other server is running** (one port `:8080`, one model at a time):
    ```
-   python scripts/check-sync.py
+   python3 scripts/check-sync.py
    ```
    If the manifest reports a PROBLEM (not a WARNING), fix it before continuing.
 
@@ -50,22 +50,22 @@ shorthand for the `launch.py` invocation below.
    `models.toml`'s `[defaults] default_alias`/`default_profile` (currently `qwen38-iq3s-mtp` /
    `262k-q8q51-mtp` — see `docs/STATUS.md`):
    ```
-   python scripts/launch.py --dry-run
+   python3 scripts/launch.py --dry-run
    ```
    To pick a different alias/profile explicitly (once one exists — the manifest currently has
    only one), `--profile` is required if the model has more than one profile:
    ```
-   python scripts/launch.py qwen38-iq3s-mtp --profile 262k-q8q51-mtp --dry-run
+   python3 scripts/launch.py qwen38-iq3s-mtp --profile 262k-q8q51-mtp --dry-run
    ```
    Check the printed command and the "Harness provider: local-262k" line.
 
 3. **Launch for real** (foreground, stays attached to the console):
    ```
-   python scripts/launch.py
+   python3 scripts/launch.py
    ```
    or in the background with a log:
    ```
-   python scripts/launch.py --background
+   python3 scripts/launch.py --background
    ```
    The log goes to `_tmp/logs/<alias>-<profile>-<timestamp>.log`. Pass an explicit
    `<alias> --profile <profile>` (see the table above) to load something other than the default.
@@ -79,7 +79,7 @@ shorthand for the `launch.py` invocation below.
 - `curl http://127.0.0.1:8080/health` returns `{"status":"ok"}`.
 - A real request from your client gets an answer (not `connection refused`, not
   `400 exceed_context`).
-- `python scripts/smoke.py <alias> --profile <profile>` for an automated check with tok/s.
+- `python3 scripts/smoke.py <alias> --profile <profile>` for an automated check with tok/s.
 
 ## Known errors
 

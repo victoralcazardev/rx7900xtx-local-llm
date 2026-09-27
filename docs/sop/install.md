@@ -38,7 +38,7 @@ driver notes, the P-state bug, the NTFS mount caveats).
    for the backend you have under `[engines]`.
 2. Run the smoke test for the reference model/profile:
    ```
-   python scripts/smoke.py qwen38-iq3s-mtp --profile 262k-q8q51-mtp
+   python3 scripts/smoke.py qwen38-iq3s-mtp --profile 262k-q8q51-mtp
    ```
 3. If it answers with real content and tok/s, the install is verified against the adopted default
    profile — see `docs/models/qwen38-27b-quants.md` §6 and `docs/STATUS.md` for how it got there.
@@ -47,7 +47,7 @@ driver notes, the P-state bug, the NTFS mount caveats).
 
 - Each section's verification step (`vulkaninfo`, `hipInfo`, `rocminfo`) gives the expected result
   before moving to the next.
-- `python scripts/check-sync.py` stops warning "no engine" for the backend you just installed.
+- `python3 scripts/check-sync.py` stops warning "no engine" for the backend you just installed.
 - The final smoke test returns `OK` or `OK*` (not `FAILED`).
 
 ## Known errors

@@ -21,6 +21,7 @@ bench/res/
 .env.*
 *.token
 hf_token*
+.atl/
 
 
 # Private ODD working notes (never published)

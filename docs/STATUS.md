@@ -6,9 +6,9 @@
 alias is given, i.e. `ia` with no arguments).
 
 ```
-python scripts/launch.py
+python3 scripts/launch.py
 # equivalent, explicit form:
-python scripts/launch.py qwen38-iq3s-mtp --profile 262k-q8q51-mtp
+python3 scripts/launch.py qwen38-iq3s-mtp --profile 262k-q8q51-mtp
 ```
 
 Engine `hip-kvmix`, `-c 262144`, KV `q8_0/q5_1`, MTP `--spec-draft-n-max 3`, `-ub 256`, vision

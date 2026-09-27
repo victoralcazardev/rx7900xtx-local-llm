@@ -39,11 +39,11 @@ is actually loaded there:
 
 | Provider | contextWindow | When it applies |
 |---|---|---|
-| `local-262k` | 262144 | profiles with `context >= 262144` (the only wired context today) |
+| `local-262k` | 262144 | profiles with `context = 262144` (the only wired context today) |
 
-`scripts/launch.py` prints the harness provider for the chosen profile, or that none is wired if
-its context isn't 262144. Verify wiring with `python scripts/check-sync.py` (only checked if
-`local.toml` has `[harness] enabled = true` — see `AGENTS.md`).
+`scripts/launch.py` prints the harness provider for the supported profile context (`262144`), or
+that none is wired for any other context. Verify wiring with `python3 scripts/check-sync.py` (only
+checked if `local.toml` has `[harness] enabled = true` — see `AGENTS.md`).
 
 ## Operate
 

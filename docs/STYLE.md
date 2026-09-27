@@ -5,10 +5,10 @@ output, commit messages, identifiers, config keys and CLI flags.
 
 ## 1. Language
 
-English only, everywhere, with one deliberate exception: test *content* that is Spanish on
+English only, everywhere, with two deliberate exceptions: test *content* that is Spanish on
 purpose (for example a Spanish long-context retrieval corpus, or Spanish prompts used to
-exercise a model's Spanish output). Mark that content with an English comment explaining why
-it stays in Spanish instead of being translated.
+exercise a model's Spanish output), and Spanish terms in the glossary in §4. Mark Spanish test
+content with an English comment explaining why it stays in Spanish instead of being translated.
 
 ## 2. Units
 

@@ -36,7 +36,7 @@ gets compared before `backend` is set in `models.toml`.
 ## How to verify
 
 - `docs/measurements/engines.md` has a new row with date and engine version.
-- `python scripts/check-sync.py` stays OK after changing `backend` in `models.toml`.
+- `python3 scripts/check-sync.py` stays OK after changing `backend` in `models.toml`.
 
 ## Known errors
 

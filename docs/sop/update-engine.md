@@ -59,12 +59,12 @@ disabled). One single-backend binary per download/build.
 
 5. **Smoke-test one representative model** per architecture in use:
    ```
-   python scripts/smoke.py qwen38-iq3s-mtp --profile 262k-q8q51-mtp --backend hip-kvmix
+   python3 scripts/smoke.py qwen38-iq3s-mtp --profile 262k-q8q51-mtp --backend hip-kvmix
    ```
 
 ## How to verify
 
-- `python scripts/check-sync.py` reports no new PROBLEM (the "engine pending" WARNING disappears
+- `python3 scripts/check-sync.py` reports no new PROBLEM (the "engine pending" WARNING disappears
   for the backend you just updated).
 - The step-5 smoke test returns real content and tok/s.
 

@@ -57,7 +57,7 @@ reaches these numbers without touching power management.
 | `-np 1` | `-1` (auto = 4 slots) | Kept |
 | `--ctx-checkpoints 4` | 32 | Kept: checkpoints live in RAM |
 | `-ngl all` | `auto` | Kept |
-| `--spec-draft-n-max 2` | 3 | Kept (see `speculative.md`) |
+| `--spec-draft-n-max 3` | 3 | Kept (see `speculative.md`) |
 | `--metrics` | disabled | Kept: exposes `/metrics` for the persistent token ledger (`docs/sop/token-ledger.md`) |
 
 Flags tested and **not** added, because they change nothing or are already the default:

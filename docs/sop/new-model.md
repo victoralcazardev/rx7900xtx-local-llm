@@ -9,15 +9,18 @@
 
 2. **Read the GGUF's local metadata** (architecture, MTP, cheap/expensive KV, recorded sampling):
    ```
-   python scripts/gguf_info.py <models_root>/<file>.gguf
+   python3 scripts/gguf_info.py <models_root>/<file>.gguf
    ```
    Compare against the card: if they disagree, the card wins, and the discrepancy gets a comment in
    `models.toml`.
 
-3. **Add the entry in `models.toml`**: `gguf` (path relative to `models_root`), `backend` (`hip` or
-   `vulkan`, decided with `docs/sop/measure-backend.md` if there's no prior data), `sampling` (only
-   the keys the vendor sets explicitly), `mtp`, `mmproj` if applicable, and at least one profile
-   under `[models.<alias>.profiles.<name>]` with `context` and `kv`.
+3. **Add the entry in `models.toml`**: `gguf` (path relative to `models_root`), model-level
+   `backend` (`hip` or `vulkan`, decided with `docs/sop/measure-backend.md` if there's no prior
+   data), `sampling` (only the keys the vendor sets explicitly), `mtp`, `mmproj` if applicable,
+   and at least one profile under `[models.<alias>.profiles.<name>]` with `context` and `kv`.
+   An optional profile-level `backend` overrides the model-level backend when that profile needs
+   another engine; use `hip-kvmix` for asymmetric-KV profiles that need its additional
+   FlashAttention kernels.
 
 4. **Find the real max context** with `--fit` (don't guess, don't copy from
    `docs/models/qwen38-27b-quants.md` §3, which is unmeasured arithmetic):
@@ -29,22 +32,22 @@
 
 5. **Smoke-test the new profile**:
    ```
-   python scripts/smoke.py <alias> --profile <profile>
+   python3 scripts/smoke.py <alias> --profile <profile>
    ```
 
-6. **Harness wiring**: usually nothing to change — the one fixed provider (`local-262k`) doesn't
-   depend on the alias, but only covers a profile with `context = 262144`; a profile at a
-   different context has no harness entry wired (`scripts/manifest.py`'s `harness_entry` returns
-   `None`) unless you wire a new one. Only touch harness config if the family uses a thinking
-   format other than `<think>`/channels already covered (check `tokenizer.chat_template` with
+6. **Harness wiring**: the project has exactly one fixed provider, `local-262k`, for
+   `context = 262144` (see `AGENTS.md`). Do not add a provider for another model or profile.
+   `scripts/launch.py` prints `local-262k` for the supported context and reports no harness
+   provider for any other context. Only touch harness config if the family uses a thinking format
+   other than `<think>`/channels already covered (check `tokenizer.chat_template` with
    `gguf_info.py`) — document it in `AGENTS.md` before changing anything.
 
 ## How to verify
 
-- `python scripts/check-sync.py` reports no PROBLEM for the new alias (a WARNING is fine if the
+- `python3 scripts/check-sync.py` reports no PROBLEM for the new alias (a WARNING is fine if the
   backend's engine isn't configured yet).
-- `python scripts/launch.py <alias> --profile <profile> --dry-run` prints the expected command.
-- `python scripts/smoke.py <alias> --profile <profile>` answers with real content.
+- `python3 scripts/launch.py <alias> --profile <profile> --dry-run` prints the expected command.
+- `python3 scripts/smoke.py <alias> --profile <profile>` answers with real content.
 
 ## Known errors
 
