@@ -12,14 +12,14 @@ guard they enforce differs per script:
 - `depth_bench.py`, `longctx_quality.py` and `concurrency_bench.py` refuse to run (`--run`)
   without both the `IA_BENCH_INHIBITED=1` environment variable and `--inhibitor-ok`; their
   `--smoke` mode touches no server/GPU and needs neither.
-- `spec_bench.py` and `spec_depth_bench.py` only check `IA_BENCH_INHIBITED=1`.
+- `spec_bench.py`, `spec_depth_bench.py` and `probe_ab.py` only check `IA_BENCH_INHIBITED=1`.
 - `ladder_bench.py`, `oom_probe.py` and `summarize.py` have no guard at all — wrap them in
   `systemd-inhibit` yourself.
 
 ## Configuration
 
 None of these scripts read `models.toml`/`local.toml` (`depth_bench.py`,
-`longctx_quality.py`, `spec_bench.py`, `spec_depth_bench.py`, `oom_probe.py`) — they talk to a
+`longctx_quality.py`, `spec_bench.py`, `spec_depth_bench.py`, `probe_ab.py`, `oom_probe.py`) — they talk to a
 fixed, already-decided configuration via environment variables, so a benchmark run stays
 pinned to one exact model/engine/corpus regardless of what the daily-driver manifest points
 at:
@@ -73,6 +73,7 @@ and verify it.
 | `ladder_bench.py` | `escalera.py` | One-shot pass/fail matrix used to pick the model/profile shortlist: loads a case, measures load time, VRAM and tok/s, and records any OOM. |
 | `oom_probe.py` | `estres.py` | Minimal OOM probe: fills the context with N characters of real text and asks for a short summary. |
 | `concurrency_bench.py` | (new) | Multi-agent concurrency: one server with `-np N` parallel slots, N simultaneous streaming requests, per-slot tok/s + draft acceptance + aggregate throughput + peak VRAM/GTT. |
+| `probe_ab.py` | (new) | Empty-context spec-off vs. spec-on A/B with the unmodified `probe.py` from [sudoingX/qwen38-mtp](https://github.com/sudoingX/qwen38-mtp) (its community table's instrument, passed via `--probe`): one server per arm on the `262k-q8q51-mtp` flags, three complete probe passes per arm, acceptance from the server log — see [`../results/20260927-probe-ab-262k/`](../results/20260927-probe-ab-262k/). |
 
 ## `--extra`: A/B-testing a new flag without editing a script
 
