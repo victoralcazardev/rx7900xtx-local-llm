@@ -331,13 +331,6 @@ def build_prompt(wiki, target):
     raise RuntimeError(f"could not build an exact depth of {target} tokens")
 
 
-def request(prompt, max_tokens, seed=42, temperature=1, events_path=None, monitor=None):
-    """Calls /completion and returns (final event, text); useful with a server already up."""
-    payload = {"prompt": prompt, "n_predict": max_tokens, "temperature": temperature, "top_k": 20, "min_p": 0,
-               "seed": seed, "stream": True, "return_progress": True, "cache_prompt": False,
-               "ignore_eos": True, "timings_per_token": True}
-    if events_path is None: events_path = Path("/tmp/depth-bench-response.sse")
-    return stream_completion(payload, Path(events_path), monitor)
 
 
 def stream_completion(payload, events_path, monitor=None):

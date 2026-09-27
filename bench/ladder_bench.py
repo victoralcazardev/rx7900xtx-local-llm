@@ -9,7 +9,7 @@ local.example.toml for the shape) to resolve models_root and the engine binaries
 Usage: python ladder_bench.py <backend> <case> [<case> ...]
        case = model_folder:context:kvK/kvV:spec_n_max(0=no MTP)[:nomm]  (nomm = no mmproj)
 """
-import json, pathlib, subprocess, sys, time, urllib.request
+import argparse, json, pathlib, subprocess, sys, time, urllib.request
 
 AQUI = pathlib.Path(__file__).resolve().parent
 REPO = AQUI.parent
@@ -111,11 +111,19 @@ def run_case(m, backend, spec):
         time.sleep(3)
 
 
-if __name__ == "__main__":
-    backend, specs = sys.argv[1], sys.argv[2:]
+def main():
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("backend", help="backend defined in bench/local.bench.toml")
+    ap.add_argument("specs", nargs="*", help="case specs (see usage above)")
+    args = ap.parse_args()
+    backend = args.backend
     m = load(local=AQUI / "local.bench.toml")
-    for s in specs:
+    for s in args.specs:
         r = run_case(m, backend, s)
         print(json.dumps(r, ensure_ascii=False), flush=True)
         with open(AQUI / "res" / "ladder.jsonl", "a") as f:
             f.write(json.dumps(r, ensure_ascii=False) + "\n")
+
+
+if __name__ == "__main__":
+    main()

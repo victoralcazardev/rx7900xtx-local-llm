@@ -38,7 +38,7 @@ def main():
     ap.add_argument('--kv', default='q5_1', help='V cache type')
     ap.add_argument('--kv-k', default='q8_0', help='K cache type (e.g. kvarn8 on BeeLlama)')
     ap.add_argument('--ctx', type=int, default=262144)
-    ap.add_argument('--variants', nargs='+', default=list(VARIANTS))
+    ap.add_argument('--variants', nargs='+', choices=tuple(VARIANTS), default=list(VARIANTS))
     ap.add_argument('--server', help='alternate llama-server binary (e.g. the vec4 engine)')
     ap.add_argument('--tag', default='')
     ap.add_argument('--extra', default='',

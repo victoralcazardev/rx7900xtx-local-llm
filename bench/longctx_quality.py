@@ -376,7 +376,7 @@ def run_matrix(args, runner):
             try:
                 monitor = runner.Monitor(proc.pid, (variant_dir / "telemetry.jsonl").open("w"))
                 monitor.start()
-                runner.wait_health(proc)
+                runner.wait_health(proc, monitor)
                 monitor.set_phase("ready")
                 if not documents:
                     for depth in DEPTHS:

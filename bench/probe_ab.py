@@ -22,6 +22,14 @@ ARMS = {"none": [], "n2": MTP(2), "n3": MTP(3), "n4": MTP(4),
 ACCEPT = re.compile(r"draft acceptance = [\d.]+ \(\s*(\d+) accepted /\s*(\d+) generated")
 
 
+def wait_for_health(proc, health, arm, timeout=1800):
+    deadline = time.monotonic() + timeout
+    while not health():
+        if proc.poll() is not None: raise SystemExit(f"{arm}: server exited while loading")
+        remaining = deadline - time.monotonic()
+        if remaining <= 0: raise TimeoutError(f"{arm}: timed out waiting for /health after {timeout} seconds")
+        time.sleep(min(2, remaining))
+
 def amdgpu():
     """The first DRM device exposing VRAM counters (the discrete card)."""
     return next(p.parent for p in sorted(pathlib.Path("/sys/class/drm").glob("card?/device/mem_info_vram_used")))
@@ -54,9 +62,7 @@ def main():
         log = open(out / f"{arm}.server.log", "w")
         p = subprocess.Popen(rec["argv"], stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
         try:
-            while not health():
-                if p.poll() is not None: raise SystemExit(f"{arm}: server exited while loading")
-                time.sleep(2)
+            wait_for_health(p, health, arm)
             rec["loaded_vram_mib"], rec["loaded_gtt_mib"] = mib("mem_info_vram_used"), mib("mem_info_gtt_used")
             rec["passes"] = []
             for i in range(a.passes):

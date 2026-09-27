@@ -23,6 +23,19 @@ VARIANTS={'none':[], 'mtp2':['--spec-type','draft-mtp','--spec-draft-n-max','2']
  'mtp2-mod':['--spec-type','draft-mtp,ngram-mod','--spec-draft-n-max','2','--spec-ngram-mod-n-match','24','--spec-ngram-mod-n-min','8','--spec-ngram-mod-n-max','32'],
  'mtp2-moddef':['--spec-type','draft-mtp,ngram-mod','--spec-draft-n-max','2'],
  'mtp3-mod':['--spec-type','draft-mtp,ngram-mod','--spec-draft-n-max','3','--spec-ngram-mod-n-match','24','--spec-ngram-mod-n-min','8','--spec-ngram-mod-n-max','32']}
+def aggregate_rows(rows):
+ incomplete_count=sum(x['incomplete'] for x in rows)
+ summary={}
+ for variant in VARIANTS:
+  r=[x for x in rows if x['variant']==variant and not x['incomplete']];speeds=[x['predicted_per_second'] for x in r if 'predicted_per_second' in x]
+  if speeds:summary[variant]={'n':len(speeds),'median_tg':statistics.median(speeds),'min_tg':min(speeds),'max_tg':max(speeds),'total_wall_s':sum(x['wall_s'] for x in r),'draft_n':sum(x.get('draft_n',0) for x in r),'accepted_n':sum(x.get('draft_n_accepted',0) for x in r)}
+ for variant in VARIANTS:
+  for kind in PROMPTS:
+   r=[x for x in rows if x['variant']==variant and x['task']==kind and not x['incomplete']]
+   speeds=[x['predicted_per_second'] for x in r if 'predicted_per_second' in x]
+   if speeds:summary[f'{variant}/{kind}']={'n':len(speeds),'median_tg':statistics.median(speeds),'median_wall_s':statistics.median(x['wall_s'] for x in r),'accept':sum(x.get('draft_n_accepted',0) for x in r)/max(1,sum(x.get('draft_n',0) for x in r)),'predicted_n':[x.get('predicted_n') for x in r]}
+ return summary,incomplete_count
+
 def main():
  ap=argparse.ArgumentParser(); ap.add_argument('--smoke',action='store_true');ap.add_argument('--run',action='store_true');a=ap.parse_args()
  if os.environ.get('IA_BENCH_INHIBITED')!='1':ap.error('requires systemd-inhibit and IA_BENCH_INHIBITED=1')
@@ -40,7 +53,7 @@ def main():
   with (case/'server.log').open('w') as log,(case/'telemetry.jsonl').open('w') as tel:
    proc=subprocess.Popen(cmd,stdout=log,stderr=subprocess.STDOUT);mon=b.Monitor(proc.pid,tel);mon.start()
    try:
-    b.wait_health(proc);mon.set_phase('ready')
+    b.wait_health(proc, mon);mon.set_phase('ready')
     for kind,prompt in (list(PROMPTS.items())[:1] if a.smoke else PROMPTS.items()):
      rendered=b.http_json('/apply-template',{'messages':[{'role':'user','content':prompt}]})['prompt']
      ids=b.http_json('/tokenize',{'content':rendered,'add_special':False})['tokens']
@@ -69,14 +82,7 @@ def main():
      proc.terminate()
      try:proc.wait(timeout=20)
      except subprocess.TimeoutExpired:proc.kill();proc.wait()
- summary={}
- for variant in VARIANTS:
-  r=[x for x in rows if x['variant']==variant];speeds=[x['predicted_per_second'] for x in r if 'predicted_per_second' in x]
-  if speeds:summary[variant]={'n':len(speeds),'median_tg':statistics.median(speeds),'min_tg':min(speeds),'max_tg':max(speeds),'total_wall_s':sum(x['wall_s'] for x in r),'draft_n':sum(x.get('draft_n',0) for x in r),'accepted_n':sum(x.get('draft_n_accepted',0) for x in r)}
- for variant in VARIANTS:
-  for kind in PROMPTS:
-   r=[x for x in rows if x['variant']==variant and x['task']==kind]
-   speeds=[x['predicted_per_second'] for x in r if 'predicted_per_second' in x]
-   if speeds:summary[f'{variant}/{kind}']={'n':len(r),'median_tg':statistics.median(speeds),'median_wall_s':statistics.median(x['wall_s'] for x in r),'accept':sum(x.get('draft_n_accepted',0) for x in r)/max(1,sum(x.get('draft_n',0) for x in r)),'predicted_n':[x.get('predicted_n') for x in r]}
+ summary,incomplete_count=aggregate_rows(rows)
+ print(f'{incomplete_count} incomplete rows excluded from aggregates')
  (out/'aggregate.json').write_text(json.dumps(summary,indent=2));print(out)
 if __name__=='__main__':main()

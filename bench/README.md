@@ -9,27 +9,29 @@ All scripts here should be run under `systemd-inhibit` (suspending mid-measureme
 mid-inference in general, with the GPU full has been observed to hang the machine), but the
 guard they enforce differs per script:
 
-- `depth_bench.py`, `longctx_quality.py` and `concurrency_bench.py` refuse to run (`--run`)
-  without both the `IA_BENCH_INHIBITED=1` environment variable and `--inhibitor-ok`; their
-  `--smoke` mode touches no server/GPU and needs neither.
+- `depth_bench.py`, `longctx_quality.py` and `concurrency_bench.py` require both the
+  `IA_BENCH_INHIBITED=1` environment variable and `--inhibitor-ok` before smoke or run handling.
+  Therefore `depth_bench.py --smoke` is a guarded server smoke (it starts `llama-server`), not a
+  server-free check. Run it under the inhibitor:
+  `systemd-inhibit --what=sleep:idle --mode=block env IA_BENCH_INHIBITED=1 python3 bench/depth_bench.py --smoke --inhibitor-ok`.
 - `spec_bench.py`, `spec_depth_bench.py` and `probe_ab.py` only check `IA_BENCH_INHIBITED=1`.
 - `ladder_bench.py`, `oom_probe.py` and `summarize.py` have no guard at all — wrap them in
   `systemd-inhibit` yourself.
 
 ## Configuration
 
-None of these scripts read `models.toml`/`local.toml` (`depth_bench.py`,
-`longctx_quality.py`, `spec_bench.py`, `spec_depth_bench.py`, `probe_ab.py`, `oom_probe.py`) — they talk to a
-fixed, already-decided configuration via environment variables, so a benchmark run stays
-pinned to one exact model/engine/corpus regardless of what the daily-driver manifest points
-at:
+These scripts do not read `models.toml`/`local.toml` (`depth_bench.py`, `longctx_quality.py`,
+`spec_bench.py`, `spec_depth_bench.py`, `probe_ab.py`, `oom_probe.py`) — they talk to a fixed,
+already-decided configuration via environment variables or command-line options, so a benchmark
+run stays pinned to one exact model/engine/corpus regardless of what the daily-driver manifest
+points at:
 
 | Variable | Meaning |
 |---|---|
 | `BENCH_SERVER` | path to the `llama-server` binary under test |
 | `BENCH_MODEL` | path to the GGUF under test |
 | `BENCH_WIKI` | path to a `wikitext-2-raw` `wiki.train.raw` file (or similar long corpus) |
-| `BENCH_OUT` | output directory (default: `bench/res`) |
+| `BENCH_OUT` | output directory (default: `bench/res`) for scripts that inherit `depth_bench.py`'s `BASE`; `longctx_quality.py` instead defaults to `bench/res/longctx_quality` and supports `--output` |
 | `BENCH_DFLASH_MODEL` | DFlash draft GGUF (only for `spec_depth_bench.py`'s `dfl3`/`dfl5` variants) |
 | `BENCH_MODEL_NO_MTP` | base model without an MTP head (only for the same `dfl*` variants) |
 | `BENCH_MAX_HOTSPOT_C` | overrides the shared `Monitor`'s hotspot abort threshold, default `104` (°C) — see "Thermal and power guards" below |
@@ -37,10 +39,11 @@ at:
 
 ## Thermal and power guards
 
-All four scripts that touch a real server (`depth_bench.py`, `spec_depth_bench.py`,
-`concurrency_bench.py`, `longctx_quality.py`) share `depth_bench.py`'s `Monitor`, which aborts a
-run after 3 consecutive unsafe telemetry readings (edge ≥ 95°C, hotspot ≥ `BENCH_MAX_HOTSPOT_C`,
-or GPU-evicted VRAM > 512 MiB). `BENCH_MAX_HOTSPOT_C` defaults to `104` (°C) — below this
+All five scripts that touch a real server (`depth_bench.py`, `spec_bench.py`,
+`spec_depth_bench.py`, `concurrency_bench.py`, `longctx_quality.py`) share `depth_bench.py`'s
+`Monitor`, which aborts a run after 3 consecutive unsafe telemetry readings (edge ≥ 95°C,
+hotspot ≥ `BENCH_MAX_HOTSPOT_C`, or GPU-evicted VRAM > 512 MiB). `BENCH_MAX_HOTSPOT_C` defaults
+to `104` (°C) — below this
 project's ~105°C unattended-run policy, see
 [`../docs/measurements/thermals-power.md`](../docs/measurements/thermals-power.md).
 
@@ -65,15 +68,21 @@ and verify it.
 
 | Script | Old name (still in historical `command.json` files) | Measures |
 |---|---|---|
-| `depth_bench.py` | `validacion262.py` | Cold matrix: tok/s and acceptance at fixed input depths (128K/200K/240K), KV q8_0/q8_0 vs. q8_0/q5_1+MTP2, plus a warm second turn reusing the KV cache. |
-| `longctx_quality.py` | `calidad262.py` | Long-context retrieval quality (RULER-style needle test) across the same depths and KV/MTP variants. Run 32K-240K, 68/68 exact match cumulative — see [`../results/20260925-longctx-quality-200k/`](../results/20260925-longctx-quality-200k/), [`../results/20260926-longctx-quality-224k/`](../results/20260926-longctx-quality-224k/), [`../results/20260926-longctx-quality-262k/`](../results/20260926-longctx-quality-262k/), and `docs/measurements/depth.md`. |
+| `depth_bench.py` | `validacion262.py` | Cold matrix: tok/s and acceptance at fixed input depths (default 128K/200K/240K), KV q8_0/q8_0 vs. q8_0/q5_1+MTP2, plus a warm second turn reusing the KV cache. |
+| `longctx_quality.py` | `calidad262.py` | Long-context retrieval quality (RULER-style needle test) across default depths 32K/128K/240K and KV/MTP variants. Run 32K-240K, 68/68 exact match cumulative — see [`../results/20260925-longctx-quality-200k/`](../results/20260925-longctx-quality-200k/), [`../results/20260926-longctx-quality-224k/`](../results/20260926-longctx-quality-224k/), [`../results/20260926-longctx-quality-262k/`](../results/20260926-longctx-quality-262k/), and `docs/measurements/depth.md`. |
 | `spec_bench.py` | `mtp262.py` | Paired comparison of speculative-decoding variants (no draft, MTP n=2/n=3, n-gram map/mod) across six task types. |
 | `spec_depth_bench.py` | `mtpprof262.py` | Speculative-decoding draft-n sweep (including DFlash) at a fixed deep context (default 240K), to see which draft length wins once the KV read dominates. |
-| `summarize.py` | `resumen262.py` | Turns a `depth_bench.py` output folder into a Markdown table (throughput, warm-turn reuse, VRAM/GTT/thermal peaks per phase). |
+| `summarize.py` | `resumen262.py` | Turns a `depth_bench.py` output folder into a Markdown table (throughput, warm-turn reuse, process VRAM by phase; GTT, evicted VRAM and thermal readings are overall peaks). |
 | `ladder_bench.py` | `escalera.py` | One-shot pass/fail matrix used to pick the model/profile shortlist: loads a case, measures load time, VRAM and tok/s, and records any OOM. |
 | `oom_probe.py` | `estres.py` | Minimal OOM probe: fills the context with N characters of real text and asks for a short summary. |
 | `concurrency_bench.py` | (new) | Multi-agent concurrency: one server with `-np N` parallel slots, N simultaneous streaming requests, per-slot tok/s + draft acceptance + aggregate throughput + peak VRAM/GTT. |
 | `probe_ab.py` | (new) | Empty-context spec-off vs. spec-on A/B with the unmodified `probe.py` from [sudoingX/qwen38-mtp](https://github.com/sudoingX/qwen38-mtp) (its community table's instrument, passed via `--probe`): one server per arm on the `262k-q8q51-mtp` flags, three complete probe passes per arm, acceptance from the server log — see [`../results/20260927-probe-ab-262k/`](../results/20260927-probe-ab-262k/). |
+
+### Common CLI options
+
+- `depth_bench.py`: `--depths DEPTH [DEPTH ...]`, `--reps N`, `--no-warm`.
+- `longctx_quality.py`: `--output DIR`, `--ctx N`, `--server PATH`.
+- `spec_depth_bench.py`: `--kv TYPE`, `--kv-k TYPE`, `--variants NAME [NAME ...]`, `--tag LABEL`.
 
 ## `--extra`: A/B-testing a new flag without editing a script
 
@@ -87,15 +96,15 @@ than the default — e.g. the exact adopted flags instead of just the KV variant
 
 ```bash
 # spec_depth_bench.py: sweep --spec-draft-p-min at a fixed depth
-env IA_BENCH_INHIBITED=1 python bench/spec_depth_bench.py --run --depth 190000 \
+env IA_BENCH_INHIBITED=1 python3 bench/spec_depth_bench.py --run --depth 190000 \
     --variants n2 --tag pmin03 --extra "--spec-draft-p-min 0.3"
 
 # depth_bench.py: a smaller checkpoint stride for warm-turn reuse
-env IA_BENCH_INHIBITED=1 python bench/depth_bench.py --run --inhibitor-ok \
+env IA_BENCH_INHIBITED=1 python3 bench/depth_bench.py --run --inhibitor-ok \
     --target-only --extra "-cms 2048"
 
 # longctx_quality.py: exact adopted 262K flags (MTP n=3, -ub 256) instead of the n=2 default
-python bench/longctx_quality.py --run --ctx 262144 --variants q8q51-mtp1 --depths 240000 \
+systemd-inhibit --what=sleep:idle --mode=block env IA_BENCH_INHIBITED=1 python3 bench/longctx_quality.py --run --inhibitor-ok --ctx 262144 --variants q8q51-mtp1 --depths 240000 \
     --docs 2 --mtp-n 3 --extra "-ub 256"
 ```
 
@@ -111,7 +120,7 @@ count decision. `--kv-unified`/`--no-kv-unified`/`--kv-unified-per-slot N` and M
 
 ```bash
 # 2 slots, 32K depth each, MTP n=2 on
-env IA_BENCH_INHIBITED=1 python bench/concurrency_bench.py --run --inhibitor-ok \
+env IA_BENCH_INHIBITED=1 python3 bench/concurrency_bench.py --run --inhibitor-ok \
     --slots 2 --depth 32000 --mtp --spec-draft-n-max 2
 ```
 
