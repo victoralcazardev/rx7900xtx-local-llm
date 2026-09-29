@@ -131,9 +131,19 @@ upstream defaults (24 / 48 / 64). `spec_depth_bench.py` does not hardcode `-ub 2
 command passes it via `--extra` to match the adopted profile (its greedy temperature 0 makes
 `--top-p` irrelevant).
 
+**Community data (verified 2026-09-29, not reproduced here)**: the closest public match to the
+`mtp3-moddef` arm is stew675's Qwen3.8-27B greedy run (PR #27210 comment, 2026-08-22): MTP n=3
+alone 51.63 / 55.81 / 69.20 / 81.80 tok/s (reasoning / prose / code / recall) vs. MTP n=3 +
+ngram-mod 51.66 / 55.92 / 68.42 / 324.32. So the only large win reported is verbatim recall; new
+code, prose and reasoning are unchanged. No published agentic-coding trace exists, so the `agent`
+task (return a full file with one change) is the one to watch. Risk: issue #23577 (`////`
+repetition loops after long sessions, reportedly faster with ngram-mod) and PR #25819 (WIP
+stuck-loop escape for ngram-mod). Details and links in `docs/SOURCES.md`.
+
 **Decision rule**: adopt only if the agent/editing tasks gain beyond seed noise and the reasoning
-and code tasks do not lose, at both empty context and 240K. Otherwise record it here as not
-adopted.
+and code tasks do not lose, at both empty context and 240K, **and** no arm shows runaway
+repetition (for example a `////` run or `predicted_n` hitting the cap on a task that normally
+stops). Otherwise record it here as not adopted.
 
 ## VEC vs. TILE kernel selection at depth
 
