@@ -227,6 +227,16 @@ already wraps the server in `systemd-inhibit`; never suspend with a hand-started
 </details>
 
 <details>
+<summary>Desktop freezes or drops back to the login screen with a model loaded</summary>
+
+The card that runs the model also drives the display. At 262K there is ~1.2 GiB of VRAM left for
+the desktop; when a GPU client can't allocate, the journal shows `Not enough memory for command
+submission!` and KWin may quit (`We are going to quit KWin now as it is broken`), ending the
+session. Disable browser hardware acceleration and avoid GPU-heavy apps while the model is loaded;
+the complete fix is a display-only second GPU. See `docs/measurements/coexistence.md`.
+</details>
+
+<details>
 <summary>Vulkan backend is 2-3.5x slower generating than ROCm</summary>
 
 GPU memory clock drops to 456-772 MHz under Vulkan generation on this system, ROCm holds 1249 MHz.
