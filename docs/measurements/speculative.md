@@ -29,7 +29,9 @@
   ties on the third, and costs more VRAM. A third-party claim that DFlash2 wins at all depths on a
   different GPU (RTX 3090) does not reproduce here.
 - **n-gram stacked on MTP**: a single sample suggests it can help on repetitive content (code edits,
-  +6%) and hurt on reasoning (−8%); not adopted without repeated measurement.
+  +6%) and hurt on reasoning (−8%); not adopted without repeated measurement. The A/B on the
+  adopted n=3 profile is prepared but not run — see "n-gram stacked on MTP: how llama.cpp
+  combines them" below.
 - **MTP n=3, first measured at 128K fill (272 W)**: strongly content-dependent — +17% on literal
   copy, ≈ on code, small essay gain — but acceptance drops 11 points vs. n=2 (75% → 64%). At that
   depth it was **not adopted** as the default (later superseded — see above).
@@ -71,6 +73,67 @@ Generation tok/s (accepted-draft percentage in parentheses).
   published method) reports DFlash2 beating MTP at every depth. **This needed repeating at ~190K**
   before trusting "MTP is better" for long-context use — see the 190K result below, where DFlash2
   is measured directly and does not reproduce that claim on this GPU.
+
+## n-gram stacked on MTP: how llama.cpp combines them (source reading, 2026-09-29)
+
+Read in `common/speculative.cpp` on llama.cpp master (last commit touching it: f1ea206,
+2026-09-28). **Not verified: that b11160 (our engine) has the same behavior, and any speed gain on
+this card.**
+
+- `common_speculative_init` builds the implementations in a **fixed priority order**, not the
+  order given in `--spec-type`: ngram-simple, ngram-map-k, ngram-map-k4v, ngram-mod, ngram-cache,
+  then draft-simple, draft-eagle3, draft-mtp, draft-dflash, draft-dspark.
+- `common_speculative_draft` calls each implementation in that order and stops at the first that
+  returns a non-empty draft. With `draft-mtp,ngram-mod`, ngram-mod drafts whenever its hash pool
+  has a match; otherwise MTP drafts. `docs/speculative.md` upstream says the same: "If a draft
+  model is combined with a draftless decoding the draftless decoding has higher precedence."
+- Draft length: `common_speculative_n_max` takes the max over the enabled types (draft types use
+  `--spec-draft-n-max`, ngram-mod uses `--spec-ngram-mod-n-max`), so `--spec-draft-n-max 3` does
+  **not** cap ngram-mod drafts (up to 64 by default).
+- There is no acceptance- or cost-based gating: if an n-gram matches, its draft is used. (Contrast:
+  the Strata engine's prompt lookup drafts only where measured acceptance and cost say it pays;
+  see `docs/SOURCES.md`.)
+- ngram-mod: rolling LCG hash of the last n tokens -> next token, ~16 MB, pool shared across
+  slots, variable draft length. Upstream notes small n is not recommended and dense models can
+  lower `--spec-ngram-mod-n-min`/`--spec-ngram-mod-n-max`. b11160 `--help` defaults: n-match 24,
+  n-min 48, n-max 64.
+- Upstream: [PR #28391](https://github.com/ggml-org/llama.cpp/pull/28391) (open, unmerged as of
+  2026-09-29) would enable ngram-mod by default and make `--spec-type` additive
+  (`--spec-type draft-mtp` -> `[ngram-mod, draft-mtp]`); once an engine update includes it, the
+  current profile would silently become MTP + ngram-mod, so re-measure then.
+  [Issue #27839](https://github.com/ggml-org/llama.cpp/issues/27839) (open): a reporter says
+  `--spec-type draft-mtp,ngram-mod` works on Qwen3.8-27B (Vulkan, gfx1151) in passing, no numbers;
+  the bug there is combining it with an external `-md` draft.
+  [Issue #25618](https://github.com/ggml-org/llama.cpp/issues/25618) (open): greedy output
+  diverges from vanilla with draft-mtp/draft-dspark.
+
+**Why the 2026-09-24 result is not enough**: it is a single sample, at n=2 (the adopted profile is
+n=3), with ngram-map-k4v (not ngram-mod), at empty context only (the adopted profile runs at up to
+240K fill).
+
+**Expected shape (hypothesis)**: helps repetitive agentic edits, where long verbatim spans are
+copied; may hurt reasoning, where a match is a poor predictor and a long wrong draft costs a
+verification pass.
+
+**Prepared, not yet run** (the GPU is in daily use; nothing below has been executed):
+
+```
+# empty context, 6 tasks x 3 seeds
+systemd-inhibit --what=sleep:idle --mode=block env IA_BENCH_INHIBITED=1 BENCH_SERVER=... BENCH_MODEL=... \
+    python3 bench/spec_bench.py --run --variants mtp3 mtp3-mod mtp3-moddef mtp3-map --tag ngram-stack
+# 240K fill
+systemd-inhibit --what=sleep:idle --mode=block env IA_BENCH_INHIBITED=1 BENCH_SERVER=... BENCH_MODEL=... BENCH_WIKI=... \
+    python3 bench/spec_depth_bench.py --run --depth 240000 --variants n3 n3-mod n3-moddef --reps 3 --tag ngram-stack --extra "-ub 256"
+```
+
+`mtp3-mod`/`n3-mod` use n-match 24 / n-min 8 / n-max 32; `mtp3-moddef`/`n3-moddef` use the
+upstream defaults (24 / 48 / 64). `spec_depth_bench.py` does not hardcode `-ub 256`, so the
+command passes it via `--extra` to match the adopted profile (its greedy temperature 0 makes
+`--top-p` irrelevant).
+
+**Decision rule**: adopt only if the agent/editing tasks gain beyond seed noise and the reasoning
+and code tasks do not lose, at both empty context and 240K. Otherwise record it here as not
+adopted.
 
 ## VEC vs. TILE kernel selection at depth
 
@@ -340,6 +403,8 @@ Raw data: [`../../results/20260927-depth-240k-none-vs-n3/`](../../results/202609
 - How much V q5_1 costs *with* MTP: spec-off pays 25% for it at 240K (vs. V q8_0), but MTP n=3
   with KV q8_0/q8_0 at 262K is not reliable on this card, so it would have to be measured at a
   smaller window (~224K), which gives up the context the default profile exists for.
+- Whether ngram-mod stacked on MTP n=3 helps agentic editing at empty context and at 240K without
+  hurting reasoning (prepared, not run; see "n-gram stacked on MTP: how llama.cpp combines them").
 - Whether a future llama.cpp release picks up #27282 (shared MTP compute arena) or #26038, which
   would reduce MTP's VRAM/compute overhead at depth.
 
@@ -365,3 +430,6 @@ Raw data: [`../../results/20260927-depth-240k-none-vs-n3/`](../../results/202609
   (empty context: n=3 +85%, n=2 ties, n=4 and p-min lose) and measured the missing spec-off
   reference at 240K fill: MTP n=3 is +109% there, correcting the earlier "gain shrinks at depth"
   conclusion (it was measured against a q8_0/q8_0 spec-off baseline).
+- **2026-09-29**: read how llama.cpp combines n-gram drafting with MTP (fixed priority, no gating,
+  `--spec-draft-n-max` does not cap ngram-mod) and prepared the n=3 ngram-mod/ngram-map A/B; not
+  run.

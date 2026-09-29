@@ -48,6 +48,10 @@ not yet tested here), **refuted** (contradicted by an own test or a primary sour
 | "TILE allocates ~16 GiB extra at 262K context" | [llama.cpp issue #21526](https://github.com/ggml-org/llama.cpp/issues/21526) (AI-summarized citation) | 2026 | Refuted (off by ~16x) | The f16 copy is one layer's K+V (~1 GiB at 262K), inside this repo's measured 1,360 MiB compute buffer — [`docs/measurements/memory.md`](measurements/memory.md) |
 | GPU spills weights to GTT with no warning at load time | [llama.cpp issue #26432](https://github.com/ggml-org/llama.cpp/issues/26432) | 2026-08-02 | Verified (issue exists) | Not observed here: GTT stayed at 8 MiB with 0 evicted at 190-240K depth — [`docs/measurements/memory.md`](measurements/memory.md) |
 | Prompt checkpoints are "always invalidated on hybrid/recurrent models" | [llama.cpp issue #24055](https://github.com/ggml-org/llama.cpp/issues/24055) | 2026-06-03 | Hypothesis | Not independently re-verified in this repository yet |
+| PR #28391 would enable ngram-mod by default and make `--spec-type` additive (`draft-mtp` -> `[ngram-mod, draft-mtp]`) | [llama.cpp PR #28391](https://github.com/ggml-org/llama.cpp/pull/28391) (open, unmerged as of 2026-09-29) | 2026-09-29 | Tracked | Not tested; re-measure the profile when an engine update includes it — [`docs/measurements/speculative.md`](measurements/speculative.md#n-gram-stacked-on-mtp-how-llamacpp-combines-them-source-reading-2026-09-29) |
+| `--spec-type draft-mtp,ngram-mod` works on Qwen3.8-27B (Vulkan, gfx1151), mentioned in passing, no numbers; the reported bug is combining it with an external `-md` draft | [llama.cpp issue #27839](https://github.com/ggml-org/llama.cpp/issues/27839) (open) | 2026-09-29 | Hypothesis | Not tested; A/B prepared, not run — same doc as above |
+| Greedy output diverges from vanilla with draft-mtp/draft-dspark | [llama.cpp issue #25618](https://github.com/ggml-org/llama.cpp/issues/25618) (open) | 2026-09-29 | Hypothesis | Related to this repo's own finding that text is not bit-identical across MTP n at temperature 0 — [`docs/measurements/speculative.md`](measurements/speculative.md) |
+
 
 ## KV / weight quantization quality
 
@@ -114,3 +118,23 @@ private working notes (not published).
 - Quantized vision projector (`mmproj` Q5_K-MIX, ~0.9 GB) — HF-reported 74.58% vs. 74.93% for BF16
   on 11 benchmarks; not pursued because vision was deprioritized for this hardware.
 - Power-limit and undervolt tuning (LACT) — explicitly deprioritized; see `docs/STATUS.md`.
+
+## Ideas for future MoE models (not pursued, 2026-09-29)
+
+All claims below are the authors' own and are unverified here.
+
+- [Strata](https://github.com/Niko1221/Strata) (engine 0.1.24, 2026-09-29): a CUDA-only custom
+  engine for Qwen3.8-Flash-Next (MoE, 24,576 experts); `CMakeLists.txt` requires CUDAToolkit and
+  `docs/MULTI_GPU.md` lists AMD as unsupported, so it does not run on this card. Ideas (author
+  claims, RTX 5070): KV streaming (`--kv-resident`: only the most-read part of the KV in VRAM, the
+  rest in RAM; claims Q2_0 at 262K 50.9 -> 62.6 tok/s); an adaptive VRAM expert cache with the CPU
+  computing uncached experts in place concurrently; MTP plus gated prompt lookup (claims code
+  edits 6-11% faster); `--calibrate` per-machine settings search. llama.cpp has no KV streaming or
+  adaptive expert cache; static `--n-cpu-moe`/`-ot` exist.
+- Qwen3.8-Flash-Next fit note (file sizes from the HF API, ISTA-DASLab repos): shard 1 (weights)
+  Coder IQ1_M 29.6 GB, Q2_0 37.6 GB, IQ2_XS 39.2 GB, IQ3_XXS 47.0 GB, IQ3_S 54.8 GB; shard 2 is a
+  per-layer n-gram embedding table of 28.8 GB, identical across variants. The model card says
+  standard llama.cpp runs it and `-lm mmap --lazy-mode on` keeps shard 2 memory-mapped on disk
+  (needs an SSD). Our b11146 `/usr/bin/llama-server` `--help` has `--lazy-mode` and `--n-cpu-moe`
+  (b11160 not checked). With 24 GB VRAM + 32 GB RAM, Coder IQ1_M might fit via `--n-cpu-moe`
+  (estimate, unmeasured). Decision 2026-09-29: not pursued now; wait for better future models.

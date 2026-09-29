@@ -20,7 +20,10 @@ disabled). One single-backend binary per download/build.
    quantized-KV TILE-path change that could remove the attention-bandwidth bottleneck described in
    [`docs/measurements/depth.md`](../measurements/depth.md#why-decode-slows-with-depth-attention-bandwidth-2026-09-26-round-4)
    (tracked upstream: [#27796](https://github.com/ggml-org/llama.cpp/issues/27796),
-   [#28867](https://github.com/ggml-org/llama.cpp/issues/28867)).
+   [#28867](https://github.com/ggml-org/llama.cpp/issues/28867)). Also check whether it includes
+   [PR #28391](https://github.com/ggml-org/llama.cpp/pull/28391) (ngram-mod on by default,
+   additive `--spec-type`): the current MTP profile would silently become MTP + ngram-mod, so
+   re-measure (see `docs/measurements/speculative.md`).
 2. **Only if something relevant changed**: build the new engine following "Build a new engine"
    below. The custom `GGML_CUDA_FA_QUANTS` build flags are still required for this build — the
    official binaries don't ship K q8_0 + V q5_1/q4_1 FlashAttention kernels.
