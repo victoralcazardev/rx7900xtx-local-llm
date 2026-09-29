@@ -16,7 +16,7 @@ hash — the difference lives in the shared library, not the file hashed here.
 | Engine folder | Status | Commit / build | SHA256 (`llama-server`) |
 |---|---|---|---|
 | `llama-b11160-bin-ubuntu-rocm-10.0-x64` | **Current** (`hip` in `local.toml`) | b11160 / `70c4e1582`, official CI | `8c98a329346088d0cdd03195ae5864e29c9a8b11fc293397a723f8730e9492dc` |
-| `llama-b11160-bin-ubuntu-vulkan-x64` | Reference (2-3.5x slower on generation here, see `docs/measurements/engines.md`) | b11160 / `70c4e1582`, official CI | `ddb272c01521fc81c14ae430a944cd52d8db9c7d237e1b90f77d0b2f33a2c012` |
+| `llama-b11160-bin-ubuntu-vulkan-x64` | Reference (2-3.5x slower on generation here; still 1.2-1.6x slower with the memory clock pinned, see `docs/measurements/engines.md`) | b11160 / `70c4e1582`, official CI | `ddb272c01521fc81c14ae430a944cd52d8db9c7d237e1b90f77d0b2f33a2c012` |
 | `llama-b11160-linux-rocm10-gfx1100-kvmix` | **Current** (`hip-kvmix` in `local.toml`) | b11160 / `70c4e1582`, own build | `3d8565952bcd74cd4e0d3be3a56221619c25da6176d3716972b75b1cc0a34128` |
 | `llama-b11160-linux-rocm10-gfx1100-kvmix-vec4` | Discarded (+20% ms/step at depth vs. `kvmix`, see `docs/measurements/speculative.md`) | b11160 / `70c4e1582` + 1-line patch | `3d8565952bcd74cd4e0d3be3a56221619c25da6176d3716972b75b1cc0a34128` (same front-end; patch is in `libggml-hip.so`) |
 | `llama-b11160-linux-rocm-gfx1100-kvmix` | Discarded (~9% slower than the ROCm-10-toolchain build, see `docs/measurements/engines.md`) | b11160 / `70c4e1582`, own build, older ROCm 7.2.4 system toolchain | `7c27f7fd7c0398075b2837a531c98cc6c57766ff107d671c1c7b06c18d6cd1b2` |
@@ -124,8 +124,10 @@ Community claims reviewed 2026-09-26 (`docs/SOURCES.md`) surfaced four candidate
   CI, no security red flags; README numbers use synthetic prompts and random-token prefill, not
   comparable to ours) — lowest priority of the candidates, 15.3 GB EXL3 model leaves less VRAM
   headroom. See `docs/SOURCES.md`.
-- **Latest-master Vulkan build**, re-tested with the GPU memory clock pinned (see
-  `docs/measurements/engines.md`'s 772 MHz vs. 1249 MHz finding) — **still pending**.
+- **Vulkan re-test with the GPU memory clock pinned** — done 2026-09-29: pinning nearly doubles
+  Vulkan decode at 64K depth but HIP still wins tg +63% at depth 0 and +18% at 64K, so Vulkan
+  stays reference-only (see `docs/measurements/engines.md`). A latest-master Vulkan build is worth
+  trying only if upstream shows a large Vulkan decode change.
 
 ## Upstream watchlist (2026-09-29)
 

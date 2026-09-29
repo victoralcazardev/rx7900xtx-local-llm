@@ -12,6 +12,11 @@ All notable changes to this project are documented here. Format follows
 
 ### Changed
 
+- Re-tested Vulkan vs. HIP with the GPU memory clock pinned at 1249 MHz (`-ub 512`): pinning
+  nearly doubles Vulkan decode at 64K depth (10.64 → 19.77 tok/s), but HIP still wins tg +63% at
+  depth 0 and +18% at 64K, so the earlier "Vulkan loses because of the memory clock" explanation
+  is only half right. Vulkan stays reference-only, no config change. See
+  `results/20260929-vulkan-mclk-pinned/` and `docs/measurements/engines.md`.
 - Measured the missing spec-off reference at 240K fill on the adopted profile: 11.2 tok/s vs.
   23.3 with MTP n=3 (**+109%**), correcting the earlier "MTP's gain shrinks at depth" conclusion,
   which compared against a KV q8_0/q8_0 spec-off baseline (14.9 tok/s on the same engine: V q5_1

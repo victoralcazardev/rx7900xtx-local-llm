@@ -3,8 +3,11 @@
 ## Current conclusion
 
 - **ROCm/HIP is 2-3.5x faster than Vulkan for generation on Linux** (39 vs. 11-23 tok/s on the
-  same model). Vulkan loses because the GPU memory clock drops to 772 MHz while generating; ROCm
-  holds 1249 MHz. This is a Linux/RADV driver behavior, not a kernel P-state bug.
+  same model). Under `auto`, Vulkan's GPU memory clock drops to 456-772 MHz while generating; ROCm
+  holds 1249 MHz. That explains Vulkan's collapse at depth but **not the whole gap**: with the
+  memory clock pinned at 1249 MHz (2026-09-29), HIP still wins tg +63% at depth 0 and +18% at 64K
+  — see "Vulkan re-test with the memory clock pinned" below. This is a Linux/RADV driver behavior,
+  not a kernel P-state bug.
 - **Engine in use**: the official llama.cpp `b11160` Ubuntu ROCm 10.0 binary, or an own build with
   the same ROCm 10 toolchain — it matches the official binary's speed and additionally supports the
   KV `q8_0`/`q5_1` mix the official binary doesn't ship kernels for. Building with the older ROCm
@@ -13,17 +16,19 @@
   [ggml-org/llama.cpp#20934](https://github.com/ggml-org/llama.cpp/issues/20934): the HIP backend
   is not expected to beat Vulkan on RDNA, because it shares CUDA-oriented kernels and loses
   RDNA's wave64 dual-issue FP32 path, which is only reachable through Vulkan. What we measure
-  locally is the opposite direction (HIP ahead) because generation here is memory-bandwidth
-  bound and Vulkan's clock behavior on this system erases its kernel-level advantage.
+  locally is the opposite direction (HIP ahead) for this model (hybrid Qwen3.8 27B, IQ3_S): the
+  memory clock explains Vulkan's depth collapse, but the depth-0 decode gap remains with the clock
+  pinned, so it is a backend/kernel difference. Don't generalize either way.
 - **Single-backend binaries only** (one Vulkan build, one ROCm/HIP build, never both compiled into
   the same binary): with a dual-backend binary, MTP gets silently routed to the wrong device and
   disabled ([llama.cpp#23199](https://github.com/ggml-org/llama.cpp/issues/23199), closed
   `NOT_PLANNED`). This is a routing bug, not a Vulkan precision problem — no evidence was found for
   an MTP accuracy issue specific to Vulkan on RDNA3.
 - **A 2026-09-26 depth screen of Vulkan vs. HIP at `-ub 256` was inconclusive**: Vulkan's prefill
-  collapses ~5x at `-ub 256` regardless of K/V type, and the memory clock wasn't pinned, so the run
-  never reached a fair decode-at-depth comparison. Not pursued further this round (VRAM headroom
-  too thin for `-ub 512`) — see "Vulkan depth screen" below.
+  collapses ~5x at `-ub 256` regardless of K/V type, and the memory clock wasn't pinned. It was
+  closed by the 2026-09-29 re-test (`-ub 512`, memory clock pinned): pinning nearly doubles Vulkan
+  decode at 64K (10.64 → 19.77 tok/s) but HIP still wins everywhere. Vulkan stays reference-only
+  for this model — see "Vulkan re-test with the memory clock pinned" below.
 
 ## Vulkan vs ROCm, generation and prompt processing
 
@@ -201,7 +206,8 @@ a quantized-KV one. Generation stays flat (23.2-23.6 tok/s) across all four comb
 configuration. The difference is consistent with the memory clock (456 MHz in most V1 samples) but
 was not isolated.
 
-**Conclusion: inconclusive for decode at depth**, and not pursued further. A fair re-test needs
+**Conclusion: inconclusive for decode at depth**, and not pursued further (re-tested 2026-09-29,
+see the next section). A fair re-test needs
 `-ub >= 512` (to avoid the prefill collapse above) with the memory clock pinned at the root. Not
 attempted this round because: `-ub 512` costs ~350 MiB more process VRAM than the adopted
 `-ub 256` (`memory.md`), while the current default leaves only 190 MiB of system-wide VRAM
@@ -210,6 +216,40 @@ than ROCm at startup (`--list-devices`: 22,781 MiB vs. 24,504 MiB free); Vulkan'
 fell off faster with depth than ROCm's in the 2026-09-24 baseline above; and MTP-on-Vulkan
 correctness is unverified on this stack. Context (`AGENTS.md` priority #1) outweighs chasing this
 lever further this round.
+
+Superseded by the 2026-09-29 re-test below, which ran the fair comparison.
+
+## Vulkan re-test with the memory clock pinned (2026-09-29)
+
+Closes the open item from the depth screen above. `llama-bench` b11160 (`70c4e1582`), same model,
+272 W, kernel 7.2.8-1-cachyos, Mesa/RADV 26.2.3 (the same as the 2026-09-26 screen; the latest in
+the Arch repos), `-fa on -ctk q8_0 -ctv q5_1 -p 512 -n 64 -d 0,65536 -r 1`. Vulkan `-ub 512`
+(avoids the `-ub 256` prefill collapse), HIP `hip-kvmix` `-ub 256` (the adopted profile). Clocks
+logged every 2 s. Single run each; no MTP in `llama-bench`. Raw data and both runs:
+[`../../results/20260929-vulkan-mclk-pinned/`](../../results/20260929-vulkan-mclk-pinned/).
+
+`profile_peak` pinned mclk at 1249 MHz (151 of 151 samples) but also capped the core clock (HIP
+-13% tg, -18% pp vs. the 2026-09-26 `auto` run), so it is confounded. The clean run uses
+`power_dpm_force_performance_level=manual` plus `echo 3 > pp_dpm_mclk`: mclk 1249 MHz in 133 of 133
+samples, sclk left dynamic (~2100-2371 MHz). Forcing mclk through sysfs did apply on this kernel.
+
+| Backend | pp512 | tg64 | pp512 @64K | tg64 @64K |
+|---|---:|---:|---:|---:|
+| Vulkan mclk pinned | 773.76 | 22.02 | 343.70 | 19.77 |
+| HIP mclk pinned | 792.73 | 35.91 | 532.93 | 23.30 |
+| *Ref: HIP `auto`, 2026-09-26* | 856.57 | 37.56 | 544.59 | 23.86 |
+| *Ref: Vulkan `auto -ub 256`, 2026-09-26* | 160.07 | 11.04 | 126.53 | 10.64 |
+
+- **The memory clock explains the depth collapse**: Vulkan tg at 64K goes 10.64 → 19.77 tok/s.
+  At depth 0 Vulkan tg is unchanged (~22-23 tok/s; 23.58 in the 2026-09-26 `-ub 512` diagnostic).
+- **HIP still wins everywhere with the clock fixed**: tg +63% at depth 0, +18% at 64K, pp +55% at
+  64K — before MTP (+109% on HIP, unverified on Vulkan). The depth-0 gap (~22 vs. ~36-38 tok/s) is
+  a backend/kernel difference on this model, not clocks. Community reports of Vulkan beating ROCm
+  on small dense Q4_0 models (llama.cpp#20934) don't transfer here.
+- Pinning mclk does not help HIP: under `auto` it already holds 1249 MHz and scored equal or
+  better. Keep `auto`; no config change.
+- **Decision**: Vulkan re-test closed; Vulkan stays reference-only for this model. Re-open only if
+  a future llama.cpp/Mesa build shows a large Vulkan decode change.
 
 ## Upstream research: build flags, feature parity, protocol
 
@@ -304,8 +344,8 @@ a separate, additive effect on top of (or against) this kernel-level gap.
 - Whether an LTS kernel is still needed to avoid the P-state bug referenced by
   `CachyOS/linux-cachyos#888`/`#1035` — not seen with kernel 7.2.7 during any of this session's
   measurements (GPU clocked normally throughout), not re-tested directly.
-- A fair Vulkan decode-at-depth re-test (`-ub >= 512`, memory clock pinned at the root) — blocked
-  for now by the current profile's thin VRAM headroom, see "Vulkan depth screen" above.
+- ~~A fair Vulkan decode-at-depth re-test (`-ub >= 512`, memory clock pinned)~~ — done 2026-09-29,
+  see "Vulkan re-test with the memory clock pinned" above. Still open: MTP on Vulkan (unverified).
 
 ## History
 
@@ -324,3 +364,7 @@ a separate, additive effect on top of (or against) this kernel-level gap.
   inconclusive for decode at depth because Vulkan's prefill collapses ~5x at `-ub 256` and the run
   was stopped before reaching 128K depth. Not pursued further (VRAM headroom too thin for the
   `-ub >= 512` a fair re-test would need) — see "Vulkan depth screen" above.
+- **2026-09-29**: Vulkan vs. HIP re-test with the memory clock pinned (`-ub 512`, mclk 1249 MHz).
+  Corrects the 2026-09-24 hypothesis: the clock explains Vulkan's collapse at depth (tg @64K
+  10.64 → 19.77 tok/s) but not the whole gap; HIP still leads tg +63% at depth 0 and +18% at 64K.
+  Vulkan stays reference-only — see "Vulkan re-test with the memory clock pinned" above.

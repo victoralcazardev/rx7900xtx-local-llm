@@ -93,8 +93,10 @@ Full evidence and method: [`docs/BENCHMARK-FORMAT.md`](docs/BENCHMARK-FORMAT.md)
 
 ## What we tested
 
-- **Backend**: ROCm/HIP is 2-3.5x faster than Vulkan for generation on this system — Vulkan's GPU
-  memory clock drops to 772 MHz while generating, ROCm holds 1249 MHz.
+- **Backend**: ROCm/HIP is 2-3.5x faster than Vulkan for generation on this system. Vulkan's GPU
+  memory clock drops to 456-772 MHz while generating (ROCm holds 1249 MHz), which explains its
+  collapse at depth, but not the whole gap: with the clock pinned HIP still leads tg +63% at
+  depth 0 and +18% at 64K.
 - **ROCm toolchain**: the ROCm 7.2.4 *compiler* costs -7.5% tg at 16K vs. the ROCm 10.0.0 compiler;
   the ROCm 10.0.0 *runtime* is 1-2% slower on tg and ~5% on pp (more variance) than the system's
   ROCm 7.2.4 runtime — kept ROCm 10 compiler + ROCm 7.2.4 runtime.
@@ -117,7 +119,7 @@ Full evidence and method: [`docs/BENCHMARK-FORMAT.md`](docs/BENCHMARK-FORMAT.md)
 
 | Area | Variants tested | Result (key numbers) | Verdict | Evidence |
 |---|---|---|---|---|
-| Backend | ROCm/HIP vs. Vulkan (b11160) | ROCm 39 tok/s vs. Vulkan 11-23 tok/s (2-3.5x); Vulkan VRAM clock 772 MHz vs. ROCm 1249 MHz | ROCm/HIP adopted; Vulkan re-test with the clock pinned is still open | [`docs/measurements/engines.md`](docs/measurements/engines.md) |
+| Backend | ROCm/HIP vs. Vulkan (b11160) | ROCm 39 tok/s vs. Vulkan 11-23 tok/s (2-3.5x); Vulkan VRAM clock 772 MHz vs. ROCm 1249 MHz; with the clock pinned, HIP still +63% tg at depth 0, +18% at 64K | ROCm/HIP adopted; Vulkan re-tested with the clock pinned (2026-09-29), stays reference-only | [`docs/measurements/engines.md`](docs/measurements/engines.md) |
 | ROCm toolchain — compiler | 7.2.4 vs. 10.0.0 (own build) | 7.2.4 compiler: tg 33.9 @16K (-7.5%) vs. the ROCm-10-compiler build (36.8-36.9) | ROCm 10.0.0 compiler adopted | [`docs/measurements/engines.md`](docs/measurements/engines.md) |
 | ROCm toolchain — runtime | TheRock 10.0.0 vs. system 7.2.4 runtime (same compiler) | ROCm 10 runtime: -1..-2% tg, ~-5% pp, much higher variance | System 7.2.4 runtime kept | [`docs/measurements/engines.md`](docs/measurements/engines.md), [`results/20260926-rocm-runtime-ab/`](results/20260926-rocm-runtime-ab/) |
 | Weight quant | IQ3_XXS-mtp, IQ3_S, **IQ3_S-mtp**, HauhauCS IQ4_XS, RVN Q4_K_M-mtp, Q4_K_M | PPL 6.948 / 6.734 / **6.734** / 6.823 / 6.710 / 6.639; MTP tg (accept) 56.3 (50%) / — / **62.2 (62%)** / — / 48.2 (55%) / — | `IQ3_S-mtp` adopted — best PPL/MTP trade-off in its size class | [`docs/measurements/kv-quality.md`](docs/measurements/kv-quality.md#weight-quantization-matrix-perplexity-toks) |
@@ -227,7 +229,8 @@ already wraps the server in `systemd-inhibit`; never suspend with a hand-started
 <details>
 <summary>Vulkan backend is 2-3.5x slower generating than ROCm</summary>
 
-GPU memory clock drops to 772 MHz under Vulkan generation on this system, ROCm holds 1249 MHz.
+GPU memory clock drops to 456-772 MHz under Vulkan generation on this system, ROCm holds 1249 MHz.
+Pinning it fixes most of Vulkan's collapse at depth, but HIP still wins by 18-63% on tg.
 Use `backend = "hip"` (default in `models.toml`). See `docs/measurements/engines.md`.
 </details>
 
