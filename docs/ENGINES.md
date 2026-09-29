@@ -127,6 +127,24 @@ Community claims reviewed 2026-09-26 (`docs/SOURCES.md`) surfaced four candidate
 - **Latest-master Vulkan build**, re-tested with the GPU memory clock pinned (see
   `docs/measurements/engines.md`'s 772 MHz vs. 1249 MHz finding) — **still pending**.
 
+## Upstream watchlist (2026-09-29)
+
+**Keep b11160 pinned: no replacement has been measured on this setup.** The official
+[llama.cpp v0.5.0 release](https://github.com/ggml-org/llama.cpp/releases/tag/v0.5.0) lists nightly
+b11146, older than this repository's b11160 baseline; its official ROCm binary also lacks the
+`q8_0`/`q5_1` FlashAttention kernel required by the current profile. Keep the clock-pinned Vulkan
+retest above pending; the upstream items below are monitoring candidates, not evidence to upgrade.
+
+| Upstream item | State and relevance | Limit |
+|---|---|---|
+| [#27530](https://github.com/ggml-org/llama.cpp/pull/27530) | Merged; cleanup after failed K/V and recurrent/hybrid state restoration. A robustness candidate. | No measured Qwen throughput or quality gain established here. |
+| [#29393](https://github.com/ggml-org/llama.cpp/pull/29393) | Merged; RMS_NORM+SCALE fusion, with a reported 4.2–4.8% MTP prefill gain. | Reported on CUDA hardware only; no local HIP/gfx1100 validation. |
+| [#28003](https://github.com/ggml-org/llama.cpp/pull/28003) | Draft; RDNA3 gfx1100 single-token MMVQ fast path, with the author reporting a Q4_K GEMV result on an RX 7900 XTX. | Not our IQ3_S quant; no local validation. |
+
+These items are watchlist candidates only; this document does not assert whether any is included in
+the current b11160 binary. Reassess only after a compatible build is available and benchmarked on
+the adopted Qwen profile.
+
 ## Not included here
 
 Windows binaries (`*-bin-win-*`) and any NVIDIA/CUDA engine folder are out of scope for this
