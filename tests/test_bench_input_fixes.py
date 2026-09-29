@@ -76,5 +76,19 @@ class TestSpecDepthVariants(unittest.TestCase):
         self.assertIn("dfl5", stderr.getvalue())
 
 
+class TestSpecBenchVariants(unittest.TestCase):
+    def test_variants_accepts_known_names(self):
+        a = spec_bench.build_parser().parse_args(["--run", "--variants", "mtp3", "mtp3-mod"])
+        self.assertEqual(a.variants, ["mtp3", "mtp3-mod"])
+
+    def test_unknown_variant_is_rejected_by_argparse(self):
+        with contextlib.redirect_stderr(io.StringIO()) as stderr:
+            with self.assertRaises(SystemExit) as ctx:
+                spec_bench.build_parser().parse_args(["--run", "--variants", "typo"])
+
+        self.assertEqual(ctx.exception.code, 2)
+        self.assertIn("invalid choice", stderr.getvalue())
+
+
 if __name__ == "__main__":
     unittest.main()

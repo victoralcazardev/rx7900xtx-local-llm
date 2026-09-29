@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-"""Paired MTP comparison: run inside systemd-inhibit; reuses depth_bench's instrumentation.
+"""Paired speculative-decoding variants at empty context (MTP alone vs. MTP stacked with n-gram).
 
-Configure via environment variables before running: BENCH_SERVER, BENCH_MODEL,
-BENCH_OUT (see depth_bench.py).
+Server flags follow the adopted profile 262k-q8q51-mtp. Run inside systemd-inhibit; reuses
+depth_bench's instrumentation. Configure via environment variables before running:
+BENCH_SERVER, BENCH_MODEL, BENCH_OUT (see depth_bench.py).
+Run (n-gram question only): systemd-inhibit --what=sleep:idle --mode=block env IA_BENCH_INHIBITED=1 BENCH_SERVER=... BENCH_MODEL=... python3 bench/spec_bench.py --run --variants mtp3 mtp3-mod mtp3-moddef mtp3-map --tag ngram-stack
 """
 import argparse, json, os, subprocess, time, statistics
 from pathlib import Path
@@ -22,7 +24,9 @@ VARIANTS={'none':[], 'mtp2':['--spec-type','draft-mtp','--spec-draft-n-max','2']
  'mtp2-map':['--spec-type','draft-mtp,ngram-map-k4v','--spec-draft-n-max','2'],
  'mtp2-mod':['--spec-type','draft-mtp,ngram-mod','--spec-draft-n-max','2','--spec-ngram-mod-n-match','24','--spec-ngram-mod-n-min','8','--spec-ngram-mod-n-max','32'],
  'mtp2-moddef':['--spec-type','draft-mtp,ngram-mod','--spec-draft-n-max','2'],
- 'mtp3-mod':['--spec-type','draft-mtp,ngram-mod','--spec-draft-n-max','3','--spec-ngram-mod-n-match','24','--spec-ngram-mod-n-min','8','--spec-ngram-mod-n-max','32']}
+ 'mtp3-mod':['--spec-type','draft-mtp,ngram-mod','--spec-draft-n-max','3','--spec-ngram-mod-n-match','24','--spec-ngram-mod-n-min','8','--spec-ngram-mod-n-max','32'],
+ 'mtp3-moddef':['--spec-type','draft-mtp,ngram-mod','--spec-draft-n-max','3'],
+ 'mtp3-map':['--spec-type','draft-mtp,ngram-map-k4v','--spec-draft-n-max','3']}
 def aggregate_rows(rows):
  incomplete_count=sum(x['incomplete'] for x in rows)
  summary={}
@@ -36,19 +40,23 @@ def aggregate_rows(rows):
    if speeds:summary[f'{variant}/{kind}']={'n':len(speeds),'median_tg':statistics.median(speeds),'median_wall_s':statistics.median(x['wall_s'] for x in r),'accept':sum(x.get('draft_n_accepted',0) for x in r)/max(1,sum(x.get('draft_n',0) for x in r)),'predicted_n':[x.get('predicted_n') for x in r]}
  return summary,incomplete_count
 
+def build_parser():
+ ap=argparse.ArgumentParser(description=__doc__); ap.add_argument('--smoke',action='store_true');ap.add_argument('--run',action='store_true')
+ ap.add_argument('--variants',nargs='+',choices=tuple(VARIANTS),default=list(VARIANTS));ap.add_argument('--tag',default='');return ap
+
 def main():
- ap=argparse.ArgumentParser(); ap.add_argument('--smoke',action='store_true');ap.add_argument('--run',action='store_true');a=ap.parse_args()
+ ap=build_parser();a=ap.parse_args()
  if os.environ.get('IA_BENCH_INHIBITED')!='1':ap.error('requires systemd-inhibit and IA_BENCH_INHIBITED=1')
  if not (a.smoke or a.run):ap.error('--run or --smoke')
- out=b.BASE/('spec-'+time.strftime('%Y%m%d-%H%M%S'));out.mkdir(parents=True)
+ out=b.BASE/('spec-'+time.strftime('%Y%m%d-%H%M%S')+(f'-{a.tag}' if a.tag else ''));out.mkdir(parents=True)
  helptext=subprocess.check_output([str(b.SERVER),'--help'],stderr=subprocess.STDOUT,text=True);(out/'help.txt').write_text(helptext)
- for extra in VARIANTS.values():
+ for extra in (VARIANTS[v] for v in a.variants):
   for flag in extra[::2]:
    if flag.startswith('--') and flag not in helptext:raise ValueError('Missing flag '+flag)
  rows=[]
- for variant,extra in VARIANTS.items():
+ for variant,extra in ((v,VARIANTS[v]) for v in a.variants):
   b.cool_down();case=out/variant;case.mkdir()
-  cmd=[str(b.SERVER),'-m',str(b.MODEL),'--port',str(b.PORT),'-c','262144','-ctk','q8_0','-ctv','q5_1','-fa','on','-np','1','--ctx-checkpoints','4','-ngl','all','--temp','1','--top-k','20','--min-p','0']+extra
+  cmd=[str(b.SERVER),'-m',str(b.MODEL),'--port',str(b.PORT),'-c','262144','-ctk','q8_0','-ctv','q5_1','-fa','on','-np','1','--ctx-checkpoints','4','-ngl','all','-ub','256','--temp','1','--top-p','0.95','--top-k','20','--min-p','0','--reasoning-effort','medium']+extra
   (case/'command.json').write_text(json.dumps(cmd))
   with (case/'server.log').open('w') as log,(case/'telemetry.jsonl').open('w') as tel:
    proc=subprocess.Popen(cmd,stdout=log,stderr=subprocess.STDOUT);mon=b.Monitor(proc.pid,tel);mon.start()
@@ -58,7 +66,7 @@ def main():
      rendered=b.http_json('/apply-template',{'messages':[{'role':'user','content':prompt}]})['prompt']
      ids=b.http_json('/tokenize',{'content':rendered,'add_special':False})['tokens']
      for seed in ([42] if a.smoke else [42,43,44]):
-      name=f'{kind}-{seed}';payload={'prompt':ids,'n_predict':32 if a.smoke else (4096 if kind=='agent' else 1500),'temperature':1,'top_k':20,'min_p':0,'seed':seed,'cache_prompt':False,'ignore_eos':False,'stream':True,'return_progress':True}
+      name=f'{kind}-{seed}';payload={'prompt':ids,'n_predict':32 if a.smoke else (4096 if kind=='agent' else 1500),'temperature':1,'top_p':0.95,'top_k':20,'min_p':0,'seed':seed,'cache_prompt':False,'ignore_eos':False,'stream':True,'return_progress':True}
       (case/(name+'-request.json')).write_text(json.dumps(payload,ensure_ascii=False));mon.set_phase('prefill');start=time.monotonic()
       final,content=b.stream_completion(payload,case/(name+'.sse'),mon)
       row={'variant':variant,'task':kind,'seed':seed,'wall_s':time.monotonic()-start,'input_n':len(ids),'response':final,'content':content}

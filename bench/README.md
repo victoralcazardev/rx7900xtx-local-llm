@@ -70,7 +70,7 @@ and verify it.
 |---|---|---|
 | `depth_bench.py` | `validacion262.py` | Cold matrix: tok/s and acceptance at fixed input depths (default 128K/200K/240K), KV q8_0/q8_0 vs. q8_0/q5_1+MTP2, plus a warm second turn reusing the KV cache. |
 | `longctx_quality.py` | `calidad262.py` | Long-context retrieval quality (RULER-style needle test) across default depths 32K/128K/240K and KV/MTP variants. Run 32K-240K, 68/68 exact match cumulative — see [`../results/20260925-longctx-quality-200k/`](../results/20260925-longctx-quality-200k/), [`../results/20260926-longctx-quality-224k/`](../results/20260926-longctx-quality-224k/), [`../results/20260926-longctx-quality-262k/`](../results/20260926-longctx-quality-262k/), and `docs/measurements/depth.md`. |
-| `spec_bench.py` | `mtp262.py` | Paired comparison of speculative-decoding variants (no draft, MTP n=2/n=3, n-gram map/mod) across six task types. |
+| `spec_bench.py` | `mtp262.py` | Paired comparison of speculative-decoding variants (no draft, MTP n=2/n=3, MTP stacked with n-gram map/mod) across six task types, on the adopted `262k-q8q51-mtp` flags. Prepared n-gram A/B, not yet run: see `docs/measurements/speculative.md`. |
 | `spec_depth_bench.py` | `mtpprof262.py` | Speculative-decoding draft-n sweep (including DFlash) at a fixed deep context (default 240K), to see which draft length wins once the KV read dominates. |
 | `summarize.py` | `resumen262.py` | Turns a `depth_bench.py` output folder into a Markdown table (throughput, warm-turn reuse, process VRAM by phase; GTT, evicted VRAM and thermal readings are overall peaks). |
 | `ladder_bench.py` | `escalera.py` | One-shot pass/fail matrix used to pick the model/profile shortlist: loads a case, measures load time, VRAM and tok/s, and records any OOM. |
@@ -82,6 +82,7 @@ and verify it.
 
 - `depth_bench.py`: `--depths DEPTH [DEPTH ...]`, `--reps N`, `--no-warm`.
 - `longctx_quality.py`: `--output DIR`, `--ctx N`, `--server PATH`.
+- `spec_bench.py`: `--variants NAME [NAME ...]`, `--tag LABEL`.
 - `spec_depth_bench.py`: `--kv TYPE`, `--kv-k TYPE`, `--variants NAME [NAME ...]`, `--tag LABEL`.
 
 ## `--extra`: A/B-testing a new flag without editing a script
