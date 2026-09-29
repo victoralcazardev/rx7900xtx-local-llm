@@ -91,6 +91,42 @@ System VRAM (all processes, `mem_info_vram_used`, 24,560 MiB total), peak:
 lighter desktop and doesn't generalize**; actual headroom depends on what else is using the GPU at
 the time, not just the profile.
 
+## Prompt-cache reuse and context checkpoints (2026-09-29)
+
+Log analysis of 7 `llama-server` logs (`scripts/launch.py --background`, `qwen38-iq3s-mtp` /
+`262k-q8q51-mtp`, b11160 `hip-kvmix`, `-np 1 --ctx-checkpoints 4`, 2026-09-26 to 2026-09-28):
+about 330 requests from a coding-agent harness (main agent plus subagents). Sessions reached up to
+112,601 tokens (none reached 240K).
+
+- **Prefix reuse works.** Slot selection by longest-common-prefix similarity logged `f_sim_best`
+  0.95-0.999 on almost every request; a typical request re-processes only tens to a few thousand
+  tokens.
+- **Only 4 full re-processes of ~32K tokens** (the harness's base system prompt plus tool
+  definitions). Three were the first request after a server start (unavoidable). One was a new
+  context (compaction or a fresh subagent) whose prompt matched the cached one at
+  `f_sim_best = 0.997`, `f_keep = 0.284` (the slot held 112,601 tokens), yet all 32,080 prompt
+  tokens were re-processed: 42.2 s lost. In the largest log (228 requests, 334 s total prompt-eval
+  time), 85 s were in its two full re-processes.
+- **Root cause (read in b11160 `tools/server/server-context.cpp`, `create_checkpoint` around lines
+  2309-2340 and checkpoint creation around 3615-3635).** Qwen3.8 is hybrid (48 Gated DeltaNet
+  recurrent layers plus 16 full-attention layers). The recurrent state cannot be truncated back to
+  an arbitrary position, so reusing a shorter prefix needs a context checkpoint at or before the
+  match point. The server creates about one checkpoint per request (last user message / near the
+  prompt end, otherwise only if more than `--checkpoint-min-step` (default 8192) past the last
+  one). When the list is full it first thins checkpoints within `checkpoint_min_step` of an earlier
+  one, then evicts the oldest (FIFO). With `--ctx-checkpoints 4` and checkpoints 8-12K tokens
+  apart nothing is thinned, so FIFO evicts the oldest: logged evictions at n_tokens 30,708 /
+  39,269 / 47,565 / 59,899 / 68,201 / 76,476. The checkpoint covering the ~32K base prompt (at
+  30,707) was evicted about 5 minutes into the session; after that, any new context starting with
+  the same base prompt re-processes it fully.
+- **Checkpoint size grows with position** (host RAM): 270.3 MiB at 30,708 tokens, 303.9 MiB at
+  39,269, 384.9 MiB at 59,899, 514.7 MiB at 92,907.
+- **Decision: keep `--ctx-checkpoints 4`.** Keeping the base-prompt checkpoint alive to ~160K
+  tokens would need about 16 checkpoints, several GiB more host RAM (per-checkpoint size grows with
+  depth) on a 31 GiB host that also holds the default 8 GiB `--cache-ram`. The payoff is ~42 s per
+  new context, seen once in a 2 h+ session. Re-open only if new contexts become frequent (for
+  example heavy subagent use); then consider a larger `--ctx-checkpoints` after measuring RAM.
+
 ## Open questions
 
 - fdinfo instrumentation was not yet wired into every benchmark script at the time of the earlier

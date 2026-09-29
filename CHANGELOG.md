@@ -12,6 +12,11 @@ All notable changes to this project are documented here. Format follows
 
 ### Changed
 
+- Analyzed prompt-cache reuse from 7 server logs (~330 coding-agent requests): prefix reuse works,
+  with one known 42.2 s miss mode (FIFO eviction of the base-prompt checkpoint at
+  `--ctx-checkpoints 4`); no config change. Documented llama.cpp PR #29393's expected (unmeasured)
+  effect on the HIP build and the evaluated-but-unusable OrcaSAQ-2-27B quant. See
+  `docs/measurements/memory.md`, `docs/ENGINES.md`, `docs/models/qwen38-27b-quants.md`.
 - Re-tested Vulkan vs. HIP with the GPU memory clock pinned at 1249 MHz (`-ub 512`): pinning
   nearly doubles Vulkan decode at 64K depth (10.64 → 19.77 tok/s), but HIP still wins tg +63% at
   depth 0 and +18% at 64K, so the earlier "Vulkan loses because of the memory clock" explanation

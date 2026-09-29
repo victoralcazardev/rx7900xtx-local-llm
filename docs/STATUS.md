@@ -114,7 +114,7 @@ best default, no overlapping alternatives.
 
 ## Next steps
 
-1. Next engine update: pick up llama.cpp PR #29393 (RMS_NORM+SCALE fusion) and watch upstream for
+1. Next engine update: pick up llama.cpp PR #29393 (RMS_NORM+SCALE fusion; expected to apply to the HIP build, prefill only, ~27 s on a cold 240K fill, not measured; not worth an update alone) and watch upstream for
    a GQA-folding FlashAttention fix for RDNA3 or removal of the TILE f16 KV conversion — see
    `docs/sop/update-engine.md` and `measurements/depth.md`.
 2. GPU care beyond the permanent 272 W cap (undervolt) — deferred.

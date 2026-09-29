@@ -60,7 +60,7 @@ reaches these numbers without touching power management.
 |---|---|---|
 | `-fa on` | `auto` | Kept: mandatory with quantized V, prevents silent disabling |
 | `-np 1` | `-1` (auto = 4 slots) | Kept |
-| `--ctx-checkpoints 4` | 32 | Kept: checkpoints live in RAM |
+| `--ctx-checkpoints 4` | 32 | Kept: checkpoints live in RAM; measured 270-515 MiB each at 31K-93K tokens, and FIFO eviction drops the base-prompt checkpoint after ~5 min ([`memory.md`](memory.md#prompt-cache-reuse-and-context-checkpoints-2026-09-29)) |
 | `-ngl all` | `auto` | Kept |
 | `--spec-draft-n-max 3` | 3 | Kept (see `speculative.md`) |
 | `--metrics` | disabled | Kept: exposes `/metrics` for the persistent token ledger (`docs/sop/token-ledger.md`) |

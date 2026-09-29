@@ -171,6 +171,16 @@ file uses the official Qwen3.8-27B card's sampling, with nothing RVN-specific in
 GGUF's local metadata does **not** carry `min_p` in `general.sampling.*` (only temp/top_k/top_p) —
 `min_p 0.0` must be set explicitly (llama.cpp's default is 0.05, not 0).
 
+### OrcaSAQ-2-27B (evaluated, not usable)
+
+<https://huggingface.co/orcarouter/OrcaSAQ-2-27B> (checked 2026-09-29): a proprietary
+mixed-precision quant of Qwen3.8-27B, 3.21 bpw average, 12.3 GB, safetensors only, requiring the
+vendor's vLLM integration. There is no GGUF and no llama.cpp support, so it cannot run here. It
+includes an MTP head and a 262,144 native context. The card claims PPL 5.6482 vs. 5.6468 for BF16,
+mean KLD 0.031, 93.2% top-1 agreement and "up to 90.1 tok/s on 16GB GPU" (GPU unspecified) —
+vendor figures, not reproduced. They are not comparable with this repository's PPL numbers
+(different eval set) nor its KLD numbers (those are KV-cache KLD). Re-evaluate if a GGUF appears.
+
 ## 3. KV cache estimate (ARITHMETIC, not measurement — see `docs/measurements/memory.md` for real numbers)
 
 The hybrid architecture is also confirmed in llama.cpp's own source: `qwen35` appears in

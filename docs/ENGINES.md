@@ -140,7 +140,7 @@ retest above pending; the upstream items below are monitoring candidates, not ev
 | Upstream item | State and relevance | Limit |
 |---|---|---|
 | [#27530](https://github.com/ggml-org/llama.cpp/pull/27530) | Merged; cleanup after failed K/V and recurrent/hybrid state restoration. A robustness candidate. | No measured Qwen throughput or quality gain established here. |
-| [#29393](https://github.com/ggml-org/llama.cpp/pull/29393) | Merged; RMS_NORM+SCALE fusion, with a reported 4.2–4.8% MTP prefill gain. | Reported on CUDA hardware only; no local HIP/gfx1100 validation. |
+| [#29393](https://github.com/ggml-org/llama.cpp/pull/29393) | Merged; RMS_NORM+SCALE fusion, with a reported 4.2–4.8% MTP prefill gain. | Reported on CUDA hardware only; no local HIP/gfx1100 validation. The PR touches only `ggml/src/ggml-cuda/ggml-cuda.cu`, `norm.cu` and `norm.cuh`, which the HIP backend also compiles, so the fusion is expected to reach HIP builds (not measured). Expected impact here: prefill only (e.g. a cold 240K fill at ~380 tok/s, ~632 s → ~605 s, ~27 s saved); decode unaffected. Not worth an engine update alone; bundle with the next one (latest upstream release on 2026-09-29: b11255). |
 | [#28003](https://github.com/ggml-org/llama.cpp/pull/28003) | Draft; RDNA3 gfx1100 single-token MMVQ fast path, with the author reporting a Q4_K GEMV result on an RX 7900 XTX. | Not our IQ3_S quant; no local validation. |
 
 These items are watchlist candidates only; this document does not assert whether any is included in
