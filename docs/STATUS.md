@@ -61,6 +61,9 @@ best default, no overlapping alternatives.
   clock nearly doubles Vulkan decode at 64K depth (10.64 → 19.77 tok/s), but HIP still wins tg
   +63% at depth 0 and +18% at 64K. Vulkan stays reference-only for this model. See
   [`measurements/engines.md`](measurements/engines.md#vulkan-re-test-with-the-memory-clock-pinned-2026-09-29).
+- **Qwen3.8-Flash-Next (MoE) trial**: Strata v0.1.26 now has an AMD HIP backend and a low-RAM
+  mode; not measured here. Adopt only if it beats 60 tok/s on real coding requests on this
+  hardware. See [`models/strata-flash-next.md`](models/strata-flash-next.md).
 - **MTP acceptance with real agent traffic at temperature 1**: depth numbers here use a synthetic
   prompt at temperature 0; third-party reports with real tool-call traffic range 64-93%
   acceptance. See `docs/SOURCES.md`.

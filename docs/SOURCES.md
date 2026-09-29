@@ -143,3 +143,9 @@ All claims below are the authors' own and are unverified here.
   (needs an SSD). Our b11146 `/usr/bin/llama-server` `--help` has `--lazy-mode` and `--n-cpu-moe`
   (b11160 not checked). With 24 GB VRAM + 32 GB RAM, Coder IQ1_M might fit via `--n-cpu-moe`
   (estimate, unmeasured). Decision 2026-09-29: not pursued now; wait for better future models.
+- **Update, later on 2026-09-29 (Strata v0.1.25/v0.1.26)**: the "CUDA-only, does not run on this
+  card" statement above is superseded. v0.1.25 merged an experimental Linux AMD HIP backend
+  (gfx1100 only) and a `--kv k8v4` KV cache; v0.1.26 added a low-RAM mode (experts memory-mapped
+  from disk). The author's "8GB+ AMD GPU", "1,250 tok/s prompt" and "k8v4 +10%" claims are checked
+  against upstream's own docs in
+  [`docs/models/strata-flash-next.md`](models/strata-flash-next.md).

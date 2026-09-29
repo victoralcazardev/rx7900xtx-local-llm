@@ -9,7 +9,8 @@ disagrees with the TOML, the TOML wins.
 
 Single model, single profile by design (2026-09-26, `docs/DECISIONS.md`): one best default, no
 overlapping alternatives. Other GSQ-RCO/RVN quants that were evaluated and not kept in the
-manifest are documented in `docs/models/qwen38-27b-quants.md` for provenance. Add a new
+manifest are documented in `docs/models/qwen38-27b-quants.md` for provenance. Qwen3.8-Flash-Next via the Strata engine was
+reviewed but not adopted: `docs/models/strata-flash-next.md`. Add a new
 model/profile per `docs/sop/new-model.md`.
 
 `qwen38-iq3s-mtp` uses `mmproj-Qwen3.8-27B-BF16.gguf` (vision projector, disabled in the default
