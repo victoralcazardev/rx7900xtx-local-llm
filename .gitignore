@@ -1,6 +1,12 @@
 # Python
 __pycache__/
 *.pyc
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
 _tmp/
 
 # Local machine config (copy from local.example.toml)
@@ -14,14 +20,31 @@ telemetry.jsonl
 request.json
 warm-request.json
 *.gguf
+*.safetensors
 bench/res/
+
+# Engine source checkouts and builds (live outside the repo; never vendor them here)
+build/
+build-*/
 
 # Secrets
 .env
 .env.*
 *.token
 hf_token*
+*.pem
+*.key
+
+# Per-user agent/editor state (settings, sessions, caches)
 .atl/
+.claude/
+.omp/
+.codex/
+.opencode/
+.vscode/
+.idea/
+*.swp
+.DS_Store
 
 
 # Private ODD working notes (never published)
