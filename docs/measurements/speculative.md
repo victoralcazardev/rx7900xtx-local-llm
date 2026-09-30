@@ -407,8 +407,9 @@ Raw data: [`../../results/20260927-depth-240k-none-vs-n3/`](../../results/202609
 
 ## Open questions
 
-- MTP acceptance rate with real agent-style tool use at ~190K (temperature 1, multiple seeds): the
-  synthetic Wikipedia-summarization benchmark used above is a pessimistic proxy — a third-party
+- ~~MTP acceptance rate with real agent-style tool use at ~190K (temperature 1, multiple seeds)~~ —
+  answered 2026-09-30: **0.66** over 186,582 drafted tokens, see
+  [`agent-traffic.md`](agent-traffic.md). Original note: the synthetic Wikipedia-summarization benchmark used above is a pessimistic proxy — a third-party
   report on a different setup saw 85-93% acceptance with real agent traffic (see `depth.md`).
 - How much V q5_1 costs *with* MTP: spec-off pays 25% for it at 240K (vs. V q8_0), but MTP n=3
   with KV q8_0/q8_0 at 262K is not reliable on this card, so it would have to be measured at a

@@ -1,8 +1,9 @@
 # SOP: measure Vulkan vs. HIP to decide a model's backend
 
-`AGENTS.md` is explicit: **the backend is decided by measuring with `llama-bench`, not assumed.**
-Vulkan supports every K/V mix out of the box and is the documented starting point, but each model
-gets compared before `backend` is set in `models.toml`.
+**The backend is decided by measuring with `llama-bench`, not assumed.** Vulkan supports every
+K/V mix out of the box, but each model gets compared before `backend` is set in `models.toml`. HIP
+was adopted for the current profile by measurement (see `docs/DECISIONS.md`, 2026-09-24 and
+2026-09-29).
 
 ## Steps
 

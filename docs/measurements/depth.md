@@ -325,7 +325,9 @@ default profile actually launches with — closing the gap left by the n=2/no-`-
 1. A broader 190K quality sample (the remaining 4 of 5 planned documents, 16 of 20 questions) —
    deprioritized as follow-up validation of the current `262k-q8q51-mtp` profile (32K/128K are
    fully validated, and the one 190K document validated exactly).
-2. Real agent-usage MTP acceptance at depth (temperature 1, 3 seeds): the synthetic benchmark above is
+2. ~~Real agent-usage MTP acceptance at depth (temperature 1, 3 seeds)~~ — answered 2026-09-30:
+   **0.66** over 186,582 drafted tokens of real agent traffic, see
+   [`agent-traffic.md`](agent-traffic.md). Original note: the synthetic benchmark above is
    pessimistic — a third-party report (`sweeps/radeon.md`,
    [sudoingX/qwen38-mtp](https://github.com/sudoingX/qwen38-mtp/blob/master/sweeps/radeon.md))
    measured **~93% acceptance** with a real agent (Hermes, MTP n=3 + p-min 0.75, 29-37K context) on

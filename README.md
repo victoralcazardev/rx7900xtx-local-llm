@@ -160,9 +160,13 @@ for the full spec breakdown and driver notes.
 
 1. **Get the model** (Qwen3.8-27B GSQ-RCO IQ3_S-mtp, 12.1 GB) — file, SHA256 and folder layout in
    [Get the model](#get-the-model) below.
-2. **Build the engine (required).** The official llama.cpp binaries lack the FlashAttention kernels
-   for K `q8_0` + V `q5_1`; the build recipe (ROCm-only, never Vulkan+HIP in one build) is in
-   [`docs/ENGINES.md`](docs/ENGINES.md).
+2. **Get the engine (required).** The official llama.cpp binaries lack the FlashAttention kernels
+   for K `q8_0` + V `q5_1`. Fast path: download the prebuilt `hip-kvmix` build from the
+   [`engine-b11160-rocm10-gfx1100-kvmix`](https://github.com/victoralcazardev/rx7900xtx-local-llm/releases/tag/engine-b11160-rocm10-gfx1100-kvmix)
+   release (`llama-b11160-rocm10-gfx1100-kvmix-linux-x64.tar.gz`, sha256
+   `f1cb8e2683c94cc5891a11af7876058d50e2c0556f0ffeb92d2451bf659fc3ec`; check with `sha256sum`;
+   the ROCm runtime is not bundled). Or build it yourself (ROCm-only, never Vulkan+HIP in one
+   build): recipe in [`docs/ENGINES.md`](docs/ENGINES.md).
 3. **Cap the power to 272 W** — see [`docs/measurements/thermals-power.md`](docs/measurements/thermals-power.md)
    §"Making it permanent".
 4. **Configure and launch**:
@@ -241,7 +245,7 @@ the complete fix is a display-only second GPU. See `docs/measurements/coexistenc
 
 GPU memory clock drops to 456-772 MHz under Vulkan generation on this system, ROCm holds 1249 MHz.
 Pinning it fixes most of Vulkan's collapse at depth, but HIP still wins by 18-63% on tg.
-Use `backend = "hip"` (default in `models.toml`). See `docs/measurements/engines.md`.
+Use HIP (the adopted profile uses the own `hip-kvmix` build). See `docs/measurements/engines.md`.
 </details>
 
 <details>
