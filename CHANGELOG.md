@@ -12,6 +12,21 @@ All notable changes to this project are documented here. Format follows
 
 ### Changed
 
+- Corrected the host RAM figure: 32 GiB installed, 31.25 GiB usable (was stated as 31 GiB), and
+  estimated KVMem's net host-RAM increase (~+10 GiB). Added a speed-levers summary to
+  `docs/STATUS.md`.
+- Enabled the harness's `compaction.handoffSaveToDisk` and prepared a KVMem trial (pinned source
+  commit, ROCm 10 build plan, fit constraints, protocol and go/no-go criteria). See
+  `docs/ENGINES.md`.
+- Measured harness compaction cost (14 compactions: full re-process of the kept context, median
+  ~83 s to the next turn), checked a third-party compaction/KVMem recommendation claim by claim, and
+  recorded the harness threshold change to 75%. See `docs/measurements/agent-traffic.md` and
+  `docs/SOURCES.md`.
+- Analyzed real coding-agent traffic (2 server logs, 31 harness sessions, 1,301 turns): generation
+  is 89% of server time, reasoning ~78% of output, real MTP acceptance 0.66, tool-call repeats
+  2.6%; the harness base prompt is now ~14.5K tokens (was ~32K). No config change;
+  `--reasoning-effort low` not pursued; compaction-threshold and presence-penalty A/B tests left
+  open. See `docs/measurements/agent-traffic.md`.
 - Analyzed prompt-cache reuse from 7 server logs (~330 coding-agent requests): prefix reuse works,
   with one known 42.2 s miss mode (FIFO eviction of the base-prompt checkpoint at
   `--ctx-checkpoints 4`); no config change. Documented llama.cpp PR #29393's expected (unmeasured)

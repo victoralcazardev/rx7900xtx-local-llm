@@ -64,9 +64,22 @@ best default, no overlapping alternatives.
 - **Qwen3.8-Flash-Next (MoE) trial**: Strata v0.1.26 now has an AMD HIP backend and a low-RAM
   mode; not measured here. Adopt only if it beats 60 tok/s on real coding requests on this
   hardware. See [`models/strata-flash-next.md`](models/strata-flash-next.md).
-- **MTP acceptance with real agent traffic at temperature 1**: depth numbers here use a synthetic
-  prompt at temperature 0; third-party reports with real tool-call traffic range 64-93%
-  acceptance. See `docs/SOURCES.md`.
+- ~~**MTP acceptance with real agent traffic at temperature 1**~~ — answered 2026-09-30: 0.66 over
+  186,582 drafted tokens of real coding-agent traffic (vs. 0.71 synthetic at 240K fill), no change
+  to n=3. See [`measurements/agent-traffic.md`](measurements/agent-traffic.md).
+- **Compaction and presence penalty A/B** (2026-09-30): real agent traffic spends 89% of server
+  time generating and ~78% of output on reasoning, with few repeated tool calls. Each compaction
+  forces a full re-process of the kept context on this hybrid model (median ~83 s before the next
+  turn). Open A/B tests: harness compaction at 75% (current) vs. 60%, `handoff`-first vs.
+  `shake`-first, and `--presence-penalty` 0 vs. 1.0. See
+  [`measurements/agent-traffic.md`](measurements/agent-traffic.md#open-ab-tests).
+- **KVMem trial** (2026-09-30): [kvmem-llama.cpp](https://github.com/kvmem/kvmem-llama.cpp) keeps
+  the full workspace but attends over a bounded active context (paper: Qwen3.8-27B DeepSWE 43.8% →
+  48.4% vs. compaction only). It could bound decode cost at depth, but its ROCm build is an older
+  beta and it has no `q5_1` KV type. Trial prepared (source pinned, build plan, protocol,
+  go/no-go criteria), to run once the GPU is free. See
+  [`ENGINES.md`](ENGINES.md#kvmem-trial-prepared-2026-09-30-not-run) and
+  [`SOURCES.md`](SOURCES.md#context-length-and-compaction-claims-reviewed-2026-09-30).
 - **Broader quality sample**: the current retrieval-quality runs are small at the edges — 190K has
   1 of 5 planned documents, 240K has 2 of 5 — not blocking, since every depth measured so far is
   exact match. See `measurements/depth.md`.
@@ -80,6 +93,20 @@ best default, no overlapping alternatives.
   (RDNA3 IQ2/IQ3 MMVQ scale-multiply change); the
   [BuffedMod IQ3_S quant](https://huggingface.co/tooltd/Qwen3.8-27B-GSQ-RCO-BuffedMod-GGUF)
   (upcasts `output.weight`, untested here).
+
+## Speed levers at depth (2026-09-30)
+
+Where more decode speed could still come from, for long agent sessions:
+
+| Lever | Expected gain | Cost | Status |
+|---|---|---|---|
+| `--reasoning-effort low` | Largest: ~78% of output is reasoning | Quality | Not pursued (quality first) |
+| Earlier compaction / one session per plan phase | Keeps decode in the ~34 tok/s band instead of ~19 | More lossy compactions, ~5 min each | Harness threshold at 75% instead |
+| KVMem (bounded active attention window, full history in host RAM) | Decode at depth without dropping history | Retrieval may miss blocks; ROCm beta; ~+10 GiB host RAM | Trial prepared — [`ENGINES.md`](ENGINES.md#kvmem-trial-prepared-2026-09-30-not-run) |
+| Upstream RDNA3 FlashAttention GQA fix | Decode at depth (kernel at ~24% of memory bandwidth) | None | Waiting on llama.cpp |
+| Server flags (MTP, `-ub`, KV, power cap) | <5% | — | Already measured |
+
+See [`measurements/agent-traffic.md`](measurements/agent-traffic.md).
 
 ## Tried and not adopted
 

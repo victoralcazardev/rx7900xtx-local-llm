@@ -29,6 +29,10 @@
   configuration measured that day, with desktop idle usage at ~1.5 GiB (vs. ~0.8 GiB on other
   days) — see "`-ub 256`" below. The process itself was never evicted, but system-wide headroom is
   thin regardless of profile; close other heavy GPU applications before long-context work.
+- **Host RAM, observed 2026-09-30**: with the weights in VRAM, `llama-server` still holds about
+  12 GiB of anonymous host RAM. Most of it is likely the default 8 GiB prompt cache
+  (`--cache-ram`); the rest is context checkpoints and HIP host buffers. This is bounded and
+  expected. Lower `--cache-ram` only if host RAM is tight — see "Host RAM footprint" below.
 
 ## VRAM breakdown at load (`-lv 4` log, 262K context, MiB)
 
@@ -123,9 +127,57 @@ about 330 requests from a coding-agent harness (main agent plus subagents). Sess
   39,269, 384.9 MiB at 59,899, 514.7 MiB at 92,907.
 - **Decision: keep `--ctx-checkpoints 4`.** Keeping the base-prompt checkpoint alive to ~160K
   tokens would need about 16 checkpoints, several GiB more host RAM (per-checkpoint size grows with
-  depth) on a 31 GiB host that also holds the default 8 GiB `--cache-ram`. The payoff is ~42 s per
+  depth) on a 32 GiB host (31.25 GiB usable) that also holds the default 8 GiB `--cache-ram`. The payoff is ~42 s per
   new context, seen once in a 2 h+ session. Re-open only if new contexts become frequent (for
   example heavy subagent use); then consider a larger `--ctx-checkpoints` after measuring RAM.
+- **Update 2026-09-30**: the ~32K base prompt belongs to the harness version in use until
+  2026-09-29. After a harness update (omp v18.4.4) the first request is ~14.5K tokens, so the same
+  miss now costs roughly ~19 s instead of 42 s (estimated, not measured). The decision above stands.
+  See [`agent-traffic.md`](agent-traffic.md).
+
+## Host RAM footprint while serving (2026-09-30)
+
+A snapshot taken on a running server showed the host RAM usage; it was not a controlled
+experiment. Setup: `qwen38-iq3s-mtp` / `262k-q8q51-mtp`, b11160 `hip-kvmix`, `-ngl all`, `-np 1
+--ctx-checkpoints 4`, `--cache-ram` not set (b11160 default: 8192 MiB). The slot held 166,007
+tokens. The host has 32 GiB of RAM installed, 31.25 GiB usable (`MemTotal`).
+
+- **The weights are in VRAM, not in host RAM.** The model GGUF (11.29 GiB) is memory-mapped
+  (`r--s` in `/proc/<pid>/maps`), but only **272 MiB** of it was resident (`RssFile`). The weights
+  are not duplicated in host RAM.
+- **`llama-server` still held 11.9 GiB of anonymous host RAM** (`RssAnon`; `VmRSS` 12.1 GiB). This
+  RAM is the process's own, so `free` counts it as "used", not as cache. The system as a whole
+  showed 21.1 GiB used, 10.2 GiB available and 3.1 GiB of swap in use. `llama-server` was by far
+  the largest process; the next largest was 2.1 GiB.
+- **Almost all of it was in four large anonymous mappings**: 5,024 MiB, 3,495 MiB, 788 MiB and
+  651 MiB (from `/proc/<pid>/smaps`).
+- **Attribution (inferred, not measured per component).** `/proc` does not name the owner of an
+  anonymous mapping. The two largest mappings (8.3 GiB together) are consistent with the prompt
+  cache, which is capped at 8 GiB by default. The rest fits the context checkpoints (sizes in the
+  previous section; they grow with depth, and this slot was at 166K) and the HIP runtime's host
+  buffers.
+- **This is expected behavior, not a leak.** The prompt cache has a fixed cap (`--cache-ram`), and
+  `--ctx-checkpoints` limits the checkpoint count. All of this memory is freed when the server
+  stops. `/metrics` reported `llamacpp:prompt_tokens_cached_total` = 23.67 M; this counter also
+  includes slot KV reuse in VRAM, so it does not measure the RAM cache on its own.
+- **When to lower it.** Keep the default if the host has spare RAM: it avoids re-processing long
+  prompts when requests alternate between contexts (main agent and subagents). Set `--cache-ram
+  2048` (or `0` to disable it) when another large host-RAM consumer must run alongside the
+  server, or when swap use grows. With a single long conversation little is lost: the slot KV
+  stays in VRAM and prefix reuse still works. Measure `RssAnon` again after any change.
+
+Reproduce on a running server (replace `<pid>` with the `llama-server` PID; add the `Authorization`
+header to `curl` if you use `--api-key`):
+
+```bash
+free -m
+ps -eo pid,rss,comm --sort=-rss | head
+grep -E "VmRSS|RssAnon|RssFile" /proc/<pid>/status
+grep "\.gguf" /proc/<pid>/maps | head -3
+awk '/^[0-9a-f]+-[0-9a-f]+ /{name=$6} /^Anonymous:/{if($2>200000) print $2" kB", name}' \
+  /proc/<pid>/smaps | sort -rn | head
+curl -s localhost:8080/metrics | grep prompt_tokens_cached_total
+```
 
 ## Open questions
 
@@ -145,3 +197,5 @@ about 330 requests from a coding-agent harness (main agent plus subagents). Sess
   -350 MiB process VRAM for a small pp cost, adopted. System VRAM (not just the process) measured
   directly across every long-context configuration that day: only 12-190 MiB free at the platform
   limit, correcting the earlier ~1.8 GiB margin figure that was measured with a lighter desktop.
+- **2026-09-30**: host RAM footprint of a running server recorded (11.9 GiB anonymous, weights not
+  resident in RAM); the prompt cache's default 8 GiB cap is the likely main consumer.

@@ -63,7 +63,7 @@ Full evidence and method: [`docs/BENCHMARK-FORMAT.md`](docs/BENCHMARK-FORMAT.md)
 | `--spec-draft-n-max 3` | `3` | Wins across essay/copy/code at the real 190K/240K operating depths (+9-11% mean tg vs. n=2); n=4/n=5 lose acceptance — [`docs/measurements/speculative.md`](docs/measurements/speculative.md) |
 | `-ub 256` | `256` | -350 MiB peak process VRAM vs. the 512 default, -5% prefill cost, no generation-speed cost — [`docs/measurements/memory.md`](docs/measurements/memory.md) |
 | `-np 1` | `1` | Single user; 1 slot + MTP with request queuing beats adding `-np` slots end-to-end — [`docs/measurements/concurrency.md`](docs/measurements/concurrency.md) |
-| `--ctx-checkpoints 4` | `4` | b11160 default is 32; kept at 4 to bound RAM (measured 270-515 MiB each at 31K-93K tokens; the oldest is evicted first, so a new context re-processes the ~32K base prompt once, ~42 s) — warm turns still reuse ~all KV in practice (e.g. 189,467 of 190,000 tokens on a task switch) — [`docs/measurements/memory.md`](docs/measurements/memory.md#prompt-cache-reuse-and-context-checkpoints-2026-09-29), [`docs/measurements/engines.md`](docs/measurements/engines.md), [`docs/measurements/speculative.md`](docs/measurements/speculative.md) |
+| `--ctx-checkpoints 4` | `4` | b11160 default is 32; kept at 4 to bound RAM (measured 270-515 MiB each at 31K-93K tokens; the oldest is evicted first, so a new context re-processes the harness base prompt once: ~42 s at ~32K tokens, ~14.5K tokens since a harness update, see [`docs/measurements/agent-traffic.md`](docs/measurements/agent-traffic.md)) — warm turns still reuse ~all KV in practice (e.g. 189,467 of 190,000 tokens on a task switch) — [`docs/measurements/memory.md`](docs/measurements/memory.md#prompt-cache-reuse-and-context-checkpoints-2026-09-29), [`docs/measurements/engines.md`](docs/measurements/engines.md), [`docs/measurements/speculative.md`](docs/measurements/speculative.md) |
 | `-ngl all` | `all` | All layers on GPU (explicit, not left to `auto`) |
 | `--temp`/`--top-p`/`--top-k`/`--min-p` | `1.0`/`0.95`/`20`/`0.0` | The Qwen3.8-27B card's own recommended sampling — nothing invented, `min-p` set explicitly since the binary's default (0.05) isn't what the vendor tested — [`AGENTS.md`](AGENTS.md) |
 | `--reasoning-effort medium` | `medium` | The card's template default is `xhigh`, which injects "think carefully, validate assumptions, consider alternatives" and tends to overthink; `medium` adds no extra instruction — `models.toml` |
@@ -144,7 +144,7 @@ Full evidence and method: [`docs/BENCHMARK-FORMAT.md`](docs/BENCHMARK-FORMAT.md)
 | **GPU** | **AMD Radeon RX 7900 XTX, 24 GB (RDNA3, gfx1100)** — Sapphire PULSE (PCI `1da2:471e`), VBIOS `113-3E4710U-O4O` |
 | **Power cap** | 272 W (stock 303 W) |
 | CPU | AMD Ryzen 7 5700X (8C/16T) |
-| RAM | 32 GB |
+| RAM | 32 GiB (31.25 GiB usable after firmware/kernel reservations), plus zram swap |
 | Motherboard | Gigabyte B450 AORUS PRO |
 | Model storage | NVMe (Kingston A2000 500 GB) |
 | OS | CachyOS (Arch-based), kernel 7.2.7 |
@@ -356,7 +356,7 @@ rx7900xtx-local-llm/
 | `docs/DECISIONS.md` | Append-only decision log with evidence links |
 | `docs/SOURCES.md` | External claims checked against this repository's own measurements |
 | `docs/hardware/`, `docs/models/`, `docs/ENGINES.md` | GPU/driver specs, model/quant provenance, llama.cpp build inventory |
-| `docs/measurements/` | Benchmark results and conclusions, by topic (engines, kv-quality, memory, coexistence, depth, speculative, thermals-power, concurrency) |
+| `docs/measurements/` | Benchmark results and conclusions, by topic (engines, kv-quality, memory, coexistence, depth, speculative, thermals-power, concurrency, agent-traffic) |
 | `docs/BENCHMARK-FORMAT.md` | How the numbers are produced and reported |
 | `docs/STYLE.md` | English, units, naming, formatting, immutable-evidence rules, and documentation conventions |
 | `docs/sop/` | Step-by-step procedures: install, launch, add a model, update the engine, measure a backend, token ledger |
