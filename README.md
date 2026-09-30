@@ -66,7 +66,7 @@ Requires **Python 3.11+**; `scripts/` use only the standard library.
 5. **Launch.** `python3 scripts/launch.py`, and point any OpenAI-compatible client at
    `http://127.0.0.1:8080`. Details: [`docs/sop/launch-model.md`](docs/sop/launch-model.md).
 6. **Optional, recommended.** Cap power to 272 W permanently
-   ([`thermals-power.md`](docs/measurements/thermals-power.md), "Making it permanent"). At 262K only
+   ([`docs/sop/power-cap.md`](docs/sop/power-cap.md)). At 262K only
    ~1.2 GiB of VRAM is left for the desktop (see the second troubleshooting entry).
 
 ## Troubleshooting
@@ -139,9 +139,9 @@ results/              # curated result folders, see results/INDEX.md
 | [`docs/DECISIONS.md`](docs/DECISIONS.md) | Append-only decision log |
 | [`docs/SOURCES.md`](docs/SOURCES.md) | External claims checked against this repository's measurements |
 | [`docs/measurements/`](docs/measurements/) | Benchmark results by topic (engines, kv-quality, memory, coexistence, depth, speculative, thermals-power, concurrency, agent-traffic) |
-| [`docs/ENGINES.md`](docs/ENGINES.md), [`docs/hardware/`](docs/hardware/), [`docs/models/`](docs/models/) | Engine builds, GPU and driver specs, model and quant provenance |
+| [`docs/ENGINES.md`](docs/ENGINES.md), [`docs/ENGINES-EXPERIMENTS.md`](docs/ENGINES-EXPERIMENTS.md), [`docs/hardware/`](docs/hardware/), [`docs/models/`](docs/models/) | Engine builds, prepared engine trials and upstream watchlist, GPU/driver specs (Linux and Windows), model and quant provenance |
 | [`docs/BENCHMARK-FORMAT.md`](docs/BENCHMARK-FORMAT.md) | How every number was produced |
-| [`docs/sop/`](docs/sop/) | Procedures: install, launch, add a model, update the engine, measure a backend, token ledger |
+| [`docs/sop/`](docs/sop/) | Procedures: install, launch, add a model, update the engine, measure a backend, power cap, token ledger |
 | [`docs/STYLE.md`](docs/STYLE.md) | Language, units, naming and immutable-evidence rules |
 | `scripts/check-repo.py`, `tests/` | Hygiene check and `python3 -m unittest discover -s tests -v` |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md), `.github/` | How to contribute, CI, issue and PR templates |

@@ -15,7 +15,7 @@ default when no alias is given.
 - Engine: llama.cpp b11160 `hip-kvmix` (own ROCm build with FlashAttention kernels for K `q8_0` +
   V `q5_1`); ROCm/HIP beats Vulkan 2-3.5x on generation here, Vulkan is reference-only.
   [`ENGINES.md`](ENGINES.md).
-- Power: 272 W permanent cap (driver minimum; stock 303 W).
+- Power: 272 W permanent cap (driver minimum; stock 303 W) — [`sop/power-cap.md`](sop/power-cap.md).
 - Harness wiring: one fixed provider `local-262k` (contextWindow 262144) on `:8080`, verified by
   `python3 scripts/check-sync.py` when `local.toml` has `[harness] enabled = true`.
 
@@ -73,7 +73,7 @@ Sampling is the Qwen3.8-27B card's own; `--min-p 0.0` is set explicitly because 
   [agent-traffic.md](measurements/agent-traffic.md#open-ab-tests).
 - **KVMem trial** ([kvmem-llama.cpp](https://github.com/kvmem/kvmem-llama.cpp)): attends over a
   bounded active context, could bound decode cost at depth; older ROCm beta, no `q5_1` KV. Prepared,
-  to run when the GPU is free — [ENGINES.md](ENGINES.md#kvmem-trial-prepared-2026-09-30-not-run),
+  to run when the GPU is free — [ENGINES-EXPERIMENTS.md](ENGINES-EXPERIMENTS.md#kvmem-trial-prepared-2026-09-30-not-run),
   [SOURCES.md](SOURCES.md#context-length-and-compaction-claims-reviewed-2026-09-30).
 - **Broader quality sample**: 190K has 1 of 5 planned documents, 240K has 2 of 5; not blocking
   (every depth so far is exact match) — [depth.md](measurements/depth.md).
@@ -93,7 +93,7 @@ Sampling is the Qwen3.8-27B card's own; `--min-p 0.0` is set explicitly because 
 |---|---|---|---|
 | `--reasoning-effort low` | Largest: ~78% of output is reasoning | Quality | Not pursued (quality first) |
 | Earlier compaction / one session per plan phase | Keeps decode in the ~34 tok/s band instead of ~19 | More lossy compactions, ~5 min each | Harness threshold at 75% instead |
-| KVMem (bounded active attention, full history in host RAM) | Decode at depth without dropping history | Retrieval may miss blocks; ROCm beta; ~+10 GiB host RAM | Trial prepared — [ENGINES.md](ENGINES.md#kvmem-trial-prepared-2026-09-30-not-run) |
+| KVMem (bounded active attention, full history in host RAM) | Decode at depth without dropping history | Retrieval may miss blocks; ROCm beta; ~+10 GiB host RAM | Trial prepared — [ENGINES-EXPERIMENTS.md](ENGINES-EXPERIMENTS.md#kvmem-trial-prepared-2026-09-30-not-run) |
 | Upstream RDNA3 FlashAttention GQA fix | Decode at depth (kernel at ~24% of memory bandwidth) | None | Waiting on llama.cpp |
 | Server flags (MTP, `-ub`, KV, power cap) | <5% | — | Already measured |
 

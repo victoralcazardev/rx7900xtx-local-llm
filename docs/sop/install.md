@@ -4,6 +4,9 @@ Canonical step list, for both a Linux-only machine and a Windows dual-boot setup
 `docs/hardware/gpu-7900xtx.md` for the background detail and sources behind each step (specs,
 driver notes, the P-state bug, the NTFS mount caveats).
 
+**Linux: the shortest path is the [README quick start](../../README.md#quick-start); this SOP is the
+full driver checklist.** Windows notes are in [`../hardware/windows.md`](../hardware/windows.md).
+
 ## Windows (if dual-booting)
 
 1. Uninstall the NVIDIA driver from "Apps & features" and reboot, before installing the AMD card.
