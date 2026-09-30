@@ -124,3 +124,12 @@ sessions run deep, where the 27B falls to ~20 tok/s and the KVMem candidate reac
 The planned trial therefore uses v0.1.30's resident variant with IQ2_XS or the Coder, confirms 0
 file reads in the log, and measures generation tok/s at 128K+ fill plus `bench/longctx_quality.py`,
 against both the current profile and the KVMem candidate at the same depths.
+
+**Model choice for this machine (2026-09-30).** IQ2_XS is ruled out: shard 1 is 39.2 GB, so
+~16-18 GB of experts must sit in RAM next to the engine's 4 GB headroom, ~1.7 GB of KV at 128K and
+a desktop that already uses ~10 GiB, on 31.25 GiB usable; it would most likely fall back to the
+mapped mode, and a trial would measure SSD reads rather than the resident variant. The Coder
+IQ1_M (shard 1 29.6 GB, ~12 GB of experts in RAM) fits with margin and matches the coding-agent
+workload. The pack needs ~90-100 GB on an NVMe drive (not the rotational HDD). Priority: the
+KVMem agent run (T6) first; the Coder trial is plan B if T6 fails, with the bar set at more than
+45 tok/s at 128K+ fill plus a `bench/longctx_quality.py` pass.

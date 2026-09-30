@@ -66,7 +66,7 @@ Sampling is the Qwen3.8-27B card's own; `--min-p 0.0` is set explicitly because 
 
 - **Qwen3.8-Flash-Next (MoE) trial**: Strata v0.1.30's resident low-RAM variant keeps the
   non-GPU experts in RAM (upstream: fits 32 GB RAM + 24 GB GPU for Q2_0, IQ2_XS, Coder); not
-  measured. Compare tok/s at 128K+ and quality against the KVMem candidate —
+  measured. IQ2_XS too tight on 32 GB RAM; Coder IQ1_M is plan B after the KVMem agent run —
   [strata-flash-next.md](models/strata-flash-next.md).
 - **Compaction and presence penalty A/B**: real agent traffic is 89% generation, ~78% of output is
   reasoning; each compaction re-processes the kept context (median ~83 s). Open: harness compaction
