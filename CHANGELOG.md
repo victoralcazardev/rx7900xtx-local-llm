@@ -12,50 +12,31 @@ All notable changes to this project are documented here. Format follows
 
 ### Changed
 
-- Corrected the host RAM figure: 32 GiB installed, 31.25 GiB usable (was stated as 31 GiB), and
-  estimated KVMem's net host-RAM increase (~+10 GiB). Added a speed-levers summary to
-  `docs/STATUS.md`.
-- Enabled the harness's `compaction.handoffSaveToDisk` and prepared a KVMem trial (pinned source
-  commit, ROCm 10 build plan, fit constraints, protocol and go/no-go criteria). See
-  `docs/ENGINES.md`.
-- Measured harness compaction cost (14 compactions: full re-process of the kept context, median
-  ~83 s to the next turn), checked a third-party compaction/KVMem recommendation claim by claim, and
-  recorded the harness threshold change to 75%. See `docs/measurements/agent-traffic.md` and
-  `docs/SOURCES.md`.
-- Analyzed real coding-agent traffic (2 server logs, 31 harness sessions, 1,301 turns): generation
-  is 89% of server time, reasoning ~78% of output, real MTP acceptance 0.66, tool-call repeats
-  2.6%; the harness base prompt is now ~14.5K tokens (was ~32K). No config change;
-  `--reasoning-effort low` not pursued; compaction-threshold and presence-penalty A/B tests left
-  open. See `docs/measurements/agent-traffic.md`.
-- Analyzed prompt-cache reuse from 7 server logs (~330 coding-agent requests): prefix reuse works,
-  with one known 42.2 s miss mode (FIFO eviction of the base-prompt checkpoint at
-  `--ctx-checkpoints 4`); no config change. Documented llama.cpp PR #29393's expected (unmeasured)
-  effect on the HIP build and the evaluated-but-unusable OrcaSAQ-2-27B quant. See
-  `docs/measurements/memory.md`, `docs/ENGINES.md`, `docs/models/qwen38-27b-quants.md`.
-- Re-tested Vulkan vs. HIP with the GPU memory clock pinned at 1249 MHz (`-ub 512`): pinning
-  nearly doubles Vulkan decode at 64K depth (10.64 → 19.77 tok/s), but HIP still wins tg +63% at
-  depth 0 and +18% at 64K, so the earlier "Vulkan loses because of the memory clock" explanation
-  is only half right. Vulkan stays reference-only, no config change. See
-  `results/20260929-vulkan-mclk-pinned/` and `docs/measurements/engines.md`.
-- Measured the missing spec-off reference at 240K fill on the adopted profile: 11.2 tok/s vs.
-  23.3 with MTP n=3 (**+109%**), correcting the earlier "MTP's gain shrinks at depth" conclusion,
-  which compared against a KV q8_0/q8_0 spec-off baseline (14.9 tok/s on the same engine: V q5_1
-  costs spec-off decode 25%). See `docs/measurements/speculative.md`.
-- Ran the sudoingX/qwen38-mtp community `probe.py` A/B on the adopted profile (empty context):
-  spec-off 37.2 → MTP n=3 68.9 tok/s (+85%); n=2 ties, n=4 and `--spec-draft-p-min` 0.60/0.75
-  lose. Added `bench/probe_ab.py`.
-- Measured MTP n=4 at 240K depth on the exact adopted flags (`-ub 256`): -8% mean tg vs. n=3
-  (21.4 vs. 23.3 tok/s), 66% vs. 71% acceptance — n=3 stays adopted. Also found generated text is
-  not bit-identical across n=2/n=3/`-ub 256` at temperature 0 for essay and code tasks.
-- Re-validated long-context retrieval quality at 240K on the exact adopted server flags (MTP n=3,
-  `-ub 256`, not just the KV q8_0/q5_1 variant, using `bench/longctx_quality.py`'s `--mtp-n`/
-  `--extra` options): 8/8 exact match — cumulative 68/68 exact match, 32K-240K fill.
-- Closed round 4 (speed research at depth for `262k-q8q51-mtp`) with **no config change**:
-  identified the root cause of the long-context decode slowdown (a GQA-6 attention-bandwidth limit
-  in HIP's quantized-KV FlashAttention kernels, reaching only ~24% of peak memory bandwidth) and
-  screened a Vulkan depth re-test, which was inconclusive (unpinned memory clock, `-ub 256`
-  prefill collapse) and not pursued further. See `docs/measurements/depth.md`,
-  `docs/measurements/engines.md`, and `docs/DECISIONS.md`.
+- Corrected host RAM to 32 GiB installed / 31.25 GiB usable; added a speed-levers summary
+  (`docs/STATUS.md`).
+- Enabled harness `compaction.handoffSaveToDisk` and prepared a KVMem trial (`docs/ENGINES.md`).
+- Measured compaction cost (14 compactions, median ~83 s to next turn), checked a third-party
+  compaction/KVMem claim, set the harness threshold to 75% (`docs/measurements/agent-traffic.md`,
+  `docs/SOURCES.md`).
+- Analyzed real agent traffic (1,301 turns): 89% generation, ~78% reasoning, MTP acceptance 0.66,
+  base prompt ~14.5K tokens; no config change (`docs/measurements/agent-traffic.md`).
+- Analyzed prompt-cache reuse (7 logs, ~330 requests): reuse works, one 42.2 s FIFO-eviction miss
+  mode at `--ctx-checkpoints 4`; documented PR #29393 and the unusable OrcaSAQ-2-27B quant
+  (`docs/measurements/memory.md`, `docs/models/qwen38-27b-quants.md`).
+- Re-tested Vulkan with the memory clock pinned: decode nearly doubles at 64K (10.64 -> 19.77
+  tok/s) but HIP still wins +63% at depth 0 and +18% at 64K; no change
+  (`docs/measurements/engines.md`, `results/20260929-vulkan-mclk-pinned/`).
+- Measured spec-off at 240K fill: 11.2 vs. 23.3 tok/s with MTP n=3 (+109%), correcting the
+  "MTP gain shrinks at depth" conclusion (`docs/measurements/speculative.md`).
+- Ran the community `probe.py` A/B (empty context): 37.2 -> 68.9 tok/s (+85%); n=2 ties, n=4 and
+  `--spec-draft-p-min` lose; added `bench/probe_ab.py` (`docs/measurements/speculative.md`).
+- MTP n=4 at 240K on the adopted flags: -8% mean tg vs. n=3, 66% vs. 71% acceptance; output is
+  not bit-identical across n=2/n=3/`-ub 256` at temperature 0 (`docs/measurements/speculative.md`).
+- Re-validated 240K retrieval on the exact adopted flags: 8/8, cumulative 68/68 exact match
+  (`docs/measurements/depth.md`).
+- Closed round 4 (speed at depth) with no config change: root cause is a GQA-6 attention-bandwidth
+  limit in HIP's quantized-KV FlashAttention (~24% of peak); Vulkan depth screen inconclusive
+  (`docs/measurements/depth.md`, `docs/DECISIONS.md`).
 
 ## [2026-09-26]
 
