@@ -1,10 +1,10 @@
 # Engine experiments and watchlist
 
-Prepared-but-not-run trials and upstream items being monitored. Nothing here is adopted; the
+Trials (prepared or run, not adopted) and upstream items being monitored. Nothing here is adopted; the
 builds actually in use, with pinned versions and SHA256, are in [`ENGINES.md`](ENGINES.md), and
 tried-and-not-adopted results are in [`TRIED.md`](TRIED.md).
 
-## KVMem trial (prepared 2026-09-30, not run)
+## KVMem trial (round 1 run 2026-09-30, not adopted)
 
 [kvmem-llama.cpp](https://github.com/kvmem/kvmem-llama.cpp) (paper
 [arXiv:2609.04852](https://arxiv.org/abs/2609.04852)) is a llama.cpp fork with its own
@@ -14,6 +14,30 @@ agent step, retrieves the relevant 128-token KV blocks into a bounded GPU workin
 history. It is the one candidate that could bound decode cost at depth, where the current profile
 drops to ~19-23 tok/s (see `measurements/agent-traffic.md` and `measurements/depth.md`). Claims and
 caveats are checked in [`SOURCES.md`](SOURCES.md#context-length-and-compaction-claims-reviewed-2026-09-30).
+
+**Round 1 outcome (2026-09-30): promising, not adopted; next round pending.** Evidence, exact
+commands and raw data: [`results/20260930-kvmem-trial/`](../results/20260930-kvmem-trial/). Built
+from source at `abe72b38256d` with two local ROCm build fixes (`rocm-build-fix.patch`, not reported
+upstream); `llama-kvmem-server` lacks `/tokenize` and `/completion`, so `bench/depth_bench.py` and
+`bench/longctx_quality.py` could not be used and two chat-API scripts replaced them (steps 3-4
+below were run that way). Single samples; the arms also differ in KV types (q8/q8 vs. q8/q5_1),
+MTP n (2 vs. 3) and `-ub`, so ratios are not a pure KVMem effect.
+
+| Criterion | Result |
+|---|---|
+| Decode at 160K+ at least ~1.3x the current profile | Met: at 244K, 48.6 tok/s (budget 28,672, 2.34x) and 40.2 (budget 49,152, 1.93x) vs. 20.8; VRAM ~15-16 GiB vs. 22.6 GiB |
+| Retrieval 8/8 exact at 240K | Budget 28,672: 7/8 (deterministic miss, needle at token 40,302); 128K 8/8. Budget 49,152: 8/8 |
+| At least ~4 GiB host RAM free at 256K | Met: minimum 6.51 GiB (RSS 9.4 GiB at budget 28,672, 13.1 GiB at 49,152) |
+| Agent run without output-cap failures | Not run (T6) |
+
+Other findings: budget 49,152 crashed once at the end of a 190K prefill (`Memory access fault by
+GPU node-1`, not reproduced); thinking is off by default and needs `--enable-thinking`; MTP
+acceptance is not reported; smoke test 71.5 tok/s at empty context. Blockers before adoption:
+reproduce the crash, run the agent run, and accept the 16,384-token per-turn output cap.
+Third-party context: [`SOURCES.md`](SOURCES.md) (upstream issue #4 on mid-band retrieval collapse).
+
+**Next round (not run)**: reproduce the 49,152 crash; budgets 36,864 and 40,960 at block 128;
+`--kvmem-block-tokens 32`; 3 repeats; MTP n=3; then the agent run.
 
 **Source pinned for the trial**: `kvmem/kvmem-llama.cpp` commit `abe72b38256d` (2026-09-30, source
 version 0.17.0), llama.cpp submodule `7fe450e19305`. The prebuilt ROCm packages are older

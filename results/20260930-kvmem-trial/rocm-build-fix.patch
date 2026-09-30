@@ -1,0 +1,25 @@
+diff --git a/src/adapter/llama-memory-kvmem-mtp.cpp b/src/adapter/llama-memory-kvmem-mtp.cpp
+index 73680cb..0d7bf6d 100644
+--- a/src/adapter/llama-memory-kvmem-mtp.cpp
++++ b/src/adapter/llama-memory-kvmem-mtp.cpp
+@@ -16,7 +16,7 @@
+ #include "ggml-backend.h"
+ #include "ggml-backend-impl.h"
+ 
+-#include <cuda_runtime.h>
++#include "llama-kvmem-gpu.h"
+ 
+ #include <algorithm>
+ #include <cmath>
+diff --git a/llama.cpp/ggml/src/ggml-cuda/vendors/hip.h b/llama.cpp/ggml/src/ggml-cuda/vendors/hip.h
+index 0a2f2829e..a8423824d 100644
+--- a/llama.cpp/ggml/src/ggml-cuda/vendors/hip.h
++++ b/llama.cpp/ggml/src/ggml-cuda/vendors/hip.h
+@@ -73,6 +73,7 @@
+ #define cudaGetDeviceProperties hipGetDeviceProperties
+ #define cudaGetErrorString hipGetErrorString
+ #define cudaGetLastError hipGetLastError
++#define cudaPeekAtLastError hipPeekAtLastError
+ #define cudaHostAlloc hipHostMalloc
+ #define cudaHostAllocPortable hipHostMallocPortable
+ #define cudaHostAllocMapped hipHostMallocMapped
