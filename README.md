@@ -69,73 +69,11 @@ Full evidence and method: [`docs/BENCHMARK-FORMAT.md`](docs/BENCHMARK-FORMAT.md)
 | `--reasoning-effort medium` | `medium` | The card's template default is `xhigh`, which injects "think carefully, validate assumptions, consider alternatives" and tends to overthink; `medium` adds no extra instruction — `models.toml` |
 | `--metrics` | on | Exposes `/metrics` for the persistent token usage ledger — `docs/sop/token-ledger.md` |
 
-<details>
-<summary>Flags we tried and don't recommend</summary>
-
-- **`-ub 1024`/`-ub 2048`** — no speed gain at depth; `-ub 1024` costs +590 MiB VRAM, `-ub 2048`
-  costs +1.8 GiB and is strictly worse (pp -1.7%, code tg -3.6%) — measured at 128K fill, see
-  [`docs/measurements/speculative.md`](docs/measurements/speculative.md#-ub-and-mtp-screening-at-128k-fill-272-w-2026-09-25).
-- **`--spec-draft-n-max 4`** — at 240K fill, on the exact adopted flags (`-ub 256`): 21.4 tok/s
-  mean vs. n=3's 23.3 (-8%), 66% vs. 71% acceptance; also loses at 128K empty-context (45.8 tok/s
-  at 31% acceptance vs. n=3's 60.6 tok/s at 56%) — [`docs/measurements/speculative.md`](docs/measurements/speculative.md#n4-checked-again-at-240k-exact-adopted-flags--ub-256-2026-09-26).
-- **`--spec-draft-p-min 0.3`** (n=2, 128K fill) — within noise of plain n=2; **`0.8`** (n=3, 190K)
-  raises acceptance 67%→96% but not speed; **`0.60`/`0.75`** (n=3, empty context, community `probe.py`) lower speed 68.9→66.2/59.8 tok/s — none adopted — [`docs/measurements/speculative.md`](docs/measurements/speculative.md).
-- **`-ctkd q8_0 -ctvd q8_0`** (quantizing the MTP draft's own KV) — shrinks the draft KV by
-  480 MiB but grows its compute buffer by 1,036 MiB: a net +426 MiB more total VRAM. Kept at the
-  f16 default — [`docs/measurements/memory.md`](docs/measurements/memory.md).
-- **KV `q4_0/q4_0`** — 4x the KLD of `q8_0/q8_0`, the only mix below 98% same-top-1 token —
-  [`docs/measurements/kv-quality.md`](docs/measurements/kv-quality.md).
-- **`-np` > 1** (extra slots) — a slot's own prefill starves generation on the others; queuing
-  through 1 slot beats 2 slots (6-9% faster wall time) and 4 slots (~26% faster) —
-  [`docs/measurements/concurrency.md`](docs/measurements/concurrency.md).
-
-</details>
-
 ## What we tested
 
-- **Backend**: ROCm/HIP is 2-3.5x faster than Vulkan for generation on this system. Vulkan's GPU
-  memory clock drops to 456-772 MHz while generating (ROCm holds 1249 MHz), which explains its
-  collapse at depth, but not the whole gap: with the clock pinned HIP still leads tg +63% at
-  depth 0 and +18% at 64K.
-- **ROCm toolchain**: the ROCm 7.2.4 *compiler* costs -7.5% tg at 16K vs. the ROCm 10.0.0 compiler;
-  the ROCm 10.0.0 *runtime* is 1-2% slower on tg and ~5% on pp (more variance) than the system's
-  ROCm 7.2.4 runtime — kept ROCm 10 compiler + ROCm 7.2.4 runtime.
-- **Weight quant**: `IQ3_S-mtp` (PPL 6.734) ties plain `IQ3_S` and beats `IQ3_XXS-mtp` (PPL 6.948)
-  while accepting more MTP drafts; the HauhauCS and RVN finetunes are larger and slower per byte.
-- **KV cache quant**: `q8_0/q5_1` costs 27% more KLD than `q8_0/q8_0` (still near-lossless) but
-  fits the full 262K context where `q8_0/q8_0` tops out at 240K; `q4_0/q4_0` discarded (4x KLD).
-- **Speculative decoding**: the built-in MTP head at n=3 wins across task types at the real
-  190K/240K operating depths (+9-11% mean tg over n=2); n=4/n=5 lose acceptance, and DFlash2/n-gram
-  alternatives don't beat it at depth.
-- **Context ladder**: pushed from a 200K candidate through 224K/240K (KV `q8_0/q8_0`) to the full
-  native 262K (KV `q8_0/q5_1`), which ended up fitting in less VRAM than 240K.
-- **Concurrency**: 1 slot + MTP with request queuing beats adding `-np` slots — a concurrent slot's
-  prefill starves generation on the others.
-- **Power**: the 272 W cap (this card's driver minimum) costs ~6% prefill speed at depth for a
-  7-8°C cooler hotspot; kept permanently via a systemd unit.
-
-<details>
-<summary>Full experiment log (verified against <code>docs/</code>, one row per area)</summary>
-
-| Area | Variants tested | Result (key numbers) | Verdict | Evidence |
-|---|---|---|---|---|
-| Backend | ROCm/HIP vs. Vulkan (b11160) | ROCm 39 tok/s vs. Vulkan 11-23 tok/s (2-3.5x); Vulkan VRAM clock 772 MHz vs. ROCm 1249 MHz; with the clock pinned, HIP still +63% tg at depth 0, +18% at 64K | ROCm/HIP adopted; Vulkan re-tested with the clock pinned (2026-09-29), stays reference-only | [`docs/measurements/engines.md`](docs/measurements/engines.md) |
-| ROCm toolchain — compiler | 7.2.4 vs. 10.0.0 (own build) | 7.2.4 compiler: tg 33.9 @16K (-7.5%) vs. the ROCm-10-compiler build (36.8-36.9) | ROCm 10.0.0 compiler adopted | [`docs/measurements/engines.md`](docs/measurements/engines.md) |
-| ROCm toolchain — runtime | TheRock 10.0.0 vs. system 7.2.4 runtime (same compiler) | ROCm 10 runtime: -1..-2% tg, ~-5% pp, much higher variance | System 7.2.4 runtime kept | [`docs/measurements/engines.md`](docs/measurements/engines.md), [`results/20260926-rocm-runtime-ab/`](results/20260926-rocm-runtime-ab/) |
-| Weight quant | IQ3_XXS-mtp, IQ3_S, **IQ3_S-mtp**, HauhauCS IQ4_XS, RVN Q4_K_M-mtp, Q4_K_M | PPL 6.948 / 6.734 / **6.734** / 6.823 / 6.710 / 6.639; MTP tg (accept) 56.3 (50%) / — / **62.2 (62%)** / — / 48.2 (55%) / — | `IQ3_S-mtp` adopted — best PPL/MTP trade-off in its size class | [`docs/measurements/kv-quality.md`](docs/measurements/kv-quality.md#weight-quantization-matrix-perplexity-toks) |
-| KV cache quant | f16, q8/q8, q8/q5_1, q8/q4_1, q4_0/q4_0 (KLD vs. f16) | 0 / 0.000587 / 0.000744 (+27%) / 0.001244 (2x) / 0.002450 (4x) | `q8_0/q5_1` adopted at 262K; `q4_0` discarded | [`docs/measurements/kv-quality.md`](docs/measurements/kv-quality.md#kv-cache-quantization-kld-vs-f16) |
-| KVarN (BeeLlama v0.4.7) | q8/q8, q8/q6_0, q8/q5_1, kvarn8/8, kvarn6/6, kvarn5/5 | KLD ~0.0020-0.0022 for KVarN (~2.7x q8/q8 at every bit width); BeeLlama itself -18-22% tg vs. `hip-kvmix` | Rejected; `q8_0/q6_0` near-lossless as a side finding, but BeeLlama-only | [`docs/measurements/kv-quality.md`](docs/measurements/kv-quality.md#beellama-kvarn-kld-2026-09-26) |
-| Context window ladder | 200K/224K/240K KV q8/q8, 262K KV q8_0/q5_1 | 224K: 22.3-25.1 tok/s @ 22,700 MiB; 240K: 22.5-24.4 @ 23,407 MiB; 262K: 18.6-26.9 @ 22,630 MiB | 262K `q8_0/q5_1` adopted — more context in less VRAM than 240K `q8/q8` | [`docs/measurements/depth.md`](docs/measurements/depth.md#context-window-ladder-224k-and-240k-272-w-2026-09-25) |
-| Long-context retrieval quality | RULER-style Spanish multi-key retrieval, 32K-240K fill | **68/68 exact match**, 0 loops (44/44 to 190K + 8/8 @ 220K + 8/8 @ 240K + 8/8 @ 240K on the exact adopted flags) | Validated on the exact adopted profile flags (MTP n=3, `-ub 256`) | [`docs/measurements/depth.md`](docs/measurements/depth.md#quality-ruler-style-200k-q8q8-mtp) |
-| Speculative decoding | none, MTP n=2/3/4/5, `--spec-draft-p-min` 0.3/0.6/0.75/0.8, DFlash2, n-gram stacking | n=3 vs. none: +109% at 240K fill (23.3 vs. 11.2), +85% at empty context (68.9 vs. 37.2); n=3 +9-11% mean tg over n=2 at 190K/240K; n=4 21.4 @ 66% accept vs. n=3's 23.3 @ 71% (240K, exact adopted flags), also 45.8 @ 31% vs. 60.6 @ 56% (128K); p-min 0.8 raises accept 67%→96% but not speed; DFlash2 slower on 2 of 3 tasks at 190K | MTP n=3 adopted | [`docs/measurements/speculative.md`](docs/measurements/speculative.md) |
-| Physical batch | `-ub` 256/512/1024/2048 | 256: -350 MiB, pp -5%, same tg (262K profile); 1024: +590 MiB, no gain; 2048: +1.8 GiB, pp -1.7%, code tg -3.6% (128K screening) | `-ub 256` adopted at 262K; default (512) stays best at 128K fill | [`docs/measurements/memory.md`](docs/measurements/memory.md), [`docs/measurements/speculative.md`](docs/measurements/speculative.md#-ub-and-mtp-screening-at-128k-fill-272-w-2026-09-25) |
-| Concurrency | 1/2/4 slots (`-np`) | vs. queuing through 1 slot: 2 slots +MTP 8.6% slower wall time, 2 slots no MTP 6.0% slower, 4 slots 25.6% slower | 1 slot + MTP + queue adopted | [`docs/measurements/concurrency.md`](docs/measurements/concurrency.md#1-vs-2-vs-4-slots-mtp-onoff-2026-09-25) |
-| Power cap | 303 W vs. 272 W | Prefill -6% (487→459 tok/s) at 190K; hotspot 100-106°C→99°C; tg128 ~-3.4% at empty context (39.35→38.0, single uncontrolled sample) | 272 W adopted as the permanent cap | [`docs/measurements/thermals-power.md`](docs/measurements/thermals-power.md), [`results/20260925-longctx-quality-200k/`](results/20260925-longctx-quality-200k/) |
-| Engine patches/forks | `kvmix-vec4`, `stew675/llama-cpp-rdna-boosts` (native q8 KV), Lemonade b1331/b1332, nasone32, exllamav3-rocm | vec4 +20% ms/step (worse); rdna-boosts -2.5% ms/step; Lemonade's build doesn't enable the FA quant kernels this needs; nasone32 targets a different arch/depth; exllamav3-rocm audited clean but deprioritized (15.3 GB model, less VRAM headroom, author's own numbers not comparable) | None adopted | [`docs/measurements/speculative.md`](docs/measurements/speculative.md), [`docs/ENGINES.md`](docs/ENGINES.md), [`docs/SOURCES.md`](docs/SOURCES.md) |
-| Vision (`mmproj`) | on vs. off at long context | VRAM/context cost not worth it at 200K+ | Off by default at 262K | [`docs/DECISIONS.md`](docs/DECISIONS.md) |
-| Prompt-cache checkpoints | `--ctx-checkpoints` default (32) vs. 4 | Warm-turn reuse observed regardless (189,467 of 190,000 tokens reused across a task switch) | Kept at 4 — bounds RAM (270-515 MiB per checkpoint measured); prompt-cache log analysis found one 42 s miss mode, see [`memory.md`](docs/measurements/memory.md#prompt-cache-reuse-and-context-checkpoints-2026-09-29) | [`docs/measurements/engines.md`](docs/measurements/engines.md), [`docs/measurements/speculative.md`](docs/measurements/speculative.md#ab-at-190k--c-204800-kv-q8q8-kvmix-vs-vec4-mtp-n2) |
-
-</details>
+Backend (ROCm/HIP beats Vulkan 2-3.5x on generation), toolchain, weight and KV quantization,
+speculative decoding, context ladder, concurrency, power cap and rejected flags/forks are all
+listed with numbers and evidence links in [`docs/TRIED.md`](docs/TRIED.md).
 
 ## Tested setup
 
@@ -357,6 +295,7 @@ rx7900xtx-local-llm/
 | Doc | What it has |
 |---|---|
 | `docs/STATUS.md` | Current recommended profile, key figures, open questions |
+| `docs/TRIED.md` | Everything tried and not adopted, with numbers and evidence links |
 | `docs/DECISIONS.md` | Append-only decision log with evidence links |
 | `docs/SOURCES.md` | External claims checked against this repository's own measurements |
 | `docs/hardware/`, `docs/models/`, `docs/ENGINES.md` | GPU/driver specs, model/quant provenance, llama.cpp build inventory |

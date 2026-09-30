@@ -110,37 +110,7 @@ See [`measurements/agent-traffic.md`](measurements/agent-traffic.md).
 
 ## Tried and not adopted
 
-- **ROCm 10.0.0 runtime libraries** (TheRock, compiler kept at ROCm 10) — 1-2% slower tg, ~5%
-  slower pp, higher variance vs. the system ROCm 7.2.4 runtime. See
-  [`measurements/engines.md`](measurements/engines.md).
-- **BeeLlama v0.4.7 + KVarN KV cache** — KVarN's KLD is ~2.7x q8/q8's at every bit width; BeeLlama
-  itself is ~18-22% slower than `hip-kvmix`. See
-  [`measurements/kv-quality.md`](measurements/kv-quality.md).
-- **DFlash2 speculative decoding** — slower than MTP n=2 at 190K on most task types, and uses more
-  VRAM. See [`measurements/speculative.md`](measurements/speculative.md).
-- **KV `q4_0/q4_0`** — 4x the KLD of q8/q8, the only mix below 98% same-top-1 token.
-- **`kvmix-vec4` patch** — +20% ms/step at depth vs. plain `kvmix`.
-- **`stew675/llama-cpp-rdna-boosts` fork** — only -2.5% ms/step, not worth maintaining a fork.
-- **More than 1 concurrent slot** — a slot's long prefill starves generation on the others; 1 slot
-  + MTP with request queuing beats adding `-np` slots end-to-end. See
-  [`measurements/concurrency.md`](measurements/concurrency.md).
-- **MTP n=4** and **`--spec-draft-p-min`** — n=4 loses acceptance vs. n=2/n=3; p-min raises
-  acceptance but not speed at any depth measured, and at empty context 0.60/0.75 lower it
-  (68.9 → 66.2/59.8 tok/s at n=3).
-- **`-ub 1024`/`-ub 2048`** — no speed gain at depth, cost 590 MiB/1.8 GiB more VRAM.
-- **Vision at 200K+ context** — VRAM/context cost not worth it at this depth.
-- **exllamav3-rocm** (+ patched TabbyAPI) — not pursued: a read-only audit found no code or
-  license blocker, but lower priority than the other candidates and the 15.3 GB EXL3 model leaves
-  less VRAM headroom. See `docs/ENGINES.md`/`docs/SOURCES.md`.
-- **GPU power-limit/undervolt tuning beyond the permanent 272 W cap** — deprioritized. See
-  `docs/DECISIONS.md`.
-- **Round 4 speed-research candidates, gains <5% or blocked by VRAM/context** (2026-09-26, no
-  measurement run for any of these): cherry-picking llama.cpp PR #29393 outside a regular engine
-  update; `--spec-draft-p-min 0.5` / `--spec-draft-n-min`; the fork's adaptive MTP
-  (`draft-mtp-adaptive` — upstream PR #27210's author advises against adaptive below draft depth
-  7); `-ub 384`; a 290/303 W power cap (303 W pushes the deep-prefill hotspot to 100-106°C, over
-  the 104°C bench ceiling); building ik_llama.cpp. See
-  [`measurements/depth.md`](measurements/depth.md#why-decode-slows-with-depth-attention-bandwidth-2026-09-26-round-4).
+Moved to [`TRIED.md`](TRIED.md).
 
 ## Next steps
 
