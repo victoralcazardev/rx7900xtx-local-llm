@@ -2,6 +2,8 @@
 
 ## Current conclusion
 
+Headline numbers and the adopted flags: [`../STATUS.md`](../STATUS.md).
+
 - **MTP `--spec-draft-n-max 3` is the adopted default at depth (2026-09-26)**: confirmed at both
   long-context profiles' real operating fill, it wins across all three task types, +9% mean tg at
   190K (`224k-q8q8-mtp`, removed 2026-09-26) and +11% at 240K (`262k-q8q51-mtp`, the current
@@ -13,18 +15,12 @@
   substantially (67%→96%) but **not speed** — not adopted on its own.
 - **At depth, MTP's gain over no speculation grows, it does not shrink (corrected 2026-09-27)**:
   on the adopted profile at 240K fill, spec-off decodes at 11.2 tok/s and MTP n=3 at 23.3
-  (**+109%**), vs. +85% at empty context on the same profile. The earlier "+15-50% at depth"
-  reading compared against a KV q8_0/q8_0 spec-off baseline; spec-off with the adopted V q5_1 is
-  25% slower than with V q8_0 at 240K (11.2 vs. 14.9 tok/s), so that baseline flattered spec-off.
+  (**+109%**), vs. +85% at empty context on the same profile.
   See "MTP vs. spec-off at 240K fill" below.
 - **Community `probe.py` A/B, empty context, 262K profile (2026-09-27)**: spec-off 37.2 → n=2
   68.6 / **n=3 68.9** / n=4 66.9 tok/s (n=2 and n=3 tie within noise); `--spec-draft-p-min`
   0.60/0.75 raises acceptance (0.72 → 0.85/0.91) but lowers speed (66.2/59.8). See "Community
   probe A/B at 262K" below.
-- **Older finding, empty context**: before the depth-specific measurements above, `--spec-draft-n-max
-  2` looked like the best overall option and used the least VRAM: no separate draft model needed,
-  the head ships inside the GGUF (`-mtp`). With an empty context: **+50-60%** generation speed
-  (39 → 58-69 tok/s depending on task). Superseded at depth by n=3 (above).
 - **DFlash2 does not beat MTP** once measured at depth (190K): slower on two of three task types,
   ties on the third, and costs more VRAM. A third-party claim that DFlash2 wins at all depths on a
   different GPU (RTX 3090) does not reproduce here.
@@ -32,11 +28,6 @@
   +6%) and hurt on reasoning (−8%); not adopted without repeated measurement. The A/B on the
   adopted n=3 profile is prepared but not run — see "n-gram stacked on MTP: how llama.cpp
   combines them" below.
-- **MTP n=3, first measured at 128K fill (272 W)**: strongly content-dependent — +17% on literal
-  copy, ≈ on code, small essay gain — but acceptance drops 11 points vs. n=2 (75% → 64%). At that
-  depth it was **not adopted** as the default (later superseded — see above).
-  `--spec-draft-p-min 0.3` is within noise of plain n=2 at the same depth — not adopted. See
-  "`-ub` and MTP screening at 128K fill" below.
 - The **root cause of MTP's depth slowdown is identified but not fully explained**: verifying ≥3
   tokens per step (MTP n≥2) routes through the FlashAttention TILE kernel, which converts the whole
   KV cache to f16 on every step; a fork that removes that conversion only recovered ~2.5% of the
@@ -444,3 +435,16 @@ Raw data: [`../../results/20260927-depth-240k-none-vs-n3/`](../../results/202609
 - **2026-09-29**: read how llama.cpp combines n-gram drafting with MTP (fixed priority, no gating,
   `--spec-draft-n-max` does not cap ngram-mod) and prepared the n=3 ngram-mod/ngram-map A/B; not
   run.
+- **2026-09-30, moved from "Current conclusion"** (superseded statements, kept for the record):
+  - Older finding, empty context (superseded at depth by n=3): before the depth-specific
+    measurements, `--spec-draft-n-max 2` looked like the best overall option and used the least
+    VRAM: no separate draft model needed, the head ships inside the GGUF (`-mtp`). With an empty
+    context: **+50-60%** generation speed (39 → 58-69 tok/s depending on task).
+  - MTP n=3, first measured at 128K fill (272 W): strongly content-dependent — +17% on literal
+    copy, ≈ on code, small essay gain — but acceptance drops 11 points vs. n=2 (75% → 64%). At
+    that depth it was **not adopted** as the default (later superseded by the 190K/240K
+    confirmation). `--spec-draft-p-min 0.3` is within noise of plain n=2 at the same depth — not
+    adopted. See "`-ub` and MTP screening at 128K fill" above.
+  - The earlier "+15-50% at depth" reading of MTP's gain compared against a KV q8_0/q8_0 spec-off
+    baseline; spec-off with the adopted V q5_1 is 25% slower than with V q8_0 at 240K (11.2 vs.
+    14.9 tok/s), so that baseline flattered spec-off (corrected 2026-09-27).

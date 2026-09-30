@@ -2,38 +2,28 @@
 
 ## Current conclusion
 
-**Profile: `262k-q8q51-mtp`** (`models.toml`) — recommended daily long-context default
-(`scripts/launch.py`'s default when no alias is given): engine `hip-kvmix`, `-c 262144`, KV
-q8_0/q5_1, MTP n=3, `-ub 256`, vision disabled, measured under a 272 W power cap (this card's
-driver minimum — see `thermals-power.md`).
+**Profile: `262k-q8q51-mtp`** (`models.toml`) — the daily long-context default
+(`scripts/launch.py`'s default when no alias is given); current profile, flags and headline
+numbers live in [`../STATUS.md`](../STATUS.md).
 
 - **18.6-26.9 tok/s at 240K fill** across three task types (essay/copy/code, temperature 0),
   process VRAM peak **22,630 MiB**, 0 evicted. See "MTP n=3 confirmed at depth" and "`-ub 256`" in
   `speculative.md`/`memory.md`, and
   [`../../results/20260926-mtp-n3-depth/`](../../results/20260926-mtp-n3-depth/),
   [`../../results/20260926-ubatch256-262k/`](../../results/20260926-ubatch256-262k/).
-- **`224k-q8q8-mtp` was the alternative profile** (`-c 229376`, KV q8_0/q8_0, MTP n=3,
-  `-ub 512` default): 21.4-32.2 tok/s at 190K fill, process VRAM peak 22,883 MiB. **Removed
-  2026-09-26** from `models.toml` — one best default, no overlapping alternatives (see
-  `docs/DECISIONS.md`); the measurement stands as evidence.
 - **Long-context quality validated up to 240K fill (68/68 exact match total)**: 52/52 up to 220K
   (see below) plus 8/8 at 240K on the adopted `262k-q8q51-mtp` profile (KV q8_0/q5_1) — the +27%
   KLD of q8_0/q5_1 over q8_0/q8_0 does not show up as a retrieval error at this depth — plus a
   further 8/8 at 240K re-run on the *exact* adopted server flags (MTP n=3, `-ub 256`, not just the
   KV variant). See "Quality (RULER-style)" below.
-- The `200k-q8q8-mtp` and `240k-q8q8-mtp` profiles were **removed from `models.toml`**: 262K
-  q8_0/q5_1 now gives more context than either at the same validated quality and less process VRAM
-  than 240K q8/q8 (see "Context-window ladder" below).
-- **System VRAM margin depends on the desktop's own usage, not just the profile**: a corrected
-  reading found only ~0.2-0.3 GiB of total system headroom across every long-context configuration
-  measured on 2026-09-26 (vs. the ~1.8 GiB figure below, measured with a lighter desktop) — see
-  `memory.md`. Close heavy GPU applications (video players, browsers with GPU video) before
+- **System VRAM margin depends on the desktop's own usage, not just the profile**: only ~0.2-0.3
+  GiB of total system headroom across every long-context configuration measured on 2026-09-26 —
+  see `memory.md`. Close heavy GPU applications (video players, browsers with GPU video) before
   long-context work, regardless of profile.
-- All of the above is measured under the 272 W power cap adopted after a 303 W run overheated
-  (see `thermals-power.md`) — about 6% slower prefill than the older 303 W measurements at a
-  comparable depth, with more thermal margin (hotspot 98-101°C vs. 100-106°C at 303 W). The 303 W
-  figures elsewhere in this file are kept as historical data points (different power policy, not
-  a correction — see `docs/STYLE.md` §7), not superseded.
+- Everything current is measured under the 272 W power cap (see `thermals-power.md`); the 303 W figures elsewhere in this file are
+  historical data points (different power policy), not corrections — see `docs/STYLE.md` §7.
+- Older profiles (`224k-q8q8-mtp`, `200k-q8q8-mtp`, `240k-q8q8-mtp`) were removed from
+  `models.toml`; their measurements stand as evidence — see "History" below.
 
 ## Why decode slows with depth: attention bandwidth (2026-09-26, round 4)
 
@@ -378,3 +368,15 @@ default profile actually launches with — closing the gap left by the n=2/no-`-
   Vulkan depth screen and several other candidates were evaluated; none cleared the adoption bar
   or were measurable without extra VRAM/context cost. **Closed with no config change** — see
   `docs/DECISIONS.md` and `docs/STATUS.md`.
+- **2026-09-30, moved from "Current conclusion"** (superseded statements, kept for the record):
+  - `224k-q8q8-mtp` was the alternative profile (`-c 229376`, KV q8_0/q8_0, MTP n=3, `-ub 512`
+    default): 21.4-32.2 tok/s at 190K fill, process VRAM peak 22,883 MiB. Removed 2026-09-26 from
+    `models.toml` — one best default, no overlapping alternatives (see `docs/DECISIONS.md`).
+  - The `200k-q8q8-mtp` and `240k-q8q8-mtp` profiles were removed from `models.toml`: 262K
+    q8_0/q5_1 gives more context than either at the same validated quality and less process VRAM
+    than 240K q8/q8 (see "Context-window ladder").
+  - A corrected reading found ~0.2-0.3 GiB of system VRAM headroom, versus the ~1.8 GiB figure
+    measured earlier with a lighter desktop.
+  - The 272 W cap was adopted after a 303 W run overheated: about 6% slower prefill than the
+    older 303 W measurements at a comparable depth, with more thermal margin (hotspot 98-101°C vs.
+    100-106°C at 303 W).

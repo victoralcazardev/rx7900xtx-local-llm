@@ -2,25 +2,20 @@
 
 ## Current conclusion
 
-- Sustained load at the factory 303 W power limit stays well inside the card's critical limits, but
-  long prefills at depth push the hotspot to 100-106°C, leaving as little as 4°C of margin before
-  the firmware begins limiting frequency at 110°C (the junction critical limit — see the sensor
-  table below). Nothing in this session's measurements exceeded a safe operating range, but
-  there's little headroom left during long prefills.
-- **2026-09-25**: a 190K-depth prefill at the factory 303 W limit reached hotspot 106°C and was
-  stopped by the operator (see `depth.md`'s quality test). Project preference from this point on:
-  keep the hotspot well below ~105°C in unattended runs. Deep-prefill tests (128K+) now run under a
-  272 W power cap (this card's driver minimum — see "Power limit" below).
-- **272 W vs. 303 W at 190K, now measured** (see "272 W vs. 303 W at 190K" below): prefill is
-  **~6% slower** (459 vs. 487 tok/s) and the hotspot peaks **7-8°C cooler** (99°C vs. 100-106°C).
-  **272 W is kept as the permanent power cap**, not just for deep-prefill tests — the thermal
+- **272 W (this card's driver minimum; stock 303 W) is the permanent power cap**, applied at boot
+  by a systemd oneshot unit — procedure in "Power limit" below (or the standalone SOP, once
+  split out). Headline numbers: [`../STATUS.md`](../STATUS.md).
+- **272 W vs. 303 W at 190K** (see "272 W vs. 303 W at 190K" below): prefill is **~6% slower**
+  (459 vs. 487 tok/s) and the hotspot peaks **7-8°C cooler** (99°C vs. 100-106°C). The thermal
   margin is worth more than the throughput at this depth.
-- **272 W is now set via a systemd oneshot unit** (see "Power limit" below) instead of a manual
-  per-boot command, so it survives a reboot without the operator remembering to re-run anything.
-- Care for the GPU (lower power limit, undervolt) is **explicitly deprioritized** as a standalone
-  work item — the priority ordering is context > model quality > cache quality > speed — but the
-  190K/106°C event above makes a conservative, permanent power cap the working default, not a
-  broader tuning effort.
+- The reason for the cap: at the factory 303 W limit, long prefills at depth push the hotspot to
+  100-106°C, leaving as little as 4°C before the firmware begins limiting frequency at 110°C (the
+  junction critical limit — see the sensor table below).
+- Project preference: keep the hotspot well below ~105°C in unattended runs; the bench scripts
+  abort after 3 consecutive readings above 104°C by default.
+- Care for the GPU (undervolt, broader tuning) is explicitly deprioritized as a standalone work
+  item — the priority ordering is context > model quality > cache quality > speed; the permanent
+  cap is the working default, not a tuning effort.
 
 ## Sustained-load temperatures (ROCm and Vulkan, 303 W)
 
@@ -175,3 +170,12 @@ journalctl -u gpu-power-cap
   systemd oneshot unit instead of a manual per-boot command; `check_power_cap` hardened to check
   every AMD card instead of just the first glob match, and to warn instead of crash on an invalid
   `BENCH_EXPECT_POWER_CAP_W` (see `bench/depth_bench.py`).
+- **2026-09-30, moved from "Current conclusion"** (state before the 272 W decision, kept for the
+  record): sustained load at the factory 303 W power limit stays well inside the card's critical
+  limits, but long prefills at depth push the hotspot to 100-106°C, leaving as little as 4°C of
+  margin before the firmware begins limiting frequency at 110°C. Nothing in that session's
+  measurements exceeded a safe operating range, but there was little headroom left during long
+  prefills. On 2026-09-25 a 190K-depth prefill at 303 W reached hotspot 106°C and was stopped by
+  the operator (see `depth.md`'s quality test); deep-prefill tests (128K+) then ran under a 272 W
+  cap, and the cap was later made permanent and set via a systemd oneshot unit instead of a manual
+  per-boot command.
