@@ -131,7 +131,7 @@ Community claims reviewed 2026-09-26 (`docs/SOURCES.md`) surfaced four candidate
 
 ## KVMem trial (prepared 2026-09-30, not run)
 
-Moved to [`ENGINES-EXPERIMENTS.md`](ENGINES-EXPERIMENTS.md#kvmem-trial-prepared-2026-09-30-not-run).
+Moved to [`ENGINES-EXPERIMENTS.md`](ENGINES-EXPERIMENTS.md#kvmem-trial-round-1-run-2026-09-30-not-adopted).
 
 ## Upstream watchlist (2026-09-29)
 
