@@ -118,6 +118,13 @@ with `q8_0`/`q5_1` stays the chosen quality/context trade-off.
     CPU + 125 W stays well under the 850 W PSU.
   - **GTX 950** (Maxwell): not considered; outside the current NVIDIA driver branch (not verified
     against a release note).
+- **Measured 2026-09-30** (KDE Plasma Wayland, two 1920x1080@60 monitors on HDMI + DP, light
+  apps: Chrome, Slack, an Electron messenger, Spotify, Telegram): without the model the card uses
+  834 MiB of VRAM (+1,228 MiB GTT); with `262k-q8q51-mtp` loaded and an empty context,
+  `llama-server` holds 21,716 MiB (fdinfo) of 22,700 MiB used, so the desktop takes ~984 MiB and
+  1,860 MiB are free. The launcher expects the profile to reach 22.2 GiB at full context, leaving
+  ~0.8 GiB. Per-process `drm-memory-vram` sums (~3.9 GiB) over-count shared buffers; use the
+  sysfs `mem_info_vram_used` difference instead.
 - **Order**: first measure how much VRAM the desktop takes on the 7900 XTX (fdinfo /
   `amdgpu_top`) with the model loaded; add a display card only if it is more than ~1 GiB or the
   KWin incident recurs. Try the HD 6450 first (same driver stack); move to the 1660 SUPER if the
