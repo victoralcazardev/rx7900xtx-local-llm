@@ -72,3 +72,37 @@ contradicts an earlier conclusion supersedes it: update the "current conclusion"
 top of the relevant doc, and move the previous conclusion to a dated history section below,
 with a link to the new evidence. The old data point stays visible and dated — it is superseded,
 not deleted.
+
+## 8. Documentation workflow
+
+Every fact has **one owner**: the single file where it is written in full. Other files link to the
+owner instead of restating it. The README headline table is the only sanctioned mirror, of STATUS.
+
+### Where new information goes
+
+| What you have | Owner | Also update |
+|---|---|---|
+| A new measurement run | `results/YYYYMMDD-topic-variant/README.md` (what, exact command, versions, conclusion) plus raw data | One row in `results/INDEX.md`; the conclusion in the topic doc under `docs/measurements/` |
+| A conclusion about a topic | `docs/measurements/<topic>.md` "Current conclusion" | STATUS only if the recommendation or a headline number changes |
+| A change to the recommended profile or a policy | `models.toml` and `docs/STATUS.md` | One appended row in `docs/DECISIONS.md` |
+| Something tried that lost or was set aside | One row in `docs/TRIED.md` (item, key numbers, evidence link) | One appended row in `docs/DECISIONS.md` |
+| A third-party claim (issue, post, paper, model card) | One row in `docs/SOURCES.md` with its status: verified, hypothesis or refuted | The topic doc, if it changes a conclusion |
+| An engine build | `docs/ENGINES.md` | STATUS if it becomes the adopted engine |
+| A candidate or trial not yet adopted | `docs/ENGINES-EXPERIMENTS.md` (engines) or an open question in STATUS | — |
+| A repeatable procedure | `docs/sop/<task>.md` | The README docs map, if it is new |
+| A user-visible change | One line in `CHANGELOG.md` ending with the owner's path | — |
+| Plans, scratch notes, task checklists | `odd/` (git-ignored) | — |
+
+### Keeping docs small
+
+- A "Current conclusion" block states only what is current, in at most ~10 bullets. When a newer
+  result supersedes a bullet, move the bullet to that doc's dated "History" section (§7).
+- "Open questions" lists only open items. When one is answered, remove it and link the answer
+  from the owner doc.
+- Word budgets: `README.md` ≤ 1,000; `AGENTS.md` ≤ 900; `docs/STATUS.md` ≤ 1,000;
+  `docs/TRIED.md` ≤ 1,200. A measurement doc that passes ~5,000 words gets split by sub-topic
+  into a new doc, with a pointer section left under the old heading.
+- Moving a section keeps its old heading as a one-line pointer, so existing anchors keep working.
+- Before committing documentation, grep for the numbers you changed (`git grep -n "<number>"`)
+  and fix or link every other copy.
+

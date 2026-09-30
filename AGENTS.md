@@ -1,89 +1,80 @@
 # rx7900xtx-local-llm
 
-Config + docs for running long-context LLMs locally on an **AMD Radeon RX 7900 XTX (24 GB,
-RDNA3, gfx1100)** via `llama-server`, on Linux (Vulkan/ROCm) and, where noted, on Windows.
+Config, launcher, benchmarks and measurement write-ups for running long-context LLMs on an **AMD
+Radeon RX 7900 XTX (24 GB, RDNA3, gfx1100)** with `llama-server` (ROCm/HIP; Vulkan as reference).
 
-**Start here: read `docs/STATUS.md` for the current state** (profile, numbers, flags, open
-questions). Doc map: `README.md`; tried and rejected: `docs/TRIED.md`.
+## Start here
 
-**Reply in the user's language in chat; every file in this repository is written in English**
-(code, comments, docs, CLI help, program output). See `docs/STYLE.md`.
+| Read | When |
+|---|---|
+| `docs/STATUS.md` | Every task: current profile, headline numbers, flag rationale, open questions |
+| `docs/STYLE.md` §8 | Before writing or moving any doc, result or finding |
+| `docs/TRIED.md` | Before proposing a flag, engine, quant or setting: it may already have lost |
+| `docs/DECISIONS.md` | Before changing the profile, `models.toml` or a documented policy |
+| `docs/sop/` | Launching, adding a model, updating the engine, measuring a backend, power cap |
+| `docs/measurements/<topic>.md` | Detailed evidence behind a number in STATUS |
 
-**Personal machine paths and one-off/exploratory material do not belong here.** Only content
-another RX 7900 XTX owner can reuse or verify gets published: config, launcher, benchmark
-scripts and measurement write-ups with pinned versions and reproducible commands.
+## Repository rules
 
-- Requires **Python 3.11+**; scripts use the standard library, except `scripts/gguf_info.py`
-  (needs `gguf`) and optional PyYAML for YAML harness targets in `scripts/check-sync.py`.
-  Use `python3` everywhere.
-- `CLAUDE.md` is a symlink to `AGENTS.md`. Always edit `AGENTS.md`; never touch `CLAUDE.md`.
-- `models.toml` is the single source of truth for models, profiles, sampling and flags.
-  `local.toml` (git-ignored, from `local.example.toml`) sets `models_root` and per-backend engine
-  binaries. Weights are not in the repository.
+- Chat replies follow the user's language; every file in this repository is English (code,
+  comments, docs, CLI help, program output, commit messages).
+- Publish only what another RX 7900 XTX owner can reuse or verify: config, launcher, benchmark
+  scripts, and write-ups with pinned versions and reproducible commands. Personal machine paths
+  and one-off notes stay local (`odd/`, `_tmp/` and `local*.toml` are git-ignored).
+- `models.toml` is the single source of truth for models, profiles, sampling and flags;
+  `local.toml` (from `local.example.toml`) holds `models_root` and the engine binaries.
+- `CLAUDE.md` is a symlink: edit `AGENTS.md`.
+- Python 3.11+, standard library only, except `scripts/gguf_info.py` (`gguf`) and optional PyYAML
+  for YAML harness targets in `scripts/check-sync.py`. Use `python3`.
+- Engine builds are single-backend: one Vulkan binary and one ROCm/HIP binary. A build with both
+  routes MTP to ROCm0 and disables it (llama.cpp #23199).
 
-## Operate
+## Commands
 
-- Launch: `python3 scripts/launch.py <alias> [--profile P] [--dry-run] [--background]` (`docs/sop/`).
-- Consistency: `python3 scripts/check-sync.py` (manifest vs. GGUFs, context ≥ 128K, K/V support;
-  a backend without an engine in `local.toml` is only a WARNING; an optional `[harness]` table
-  also checks the `local-262k` provider).
-- Smoke test: `python3 scripts/smoke.py <alias> [--profile P]`.
+- Launch: `python3 scripts/launch.py [alias] [--profile P] [--dry-run] [--background]`.
+- Manifest check: `python3 scripts/check-sync.py`. Smoke test: `python3 scripts/smoke.py <alias>`.
 - GGUF metadata: `python3 scripts/gguf_info.py <path-or-folder>`.
-- **Before every push**: `python3 scripts/check-repo.py` (links, files > 1 MiB, personal paths,
-  secrets, Spanish leftovers).
-- Tests: `python3 -m unittest discover -s tests -v` (stdlib, no GPU/server/network; CI also runs
-  `check-repo.py` and `check-sync.py`; see `tests/`).
-- New model: `docs/sop/new-model.md`. Engine update or backend choice:
-  `docs/sop/update-engine.md`, `docs/sop/measure-backend.md`.
-- **Single-backend engine builds only**: one Vulkan binary and one ROCm/HIP binary, **never one
-  compiled with both** (llama.cpp #23199: with both, MTP is routed to ROCm0 and ends up disabled).
+- Done means both pass: `python3 scripts/check-repo.py` and
+  `python3 -m unittest discover -s tests` (stdlib, no GPU, server or network). CI runs the same.
+
+## Model and flag rules
+
+- **Check the vendor's model card on Hugging Face before configuring a model**, even when another
+  quant of it is already configured: sampling, native context, thinking format and variant
+  requirements come from there. The card's sampling wins over `general.sampling.*` in the GGUF and
+  over values copied from another model (that has gone wrong twice). If card and GGUF disagree,
+  follow the card and note the discrepancy in the config comment.
+- Set only what the vendor states. A key the card doesn't mention (e.g. `top_p`) stays unset.
+  Reasoned exception: `--min-p 0.0`, because llama.cpp defaults to `0.05` and vendors test
+  without min-p.
+- A flag belongs in the config only if it changes the default of **the exact binary you will
+  run**: check its `--help` (defaults drift between llama.cpp versions and between backends), and
+  verify every flag there before copying it from another build.
+- Thinking: leave `--reasoning-format` at its default `auto`. Add `--reasoning-budget` only after
+  observing empty `content` with `finish_reason: length`.
+- `-c` matches the context window the harness expects for that provider; recompute per model with
+  `--fit on --fit-target <N>`.
+- Quantized KV (`q8_0`, `q4_0` or the mixed pairs the engine supports) is the default policy;
+  re-verify parity against `f16` per backend.
+- A config is good when real inference works, not when the model loads.
+- Measure `--mlock` before using it: it has been reported to freeze a Windows host under memory
+  pressure (MoE model, small-VRAM card).
+
+## Evidence discipline
+
+- A research subagent's summary is a hypothesis. Verify each citation against the primary source
+  before recording it as established; an agent once attributed claims to llama.cpp issues that
+  did not say them.
+- If a measurement in `docs/` contradicts what you observe, re-measure before building on it; a
+  stale number has supported a wrong recommendation before.
+- If a request conflicts with a rule here, say so and propose the alternative.
+- When the user corrects a behavior that a rule should have prevented, fix the rule here or in
+  `docs/STYLE.md` in the same change.
+- When compacting context, keep: the task file path, commands run with their results, and every
+  measured number with its unit and conditions.
 
 ## Coding-agent harness (optional)
 
-Any harness reading an OpenAI-compatible `baseUrl` + `contextWindow` list should have exactly one
-fixed `local-262k` entry (contextWindow 262144) on the configured port (`[defaults].port`, 8080 if
-absent); `launch.py` decides which alias is loaded. `check-sync.py` verifies this only when
-`local.toml` has a `[harness]` table.
-
-## What still holds, regardless of hardware
-
-- **Always check the vendor's model card on Hugging Face before configuring a model**, even if
-  another quant of the same model is already configured. That is where the recommended sampling,
-  native context, thinking format and any variant-specific requirement (QAT/instruct/thinking)
-  come from. **The vendor's sampling wins** over whatever is baked into the GGUF
-  (`general.sampling.*`) and over copying it from another model — that has gone wrong twice.
-  **What the vendor doesn't say, don't set.** If the card doesn't mention `top_p`, leave it
-  unset (setting it to the binary's default would be a default disguised as a recommendation).
-  Reasoned exception: `--min-p 0.0`, because llama.cpp's default is `0.05` and almost no vendor
-  tunes for min-p, so turning it off **is** a deliberate change from default that reflects what
-  the vendor tested. If the card and the GGUF metadata disagree, the card wins; note the
-  discrepancy in the config comment.
-- **Only set a flag if it changes something relative to the binary's default.** Check the default
-  in `llama-server --help` **of the exact binary you're about to run** — defaults drift between
-  llama.cpp versions and between backends (Vulkan vs. ROCm/HIP), so re-verify per engine build.
-- **Thinking: do not set `--reasoning-format`.** The default `auto` detects the template's format
-  and already returns `reasoning_content` correctly for most models. **`--reasoning-budget` only
-  with evidence**, never as a habit: set it where you've actually seen empty `content` with
-  `finish_reason: length`.
-- **`-c` must match the context window your harness (if any) expects for that provider.** There
-  is no universal default: recompute per model with `--fit on --fit-target <N>`, don't guess.
-- **Quantized KV** (`q8_0`/`q4_0`, or the mixed K/V combinations your engine build supports) is
-  the default policy; re-verify parity against `f16` per backend before trusting it blindly.
-- **Never trust that a model "loads"** as proof a config is good: test real inference.
-- **`--mlock`**: measure before using it. It has been reported to freeze a Windows host under
-  memory pressure with a MoE model on a small-VRAM card; verify on your own hardware first.
-- **Verify every flag against the real `--help` of the binary you're using** — never copy a flag
-  list from a different engine build or backend without re-checking.
-
-## Lesson learned
-
-**A research subagent's summary is a hypothesis, not a fact** — verify citations against the
-primary source before writing them here as established. This has bitten us before: a research
-agent attributed a specific claim to upstream llama.cpp issues that, on inspection, did not say
-that.
-
-## If something doesn't fit
-
-If a measurement in `docs/` contradicts what you're seeing, re-measure before building on top of
-it — a stale number has silently supported a wrong recommendation before. If a request conflicts
-with a guardrail in this file, say so and propose the alternative; don't silently work around it.
+Wire a harness to exactly one `local-262k` provider (contextWindow 262144) on `[defaults].port`
+(8080 if absent); `launch.py` decides which alias is loaded. `check-sync.py` checks this wiring
+only when `local.toml` has a `[harness]` table.

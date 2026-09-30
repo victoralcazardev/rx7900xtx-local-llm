@@ -39,6 +39,8 @@ quality, real server, stress test, per-process memory).
    - Only small, valuable files — no raw per-request logs, SSE streams, or anything over 1 MiB
      (`scripts/check-repo.py` enforces this).
 4. Add a row for the new folder to [`results/INDEX.md`](results/INDEX.md).
+5. Put the conclusion in its owner doc and link it elsewhere instead of repeating it: see the
+   routing table in [`docs/STYLE.md`](docs/STYLE.md) §8.
 
 Evidence is immutable once published: a result folder is never edited after the fact. A
 corrected or repeated measurement gets a new dated folder; the older one stays as-is

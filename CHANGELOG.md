@@ -12,6 +12,9 @@ All notable changes to this project are documented here. Format follows
 
 ### Changed
 
+- Rewrote `AGENTS.md` as a short index (read-when pointers, rules, commands, evidence discipline)
+  and added the documentation workflow (single owner per fact, routing table, word budgets) as
+  `docs/STYLE.md` §8.
 - Corrected host RAM to 32 GiB installed / 31.25 GiB usable; added a speed-levers summary
   (`docs/STATUS.md`).
 - Enabled harness `compaction.handoffSaveToDisk` and prepared a KVMem trial (`docs/ENGINES.md`).
