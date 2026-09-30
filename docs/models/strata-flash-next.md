@@ -67,6 +67,20 @@ second. Enable KV Cache - k8v4 for +10% boost in performance with no quality los
   reads every token. Reads do not meaningfully wear an SSD; writes are a one-time download and
   pack build.
 
+- **v0.1.30 resident low-RAM variant** (`--resident-experts`, chosen by setup when it fits;
+  `--low-ram resident|mmap` forces one): at start the engine copies the experts the GPU does not
+  hold from `experts.bin` into RAM, so steady-state generation reads nothing from the SSD. Upstream
+  [DETAILS.md](https://github.com/Niko1221/Strata/blob/main/docs/DETAILS.md): "a 32 GB PC with a
+  24 GB GPU runs Q2_0, IQ2_XS and the Coder this way (~16-18 GB of experts in RAM, the GPU holds
+  the other ~18 GB)"; IQ3_XXS stays mapped on 32 GB. The engine leaves 4 GB of free RAM
+  (`STRATA_RESIDENT_HEADROOM_GIB`) and falls back to the mapped mode when the copy does not fit;
+  the server log reports `resident RAM: ... blob reads from the file` (0 in steady use). On ROCm
+  setup keeps the copy pageable (`STRATA_RESIDENT_PIN=0`). This removes the disk-read objection
+  above for Q2_0, IQ2_XS and the Coder. **Not measured** on this machine; with 31.25 GiB usable
+  and ~16-18 GB of experts it is tight, so check the log line before trusting any speed.
+- v0.1.30 also streams every expert from 1024-token prefill chunks (upstream: +17-28% on 1-4K
+  prompts, same output). No new RX 7900 XTX generation figures were published.
+
 v0.1.26 also batches the MTP draft layer's prompt pass (upstream: +13-19% prompts on the RX 7900
 XTX, 30/30 HIP tests passed). Generation speed is unchanged.
 
@@ -103,3 +117,10 @@ integrating if, on this hardware, the Coder IQ1_M in low-RAM mode on NVMe:
    needle tests.
 
 Otherwise it is not worth the extra engine, disk footprint and RAM pressure.
+
+**Revision 2026-09-30.** Criterion 1 compares against the 27B at empty context, but long agent
+sessions run deep, where the 27B falls to ~20 tok/s and the KVMem candidate reaches 45.5 tok/s at
+244K ([`ENGINES-EXPERIMENTS.md`](../ENGINES-EXPERIMENTS.md#kvmem-trial-round-2-and-final-round-2026-09-30-not-adopted)).
+The planned trial therefore uses v0.1.30's resident variant with IQ2_XS or the Coder, confirms 0
+file reads in the log, and measures generation tok/s at 128K+ fill plus `bench/longctx_quality.py`,
+against both the current profile and the KVMem candidate at the same depths.
