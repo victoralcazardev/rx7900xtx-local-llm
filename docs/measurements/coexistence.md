@@ -102,6 +102,33 @@ with `q8_0`/`q5_1` stays the chosen quality/context trade-off.
   **separate** draft model; MTP heads live inside the main GGUF, so it doesn't apply. The only real
   use would be a second, independent small-model server.
 
+### Display-GPU plan for this machine (2026-09-30, not built)
+
+- **Free slot**: the Gigabyte B450 AORUS PRO has one PCIEX4 slot (x16 physical, PCIe 2.0 x4 from
+  the chipset). It shares lanes only with PCIEX1_1/PCIEX1_2 (drops to x2 if either is populated),
+  not with the M2B socket, which shares with SATA ports 2-3
+  ([Gigabyte spec](https://www.gigabyte.com/Motherboard/B450-AORUS-PRO-WIFI-rev-1x/sp)). ~2 GB/s
+  is enough for a desktop and only lengthens model load for a compute card.
+- **Cards already owned**:
+  - **Radeon HD 6450** (TeraScale, ~20 W): keeps the whole stack on AMD/Mesa, but OpenGL only
+    (no Vulkan), HDMI 1.4 and H.264-only video decode; marginal for several or 4K monitors.
+  - **GTX 1660 SUPER** (Turing, 6 GB, 125 W): stronger display card; the proprietary `nvidia`
+    module coexists with `amdgpu` at kernel level, but KWin then needs `KWIN_DRM_DEVICES` to pick
+    the display GPU and games need PRIME offload to reach the 7900 XTX. Power: 272 W cap + 65 W
+    CPU + 125 W stays well under the 850 W PSU.
+  - **GTX 950** (Maxwell): not considered; outside the current NVIDIA driver branch (not verified
+    against a release note).
+- **Order**: first measure how much VRAM the desktop takes on the 7900 XTX (fdinfo /
+  `amdgpu_top`) with the model loaded; add a display card only if it is more than ~1 GiB or the
+  KWin incident recurs. Try the HD 6450 first (same driver stack); move to the 1660 SUPER if the
+  desktop is too slow on it.
+- **Small-model server on the 1660 SUPER** (separate CUDA or Vulkan `llama-server`, own port,
+  `CUDA_VISIBLE_DEVICES` / `GGML_VK_VISIBLE_DEVICES`, 2B-4B GGUF such as MiniCPM5-2B): technically
+  fine (~5 GB left after the desktop), but **not pursued**: a 2B model is weak as a coding
+  subagent, it cannot act as the 27B's draft (MTP lives inside the main GGUF, same process), and
+  cheap hosted models cover summaries/titles/classification at negligible cost without another
+  server to maintain. Revisit only for an offline or privacy requirement.
+
 ## History
 
 - **2026-09-24**: coexistence test (C1-C3) and the suspend-hang incident both recorded the same day.
