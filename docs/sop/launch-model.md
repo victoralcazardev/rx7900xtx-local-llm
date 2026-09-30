@@ -1,6 +1,6 @@
 # SOP: launch a model that's already wired up
 
-For models already in `models.toml` (see `docs/models/models.md`). If the model doesn't exist in
+For models already in `models.toml` (see `docs/STATUS.md`). If the model doesn't exist in
 the manifest yet, use `docs/sop/new-model.md` first.
 
 ## Recommended profile (`qwen38-iq3s-mtp`, measured in `docs/measurements/`)
