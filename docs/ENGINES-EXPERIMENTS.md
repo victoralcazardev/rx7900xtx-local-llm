@@ -4,6 +4,28 @@ Trials (prepared or run, not adopted) and upstream items being monitored. Nothin
 builds actually in use, with pinned versions and SHA256, are in [`ENGINES.md`](ENGINES.md), and
 tried-and-not-adopted results are in [`TRIED.md`](TRIED.md).
 
+## KVMem trial round 2 and final round (2026-09-30, not adopted)
+
+**Outcome: candidate = budget 28,672 + `--kvmem-block-tokens 32`; meets 3 of 4 go/no-go criteria,
+agent run (T6) outstanding, not adopted.** Background, source pin and protocol are under the round 1
+section below; evidence: [`results/20260930-kvmem-trial-round2/`](../results/20260930-kvmem-trial-round2/).
+Single samples.
+
+| Criterion | Result |
+|---|---|
+| Decode at 160K+ at least ~1.3x the current profile | Met: 45.5 tok/s at 244K vs. 20.8 (2.2x); VRAM 15.1 GiB; round 1 at block 128 gave 48.6 |
+| Retrieval 8/8 exact at 240K | Met: 8/8 at 240K; 4/4 at 190K and 4/4 at 220K; 128K 8/8 was measured at block 128 and not re-run at 32 |
+| At least ~4 GiB host RAM free at 256K | Met: minimum 10.15 GiB at 244K (RSS 13.67 GiB) |
+| Agent run without output-cap failures | Not run (T6) |
+
+- Block size, not budget, fixes the round 1 miss (`PLANO-01-03-469`): block 32 at 28,672 is 8/8;
+  budget 36,864 at block 128 is 3/4 with the same miss.
+- Budget 49,152 is unusable: the 190K crash reproduced (2 of 2), a GPU `Memory access fault` at the
+  end of prefill, and the faulted server ignores SIGTERM. Not traced; not reported upstream, nor is
+  the ROCm build fix.
+- Not done: candidate speed at 128K/190K, MTP n=3, traced crash run, quality on the remaining
+  documents. The 16,384-token per-turn output cap remains a risk. Next step: T6 with the candidate.
+
 ## KVMem trial (round 1 run 2026-09-30, not adopted)
 
 [kvmem-llama.cpp](https://github.com/kvmem/kvmem-llama.cpp) (paper
@@ -36,8 +58,7 @@ acceptance is not reported; smoke test 71.5 tok/s at empty context. Blockers bef
 reproduce the crash, run the agent run, and accept the 16,384-token per-turn output cap.
 Third-party context: [`SOURCES.md`](SOURCES.md) (upstream issue #4 on mid-band retrieval collapse).
 
-**Next round (not run)**: reproduce the 49,152 crash; budgets 36,864 and 40,960 at block 128;
-`--kvmem-block-tokens 32`; 3 repeats; MTP n=3; then the agent run.
+**Next round**: run as round 2 above (crash reproduced, budget 36,864, block 32); budget 40,960, 3 repeats and MTP n=3 were not run.
 
 **Source pinned for the trial**: `kvmem/kvmem-llama.cpp` commit `abe72b38256d` (2026-09-30, source
 version 0.17.0), llama.cpp submodule `7fe450e19305`. The prebuilt ROCm packages are older
