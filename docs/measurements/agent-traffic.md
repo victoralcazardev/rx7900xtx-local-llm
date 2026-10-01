@@ -141,6 +141,8 @@ the harness's `handoff` method (an LLM-written summary replaces the history) and
   size is not the fill level, and the harness compacts on its own.
 - **Harness threshold changed to 75% (~196K) on 2026-09-30.** This is an operator choice, not
   based on a measurement here. The data above predates it.
+- **Harness threshold changed to 70% (~183K) on 2026-10-01**, an operator choice after the
+  full-miss audit below. It sits above the ~172K miss depth and below the ~193K one.
 - **Workload shape**: the local model runs as the harness's main agent, carrying out an already
   documented, detailed plan for hours. Compaction is therefore automatic (`handoff` on threshold),
   not a manual `/handoff`. The harness's `handoff` summarizes into the same session; it does not
