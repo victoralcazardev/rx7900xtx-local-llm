@@ -4,6 +4,62 @@ Trials (prepared or run, not adopted) and upstream items being monitored. Nothin
 builds actually in use, with pinned versions and SHA256, are in [`ENGINES.md`](ENGINES.md), and
 tried-and-not-adopted results are in [`TRIED.md`](TRIED.md).
 
+## Fork vs. wait for upstream, and the rdna-boosts GQA-6 FA band (2026-10-01, candidate, not run)
+
+Question: instead of waiting for the tracked upstream items, carry them as patches on our own build?
+Checked llama.cpp b11301 → b11320 first (19 commits): nothing touches HIP, ROCm, `fattn` or the KV
+cache. [#29019](https://github.com/ggml-org/llama.cpp/pull/29019) (preserve batch order for
+speculative layer inputs) only matters with concurrency > 1 and a DFlash drafter; this profile runs
+`-np 1` with MTP.
+
+**Most tracked items have no code to merge.** Linked pull requests per issue (GitHub timeline,
+2026-10-01):
+
+| Item | Code available | Value for this profile |
+|---|---|---|
+| [#26038](https://github.com/ggml-org/llama.cpp/issues/26038) MTP draft FA workspace on HIP | Only the reporter's own downstream patch (gfx1030/1031, bundled with unrelated changes) | VRAM only; size on this profile not measured |
+| [#27282](https://github.com/ggml-org/llama.cpp/issues/27282) duplicate MTP compute arena | [PR #27489](https://github.com/ggml-org/llama.cpp/pull/27489): open, conflicting, last updated 2026-08-21, auto-enabled only for "single-CUDA-device"; −1,042 MiB peak on a CUDA card; users report aborts | VRAM only (could buy V `q8_0` or `-ub 512` if the saving holds on HIP); a HIP port with no maintainer buy-in |
+| [#28433](https://github.com/ggml-org/llama.cpp/issues/28433) draft context sized from `llama_n_ctx` | None; the proposed fix was withdrawn by its contributor; [PR #29208](https://github.com/ggml-org/llama.cpp/pull/29208) (open) clamps to `n_ctx_train` | None: hits multi-slot unified KV, this profile is `-np 1` |
+| [#26432](https://github.com/ggml-org/llama.cpp/issues/26432) silent GTT fallback with MTP | None | None: the 262K profile is measured without spill |
+| [#28867](https://github.com/ggml-org/llama.cpp/issues/28867) gfx1201 FA threshold | None | gfx1201 only |
+| RDNA3 FlashAttention GQA folding (the depth-decode bottleneck, [depth.md](measurements/depth.md#why-decode-slows-with-depth-attention-bandwidth-2026-09-26-round-4)) | No upstream PR; one fork implementation, below | The only lever with a large expected decode gain |
+
+Conclusion: do not maintain a fork. Patch on demand: apply a specific change on top of the pinned tag
+(as with `kvmix-vec4` in [`ENGINES.md`](ENGINES.md)), A/B it, and keep it only if it wins.
+
+**Candidate: the rdna-boosts GQA-6 decode/verify band.**
+[stew675/llama-cpp-rdna-boosts#45](https://github.com/stew675/llama-cpp-rdna-boosts/issues/45)
+(closed, shipped in release `v16-84e76d8a2-r4`, extended to f16/bf16 in `r5`) addresses the same
+cause as [depth.md](measurements/depth.md#why-decode-slows-with-depth-attention-bandwidth-2026-09-26-round-4):
+"With GQA 6, `ncols2` falls back to 2, and ... every K/V element is fetched and dequantized three
+times per query token". It routes `n_q <= 8` (decode and MTP verify) to the existing MMA-f16 instance
+`(256, ncols1 4, ncols2 8)` and splits KV round-robin so decode and verify stay bit-identical.
+
+- Reported (R9700, gfx1201, Qwen3.8-27B, q8_0 K/V, `draft-mtp`): FA at kv 204800, `n_q` 3: 4121 →
+  1654 µs; `llama-server` decode at 110K: 28.20 → 36.03 t/s; plain decode without MTP ~5% slower;
+  `test-backend-ops` FA cases and greedy `plain == draft-mtp` pass.
+- **Gated to RDNA4** (the fork README: "`r4` the block-15 RDNA4 GQA-6 decode/verify flash-attention
+  band"). On gfx1100 it does not engage. The same README states the WMMA FA path also runs on RDNA3.0
+  with a head limit of 256; this model's `head_dim` is 256. Whether the band builds and wins on
+  first-generation RDNA3 WMMA is unknown.
+- This repo's earlier rdna-boosts trial (`v16-ebbb18522-r13`, −2.5% ms/step at ~190K, see
+  [`ENGINES.md`](ENGINES.md)) predates the band, so it says nothing about it.
+- Risk: [stew675/llama-cpp-rdna-boosts#60](https://github.com/stew675/llama-cpp-rdna-boosts/issues/60)
+  (open, 2x 7900 XTX, different MoE model) reports a 334.39 MiB allocation OOM in long prefill from
+  `r5` on, avoided by `GGML_CUDA_FA_KV_NATIVE=0` or a smaller `-ub`. The reporter's title attributes it
+  to an unrelated indexer reserve, not the band. This profile peaks at 22,630 MiB, so headroom is thin.
+
+Test plan (not run):
+
+1. Build the latest fork release (`v16-84e76d8a2-r28` on 2026-10-01) for gfx1100 with the `kvmix`
+   FA-quants flags, widening the band's architecture gate to RDNA3.
+2. `test-backend-ops -o FLASH_ATTN_EXT` for head 256 with `q8_0`/`q5_1`, and greedy `plain ==
+   draft-mtp` at depth.
+3. One A/B against `kvmix` at 190K and 240K fill: decode, prefill and peak VRAM.
+
+Go if decode at 240K improves by more than ~10% with no quality or VRAM regression; otherwise record it
+in [`TRIED.md`](TRIED.md).
+
 ## KVMem trial round 2 and final round (2026-09-30, not adopted)
 
 **Outcome: candidate = budget 28,672 + `--kvmem-block-tokens 32`; meets 3 of 4 go/no-go criteria,

@@ -98,15 +98,18 @@ Sampling is the Qwen3.8-27B card's own; `--min-p 0.0` is set explicitly because 
 | `--reasoning-effort low` | Largest: ~78% of output is reasoning | Quality | Not pursued (quality first) |
 | Earlier compaction / one session per plan phase | Keeps decode in the ~34 tok/s band instead of ~19 | More lossy compactions, ~5 min each | Harness threshold at 75% instead |
 | KVMem (bounded active attention, full history in host RAM) | Decode at depth without dropping history | Retrieval may miss blocks; ROCm beta; ~+10 GiB host RAM | Trial: 2.2x decode at 244K, exact at 240K, awaiting agent run, not adopted — [ENGINES-EXPERIMENTS.md](ENGINES-EXPERIMENTS.md#kvmem-trial-round-2-and-final-round-2026-09-30-not-adopted) |
-| Upstream RDNA3 FlashAttention GQA fix | Decode at depth (kernel at ~24% of memory bandwidth) | None | Waiting on llama.cpp |
+| RDNA3 FlashAttention GQA fix | Decode at depth (kernel at ~24% of memory bandwidth) | None | No upstream PR; rdna-boosts band (RDNA4-gated) is the candidate to test |
 | Server flags (MTP, `-ub`, KV, power cap) | <5% | — | Already measured |
 
 Detail: [agent-traffic.md](measurements/agent-traffic.md).
 
 ## Next steps
 
-1. Next engine update: pick up llama.cpp PR #29393 (RMS_NORM+SCALE fusion; expected to apply to the
+1. Test the rdna-boosts GQA-6 FlashAttention band on gfx1100 (+28% decode at 110K on RDNA4; not
+   run) —
+   [ENGINES-EXPERIMENTS.md](ENGINES-EXPERIMENTS.md#fork-vs-wait-for-upstream-and-the-rdna-boosts-gqa-6-fa-band-2026-10-01-candidate-not-run).
+2. Next engine update: pick up llama.cpp PR #29393 (RMS_NORM+SCALE fusion; expected to apply to the
    HIP build, prefill only, ~27 s on a cold 240K fill, not measured; not worth an update alone) and
    watch upstream for a GQA-folding FlashAttention fix for RDNA3 or removal of the TILE f16 KV
    conversion — [update-engine.md](sop/update-engine.md), [depth.md](measurements/depth.md).
-2. GPU care beyond the permanent 272 W cap (undervolt) — deferred.
+3. GPU care beyond the permanent 272 W cap (undervolt) — deferred.

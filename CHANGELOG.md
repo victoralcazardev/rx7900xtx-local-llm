@@ -12,6 +12,7 @@ All notable changes to this project are documented here. Format follows
 
 ### Changed
 
+- Checked llama.cpp b11320 (no update) and recorded the fork-vs-wait analysis: no fork, patch on demand; rdna-boosts GQA-6 FA band is the next engine candidate for gfx1100, not run (`docs/ENGINES-EXPERIMENTS.md`).
 - Ran KVMem trial round 2 and a final round: `--kvmem-block-tokens 32` fixes the 240K retrieval miss (8/8), budget 49,152 crash reproduced, candidate (budget 28,672, block 32) 2.2x decode at 244K and exact at 190K-240K; still not adopted pending the agent run (`results/20260930-kvmem-trial-round2/README.md`).
 - Ran KVMem trial round 1 on ROCm (2.3x decode at 244K, ~15 GiB VRAM; 7/8 retrieval at budget 28,672, 8/8 at 49,152, one 190K crash): promising, not adopted (`results/20260930-kvmem-trial/README.md`).
 - Rewrote `AGENTS.md` as a short index (read-when pointers, rules, commands, evidence discipline)
