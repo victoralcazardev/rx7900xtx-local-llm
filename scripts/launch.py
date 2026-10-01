@@ -10,9 +10,9 @@ only one profile that one is used; with several, they are listed and the script 
 with code 2. --backend overrides the one declared in models.toml (useful for pipeline
 tests, e.g. --backend cuda).
 
---background launches the server in the background and writes the log to
-_tmp/logs/<alias>-<profile>-<timestamp>.log (foreground is the default: it
-stays attached to the console, Ctrl+C to stop).
+Every launch writes the server log to _tmp/logs/<alias>-<profile>-<timestamp>.log.
+Foreground (the default) also echoes it to the console, Ctrl+C to stop;
+--background detaches the server and only writes the file.
 """
 from __future__ import annotations
 
@@ -110,19 +110,39 @@ def main() -> int:
               file=sys.stderr)
         return 1
 
+    logs = REPO / "_tmp" / "logs"
+    logs.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    log_path = logs / f"{model.alias}-{profile_name}-{stamp}.log"
+    cmd = _without_suspend([str(exe)] + argv)
+
     if args.background:
-        logs = REPO / "_tmp" / "logs"
-        logs.mkdir(parents=True, exist_ok=True)
-        stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-        log_path = logs / f"{model.alias}-{profile_name}-{stamp}.log"
         with open(log_path, "w") as log:
-            subprocess.Popen(_without_suspend([str(exe)] + argv), cwd=str(exe.parent),
-                             stdout=log, stderr=log)
+            subprocess.Popen(cmd, cwd=str(exe.parent), stdout=log, stderr=log)
         print(f"launched in background, log: {log_path}")
         return 0
 
-    proc = subprocess.run(_without_suspend([str(exe)] + argv), cwd=str(exe.parent))
-    return proc.returncode
+    print(f"log: {log_path}")
+    with open(log_path, "wb") as log:
+        proc = subprocess.Popen(cmd, cwd=str(exe.parent),
+                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        _tee(proc.stdout, sys.stdout.buffer, log)
+        return proc.wait()
+
+
+def _tee(src, *sinks) -> None:
+    """Copy src to every sink until EOF. Ctrl+C also reaches the server (same process
+    group), so keep copying its shutdown output instead of dying mid-stream."""
+    while True:
+        try:
+            chunk = src.read1(65536)
+        except KeyboardInterrupt:
+            continue
+        if not chunk:
+            return
+        for sink in sinks:
+            sink.write(chunk)
+            sink.flush()
 
 
 if __name__ == "__main__":

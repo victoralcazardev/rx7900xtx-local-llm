@@ -63,11 +63,13 @@ shorthand for the `launch.py` invocation below.
    ```
    python3 scripts/launch.py
    ```
-   or in the background with a log:
+   or detached in the background:
    ```
    python3 scripts/launch.py --background
    ```
-   The log goes to `_tmp/logs/<alias>-<profile>-<timestamp>.log`. Pass an explicit
+   Both modes write the server log to `_tmp/logs/<alias>-<profile>-<timestamp>.log`; foreground
+   also echoes it to the console. Keep these logs: cache misses and timings of a real session can
+   only be analyzed from them. Pass an explicit
    `<alias> --profile <profile>` (see the table above) to load something other than the default.
 
 4. **In your coding-agent harness (if any), select the provider printed in step 2**
@@ -88,7 +90,7 @@ shorthand for the `launch.py` invocation below.
 - **`400 exceed_context`**: your harness's provider entry doesn't match the profile's real `-c`.
   Run `check-sync.py`; if the "harness" block fails, the wiring is out of sync.
 - **`connection refused` when the client tries to use the model**: no server listening on `:8080`
-  yet, or it crashed. Check the `--background` log or the foreground console.
+  yet, or it crashed. Check its log in `_tmp/logs/`.
 - **rejected K/V combination** (`ManifestError`): in HIP only `q4_0/q4_0`, `q8_0/q8_0`, `f16/f16`,
   `bf16/bf16` have a compiled FA kernel (see `docs/ENGINES.md`). For `q8_0/q5_1` or `q8_0/q4_1` use
   the `hip-kvmix` engine (own build, see `docs/ENGINES.md`).

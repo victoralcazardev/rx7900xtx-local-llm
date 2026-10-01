@@ -44,6 +44,13 @@ class TestLauncherAndSmoke(unittest.TestCase):
             self.assertEqual(launch.main(), 0)
         self.assertIn("'/models/a model.gguf'", output.getvalue())
 
+    def test_tee_copies_server_output_to_console_and_log(self):
+        src = io.BufferedReader(io.BytesIO(b"line 1\nline 2\n"))
+        console, log = io.BytesIO(), io.BytesIO()
+        launch._tee(src, console, log)
+        self.assertEqual(console.getvalue(), b"line 1\nline 2\n")
+        self.assertEqual(log.getvalue(), b"line 1\nline 2\n")
+
     def test_smoke_aborts_when_process_detection_fails(self):
         model = object()
         profile = {"context": 131072}
