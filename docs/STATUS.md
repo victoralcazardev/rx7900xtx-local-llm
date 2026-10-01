@@ -68,8 +68,11 @@ Sampling is the Qwen3.8-27B card's own; `--min-p 0.0` is set explicitly because 
   non-GPU experts in RAM (upstream: fits 32 GB RAM + 24 GB GPU for Q2_0, IQ2_XS, Coder); not
   measured. IQ2_XS too tight on 32 GB RAM; Coder IQ1_M is plan B after the KVMem agent run —
   [strata-flash-next.md](models/strata-flash-next.md).
-- **Compaction and presence penalty A/B**: real agent traffic is 89% generation, ~78% of output is
-  reasoning; each compaction re-processes the kept context (median ~83 s). Open: harness compaction
+- **Full cache misses in long sessions**: a 5.8-hour session re-processed the whole ~172K-194K
+  context six times with no compaction (42 min); cause open, next run logs to file —
+  [agent-traffic.md](measurements/agent-traffic.md#full-cache-misses-in-a-long-session-2026-10-01).
+- **Compaction and presence penalty A/B**: ~78% of output is reasoning; each compaction
+  re-processes the kept context (median ~83 s). Open: harness compaction
   at 75% vs. 60%, `handoff`-first vs. `shake`-first, `--presence-penalty` 0 vs. 1.0 —
   [agent-traffic.md](measurements/agent-traffic.md#open-ab-tests).
 - **KVMem trial** ([kvmem-llama.cpp](https://github.com/kvmem/kvmem-llama.cpp)): rounds 1-2 (2026-09-30):

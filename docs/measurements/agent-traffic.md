@@ -4,11 +4,13 @@ What the adopted profile (`qwen38-iq3s-mtp` / `262k-q8q51-mtp`) actually spends 
 coding-agent harness drives it, as opposed to the synthetic depth and speculative benchmarks in the
 other measurement docs. Log and session analysis only: no new GPU run.
 
-## Current conclusion (2026-09-30)
+## Current conclusion (2026-10-01)
 
-- **Generation dominates wall time, not prefill**: 89% of server time is generation, 11% prefill
-  (301 requests, two server logs). Prefix caching already keeps prefill small, so speed work should
-  target generated tokens and decode speed at depth, not prompt processing.
+- **Long sessions lose prefill time to full cache misses** (2026-10-01, 5.8-hour session at the
+  75% threshold): prefill was 35% of server busy time, not the 10.8% of the 2026-09-28 logs. Six
+  requests at ~172K and ~193K depth reused 0 cached tokens with no compaction before them and
+  re-processed the whole context (381-456 s each, 42 min in total). Cause open — see "Full cache
+  misses in a long session" below. Decode speed and MTP acceptance (0.66) match earlier data.
 - **Reasoning dominates generated output**: ~78% of output characters are thinking at
   `--reasoning-effort medium` (1,301 agent turns). Mean output is ~1,080 tokens per turn, p90
   2,744. `--reasoning-effort low` would be the largest speed lever, but it is **not pursued**:
@@ -148,6 +150,30 @@ the harness's `handoff` method (an LLM-written summary replaces the history) and
   each compaction kept is recoverable from disk. Manual `/handoff` is not written by this setting.
   No runtime cost.
 
+## Full cache misses in a long session (2026-10-01)
+
+Evidence: [`results/20261001-agent-session-audit/`](../../results/20261001-agent-session-audit/README.md)
+(server counters plus the harness session file; no server log, the server ran in the foreground).
+
+- 344 main-agent turns, 3 compactions, deepest context 201,519 tokens. Server busy 96% of uptime;
+  32.9 tok/s mean decode, 433 tok/s mean uncached prefill, 94.2% of prompt tokens served from cache.
+- Six turns were a full re-process with no compaction before them: the prompt was the previous one
+  plus ~1K tokens, yet cache read was 0. Two per compaction epoch, at ~172K and ~193K. Together
+  2,512 s, against 162 s for the three post-compaction re-processes.
+- Not yet explained. Hypotheses: the harness rewrites a message older than the oldest of the 4
+  kept context checkpoints (`--ctx-checkpoints 4`), or checkpoint placement leaves no checkpoint
+  before the divergence (since llama.cpp PR #22929 the server checkpoints before the latest user
+  message and otherwise only every `--checkpoint-min-step` = 8,192 tokens). The 2026-09-29 test in
+  [`memory.md`](memory.md#prompt-cache-reuse-and-context-checkpoints-2026-09-29) found 4 and 32
+  checkpoints equal for warm turns but did not cover this pattern.
+- The 2026-09-28 sessions at the then 60% threshold (~157K) show no such misses: prefill was 10.8%
+  of server time and context never passed 149K. Both miss depths lie above 157K, so a lower
+  threshold may avoid them — a correlation across two days, not a test.
+- Next step: `scripts/launch.py` now always writes a log (2026-10-01). When a miss repeats, read
+  where the prompt diverged. Near the start means the harness changed early content and more
+  checkpoints can't help; mid-context means test `--ctx-checkpoints` 16 (open A/B 4 below). Host
+  RAM is that test's cost: checkpoints measured 270-515 MiB each up to ~93K and grow with depth.
+
 ## Open A/B tests
 
 All need the same fixed agent task suite (a test repository with a handful of tasks that have
@@ -161,7 +187,16 @@ and full re-processes in the server log.
 2. **Compaction method order**: the effective current order is `handoff` → `shake` → `soft`
    (`remote` isn't configured and `snapcompact`, which renders history as images, was never
    used in these sessions) vs. `shake` first. See the re-process cost above.
-3. **Presence penalty**: `--presence-penalty 0` (Qwen3.8 card's thinking-mode value, the current
+3. **Context checkpoints** (only if the log shows a mid-context divergence): `--ctx-checkpoints 4`
+   vs. 16, counting full re-processes, their time and peak host RAM.
+4. **Presence penalty**: `--presence-penalty 0` (Qwen3.8 card's thinking-mode value, the current
    setting) vs. `1.0`. The data above shows little repetition to fix, and the card warns that
    higher values can cause language mixing, which matters for non-English work — adopt only if the
    A/B shows fewer repeated tool calls or shorter reasoning without a quality or language cost.
+
+## History
+
+- **2026-09-30, superseded 2026-10-01 for long sessions.** Generation dominates wall time, not
+  prefill: 89% of server time is generation, 11% prefill (301 requests, two server logs). Prefix
+  caching already keeps prefill small, so speed work should target generated tokens and decode
+  speed at depth, not prompt processing.

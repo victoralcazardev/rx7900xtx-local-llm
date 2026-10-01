@@ -179,6 +179,15 @@ awk '/^[0-9a-f]+-[0-9a-f]+ /{name=$6} /^Anonymous:/{if($2>200000) print $2" kB",
 curl -s localhost:8080/metrics | grep prompt_tokens_cached_total
 ```
 
+## VRAM during a 5.8-hour agent session (2026-10-01)
+
+Read once at ~200K context with the desktop running
+([results](../../results/20261001-agent-session-audit/README.md)): card 24,560 MiB, used
+23,836 MiB, **724 MiB free**. `llama-server` held 22,967 MiB VRAM, 8 MiB GTT, 0 evicted; the desktop
+and other processes ~870 MiB. The process figure is 337 MiB above the 22,630 MiB of the
+2026-09-26 `-ub 256` reading at 240K fill; the cause was not investigated. No spill, but no room
+for a larger quant or compute buffer either.
+
 ## Open questions
 
 - fdinfo instrumentation was not yet wired into every benchmark script at the time of the earlier
