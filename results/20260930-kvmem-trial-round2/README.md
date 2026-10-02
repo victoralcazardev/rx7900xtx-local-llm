@@ -49,7 +49,7 @@ Budget 49,152, block 128, 190K target: `Memory access fault by GPU node-1 ... Re
 or supervisor privilege` at the end of prefill (prefill at 100% progress, 192,000 tokens, ~565 tok/s). Together
 with round 1 that is 2 of 2 attempts, so it is deterministic at this configuration. The faulted
 server does not exit on SIGTERM and needs SIGKILL. Log tail:
-[`crash-b49k-190k-repro.log`](crash-b49k-190k-repro.log). Not traced (`--kvmem-trace` not run).
+`crash-b49k-190k-repro.log` (raw log kept locally, not tracked). Not traced (`--kvmem-trace` not run).
 
 ## Results: final round, candidate = budget 28,672, block 32
 
