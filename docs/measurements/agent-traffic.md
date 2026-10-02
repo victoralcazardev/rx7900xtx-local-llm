@@ -196,6 +196,16 @@ and full re-processes in the server log.
    higher values can cause language mixing, which matters for non-English work — adopt only if the
    A/B shows fewer repeated tool calls or shorter reasoning without a quality or language cost.
 
+## Speed levers at depth (2026-09-30)
+
+| Lever | Expected gain | Cost | Status |
+|---|---|---|---|
+| `--reasoning-effort low` | Largest: ~78% of output is reasoning | Quality | Not pursued (quality first) |
+| Earlier compaction / one session per plan phase | Keeps decode in the ~34 tok/s band instead of ~19 | More lossy compactions, ~5 min each | Harness threshold at 75% instead |
+| KVMem (bounded active attention, full history in host RAM) | Decode at depth without dropping history | Retrieval may miss blocks; ROCm beta; ~+10 GiB host RAM | Trial: 2.2x decode at 244K, exact at 240K, awaiting agent run, not adopted — [ENGINES-EXPERIMENTS.md](../ENGINES-EXPERIMENTS.md#kvmem-trial-round-2-and-final-round-2026-09-30-not-adopted) |
+| RDNA3 FlashAttention GQA fix | Decode at depth (kernel at ~24% of memory bandwidth) | None | No upstream PR; rdna-boosts band (RDNA4-gated) is the candidate to test |
+| Server flags (MTP, `-ub`, KV, power cap) | <5% | — | Already measured |
+
 ## History
 
 - **2026-09-30, superseded 2026-10-01 for long sessions.** Generation dominates wall time, not

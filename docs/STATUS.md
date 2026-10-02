@@ -1,7 +1,14 @@
 # Status
 
-Single source of truth for the current profile, headline numbers and flags. Other docs link here
-instead of repeating them. Tried and not adopted: [`TRIED.md`](TRIED.md).
+What runs today and why: the adopted profile, its headline numbers, flag rationale, and a short
+list of what is open. Other docs link here instead of repeating them.
+
+**Scope.** This file holds only the current state. Each open question or next step is one line
+that links its owner; results, candidate lists, trial details, upstream watch lists and analysis
+live in the owner doc ([`STYLE.md`](STYLE.md) §8), never here. When an item is answered or
+started, remove it and record the outcome in its owner. Budget: 1,000 words. Tried and not
+adopted: [`TRIED.md`](TRIED.md); planned engine trials:
+[`ENGINES-EXPERIMENTS.md`](ENGINES-EXPERIMENTS.md).
 
 ## Current profile
 
@@ -64,55 +71,28 @@ Sampling is the Qwen3.8-27B card's own; `--min-p 0.0` is set explicitly because 
 
 ## Open questions
 
-- **Qwen3.8-Flash-Next (MoE) trial**: Strata v0.1.30's resident low-RAM variant keeps the
-  non-GPU experts in RAM (upstream: fits 32 GB RAM + 24 GB GPU for Q2_0, IQ2_XS, Coder); not
-  measured. IQ2_XS too tight on 32 GB RAM; Coder IQ1_M is plan B after the KVMem agent run —
-  [strata-flash-next.md](models/strata-flash-next.md).
-- **Full cache misses in long sessions**: a 5.8-hour session re-processed the whole ~172K-194K
-  context six times with no compaction (42 min); cause open, next run logs to file —
+- **Full cache misses in long sessions**: whole-context re-processing with no compaction, 42 min
+  in one 5.8-hour session; cause open —
   [agent-traffic.md](measurements/agent-traffic.md#full-cache-misses-in-a-long-session-2026-10-01).
-- **Compaction and presence penalty A/B**: ~78% of output is reasoning; each compaction
-  re-processes the kept context (median ~83 s). Open: harness compaction
-  at 75% vs. 60%, `handoff`-first vs. `shake`-first, `--presence-penalty` 0 vs. 1.0 —
+- **Compaction threshold and presence penalty** A/B —
   [agent-traffic.md](measurements/agent-traffic.md#open-ab-tests).
-- **KVMem trial** ([kvmem-llama.cpp](https://github.com/kvmem/kvmem-llama.cpp)): rounds 1-2 (2026-09-30):
-  candidate budget 28,672 + `--kvmem-block-tokens 32` gives 45.5 tok/s at 244K (baseline 20.8,
-  2.2x) with ~15 GiB VRAM and 8/8 exact at 240K (4/4 at 190K and 220K); budget 49,152 faults
-  deterministically at 190K. Not adopted; open: the real agent run (T6), the 16,384-token
-  per-turn output cap —
-  [ENGINES-EXPERIMENTS.md](ENGINES-EXPERIMENTS.md#kvmem-trial-round-2-and-final-round-2026-09-30-not-adopted),
-  [results](../results/20260930-kvmem-trial-round2/README.md).
-- **Broader quality sample**: 190K has 1 of 5 planned documents, 240K has 2 of 5; not blocking
-  (every depth so far is exact match) — [depth.md](measurements/depth.md).
-- **Upstream issues to re-check on the next engine update** ([update-engine.md](sop/update-engine.md),
-  [SOURCES.md](SOURCES.md)): llama.cpp [#26648](https://github.com/ggml-org/llama.cpp/issues/26648)
-  (MTP sampler assert at long context on HIP); [#26038](https://github.com/ggml-org/llama.cpp/issues/26038),
-  [#27282](https://github.com/ggml-org/llama.cpp/issues/27282),
-  [#28433](https://github.com/ggml-org/llama.cpp/issues/28433) (MTP compute/draft-ctx sizing on HIP,
-  open as of b11178); [halo-box/strix-llama.cpp#56](https://github.com/halo-box/strix-llama.cpp/pull/56)
-  (RDNA3 IQ2/IQ3 MMVQ change); the
-  [BuffedMod IQ3_S quant](https://huggingface.co/tooltd/Qwen3.8-27B-GSQ-RCO-BuffedMod-GGUF)
-  (upcasts `output.weight`, untested here).
+- **KVMem**: 2.2x decode at 244K and exact at 240K, not adopted until a real agent run —
+  [ENGINES-EXPERIMENTS.md](ENGINES-EXPERIMENTS.md#kvmem-trial-round-2-and-final-round-2026-09-30-not-adopted).
+- **Qwen3.8-Flash-Next (MoE) via Strata**: not measured —
+  [strata-flash-next.md](models/strata-flash-next.md).
+- **Broader quality sample** at 190K/240K (not blocking) — [depth.md](measurements/depth.md).
 
 ## Speed levers at depth (2026-09-30)
 
-| Lever | Expected gain | Cost | Status |
-|---|---|---|---|
-| `--reasoning-effort low` | Largest: ~78% of output is reasoning | Quality | Not pursued (quality first) |
-| Earlier compaction / one session per plan phase | Keeps decode in the ~34 tok/s band instead of ~19 | More lossy compactions, ~5 min each | Harness threshold at 75% instead |
-| KVMem (bounded active attention, full history in host RAM) | Decode at depth without dropping history | Retrieval may miss blocks; ROCm beta; ~+10 GiB host RAM | Trial: 2.2x decode at 244K, exact at 240K, awaiting agent run, not adopted — [ENGINES-EXPERIMENTS.md](ENGINES-EXPERIMENTS.md#kvmem-trial-round-2-and-final-round-2026-09-30-not-adopted) |
-| RDNA3 FlashAttention GQA fix | Decode at depth (kernel at ~24% of memory bandwidth) | None | No upstream PR; rdna-boosts band (RDNA4-gated) is the candidate to test |
-| Server flags (MTP, `-ub`, KV, power cap) | <5% | — | Already measured |
-
-Detail: [agent-traffic.md](measurements/agent-traffic.md).
+Moved to [agent-traffic.md](measurements/agent-traffic.md#speed-levers-at-depth-2026-09-30).
 
 ## Next steps
 
-1. Test the rdna-boosts GQA-6 FlashAttention band on gfx1100 (+28% decode at 110K on RDNA4; not
-   run) —
+1. Test the rdna-boosts GQA-6 FlashAttention band on gfx1100 —
    [ENGINES-EXPERIMENTS.md](ENGINES-EXPERIMENTS.md#fork-vs-wait-for-upstream-and-the-rdna-boosts-gqa-6-fa-band-2026-10-01-candidate-not-run).
-2. Next engine update: pick up llama.cpp PR #29393 (RMS_NORM+SCALE fusion; expected to apply to the
-   HIP build, prefill only, ~27 s on a cold 240K fill, not measured; not worth an update alone) and
-   watch upstream for a GQA-folding FlashAttention fix for RDNA3 or removal of the TILE f16 KV
-   conversion — [update-engine.md](sop/update-engine.md), [depth.md](measurements/depth.md).
-3. GPU care beyond the permanent 272 W cap (undervolt) — deferred.
+2. Cheap A/Bs from third-party repositories (`GGML_CUDA_GRAPH_OPT=1`, reasoning budget, n-gram
+   replay) —
+   [ENGINES-EXPERIMENTS.md](ENGINES-EXPERIMENTS.md#candidates-from-third-party-repositories-2026-10-02-not-run).
+3. Next engine update: follow [update-engine.md](sop/update-engine.md) and the
+   [upstream watchlist](ENGINES-EXPERIMENTS.md#upstream-watchlist-2026-09-29).
+4. GPU care beyond the 272 W cap (undervolt): deferred.
