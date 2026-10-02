@@ -102,14 +102,15 @@ def peak_usage(telemetry_path):
     peak = {"vram": 0, "gtt": 0, "evicted": 0, "edge": 0, "hotspot": 0}
     if not telemetry_path.exists():
         return peak
-    for line in telemetry_path.open():
-        row = json.loads(line)
-        m, s = row["process"]["bytes_by_metric"], row["safety"]
-        peak["vram"] = max(peak["vram"], m.get("drm-memory-vram", 0))
-        peak["gtt"] = max(peak["gtt"], m.get("drm-memory-gtt", 0))
-        peak["evicted"] = max(peak["evicted"], m.get("amd-evicted-vram", 0))
-        peak["edge"] = max(peak["edge"], s.get("edge_c") or 0)
-        peak["hotspot"] = max(peak["hotspot"], s.get("hotspot_c") or 0)
+    with telemetry_path.open() as telemetry:
+        for line in telemetry:
+            row = json.loads(line)
+            m, s = row["process"]["bytes_by_metric"], row["safety"]
+            peak["vram"] = max(peak["vram"], m.get("drm-memory-vram", 0))
+            peak["gtt"] = max(peak["gtt"], m.get("drm-memory-gtt", 0))
+            peak["evicted"] = max(peak["evicted"], m.get("amd-evicted-vram", 0))
+            peak["edge"] = max(peak["edge"], s.get("edge_c") or 0)
+            peak["hotspot"] = max(peak["hotspot"], s.get("hotspot_c") or 0)
     return peak
 
 

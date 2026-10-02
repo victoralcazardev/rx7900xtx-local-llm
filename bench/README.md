@@ -78,6 +78,12 @@ and verify it.
 | `concurrency_bench.py` | (new) | Multi-agent concurrency: one server with `-np N` parallel slots, N simultaneous streaming requests, per-slot tok/s + draft acceptance + aggregate throughput + peak VRAM/GTT. |
 | `probe_ab.py` | (new) | Empty-context spec-off vs. spec-on A/B with the unmodified `probe.py` from [sudoingX/qwen38-mtp](https://github.com/sudoingX/qwen38-mtp) (its community table's instrument, passed via `--probe`): one server per arm on the `262k-q8q51-mtp` flags, three complete probe passes per arm, acceptance from the server log — see [`../results/20260927-probe-ab-262k/`](../results/20260927-probe-ab-262k/). |
 
+`longctx_quality.py` preserves completed measurements and `scores.json` when individual queries
+fail, but exits nonzero if any expected query failed or returned an incomplete stream. Each score
+row reports `expected`, `completed`, `failures`, `missing`, and `complete`; `exact_rate` remains
+the rate among completed responses. A completed but incorrect answer is a quality miss, not an
+execution failure.
+
 ### Common CLI options
 
 - `depth_bench.py`: `--depths DEPTH [DEPTH ...]`, `--reps N`, `--no-warm`.

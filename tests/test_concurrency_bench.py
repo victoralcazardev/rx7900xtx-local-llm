@@ -15,6 +15,7 @@ import sys
 import tempfile
 import types
 import unittest
+from unittest import mock
 
 BENCH_DIR = pathlib.Path(__file__).resolve().parent.parent / "bench"
 sys.path.insert(0, str(BENCH_DIR))
@@ -76,6 +77,25 @@ class TestPeakUsage(unittest.TestCase):
             path.write_text("\n".join(json.dumps(r) for r in rows) + "\n")
             peak = concurrency_bench.peak_usage(path)
         self.assertEqual(peak, {"vram": 300, "gtt": 10, "evicted": 20, "edge": 60.0, "hotspot": 50.0})
+
+    def test_closes_telemetry_file_after_scanning(self):
+        row = {"process": {"bytes_by_metric": {}}, "safety": {}}
+        with tempfile.TemporaryDirectory() as tmp:
+            path = pathlib.Path(tmp) / "telemetry.jsonl"
+            path.write_text(json.dumps(row) + "\n")
+            opened = []
+            original_open = pathlib.Path.open
+
+            def track_open(file_path, *args, **kwargs):
+                handle = original_open(file_path, *args, **kwargs)
+                opened.append(handle)
+                return handle
+
+            with mock.patch.object(pathlib.Path, "open", new=track_open):
+                concurrency_bench.peak_usage(path)
+
+        self.assertEqual(len(opened), 1)
+        self.assertTrue(opened[0].closed)
 
 
 class TestRequiredHelpFlags(unittest.TestCase):

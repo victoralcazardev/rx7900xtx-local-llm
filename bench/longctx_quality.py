@@ -204,6 +204,32 @@ def evaluate(output: str, expected: dict) -> dict:
             "loop_detected": detect_loop(clean)}
 
 
+def aggregate_scores(rows: list[dict], failures: list[dict], documents: dict,
+                     variants: tuple[tuple[str, bool], ...], depths: tuple[int, ...]) -> tuple[list[dict], int]:
+    """Summarizes responses; quality misses score normally, incomplete cells return status 1."""
+    scores = []
+    incomplete_matrix = False
+    for kv, mtp in variants:
+        name = f"{kv}-mtp{int(mtp)}"
+        for depth in depths:
+            subset = [r for r in rows if r["variant"] == name and r["depth"] == depth]
+            failure_count = sum(1 for r in failures if r.get("variant") == name and r.get("depth") == depth)
+            expected = sum(len(doc["questions"]) for doc in documents.get(depth, []))
+            completed = len(subset)
+            complete = completed == expected and failure_count == 0
+            incomplete_matrix |= not complete
+            scores.append({"variant": name, "depth": depth, "n": completed,
+                           "expected": expected, "completed": completed, "complete": complete,
+                           "missing": max(0, expected - completed - failure_count),
+                           "exact": sum(r["exact_match"] for r in subset),
+                           "exact_rate": sum(r["exact_match"] for r in subset) / len(subset) if subset else None,
+                           "field_accuracy": sum(r["field_accuracy"] for r in subset) / len(subset) if subset else None,
+                           "loops": sum(r["loop_detected"] for r in subset),
+                           "truncated": sum(r["truncated"] for r in subset),
+                           "failures": failure_count})
+    return scores, 1 if incomplete_matrix else 0
+
+
 def detect_loop(s: str) -> bool:
     words = re.findall(r"\w+|[^\w\s]", s.lower())
     if len(words) < 80:
@@ -252,6 +278,10 @@ def _parse_port(url: str) -> int:
 
 
 _VARIANT_RE = re.compile(r"^(q8q8|q8q51)-mtp([01])$")
+
+
+class IncompleteResponse(RuntimeError):
+    """Raised when a streamed request did not produce a complete final response."""
 
 
 def parse_variants(values: list[str]) -> tuple[tuple[str, bool], ...]:
@@ -321,11 +351,10 @@ def main() -> int:
     port = _parse_port(args.tokenizer_url)
     runner.PORT = port
     runner.URL = f"http://127.0.0.1:{port}"
-    run_matrix(args, runner)
-    return 0
+    return run_matrix(args, runner)
 
 
-def run_matrix(args, runner):
+def run_matrix(args, runner) -> int:
     out = args.output / time.strftime("longctx-%Y%m%d-%H%M%S")
     docs_dir = out / "documents"
     out.mkdir(parents=True)
@@ -415,6 +444,10 @@ def run_matrix(args, runner):
                         response, content = runner.stream_completion(payload, case / "response.sse", monitor)
                         elapsed = time.monotonic() - started
                         monitor.set_phase("complete")
+                        if not response or not response.get("stop"):
+                            raise IncompleteResponse(
+                                "response missing terminal stop event"
+                            )
                         score = evaluate(content, question["expected"])
                         timings = (response or {}).get("timings", {})
                         result = {"variant": variant_name, "kv": kv, "mtp2": mtp, "depth": depth,
@@ -437,7 +470,9 @@ def run_matrix(args, runner):
                         # server or the monitor died, it stops.
                         with out_summary.open("a") as f:
                             f.write(json.dumps({"variant": variant_name, "depth": depth, "document_index": i,
-                                                "question": q, "failure": repr(e)}) + "\n")
+                                                "question": q, "failure": repr(e),
+                                                "failure_kind": "incomplete_response" if isinstance(e, IncompleteResponse)
+                                                else "request_error"}) + "\n")
                         if proc.poll() is not None or monitor.error or monitor.bad:
                             raise
             except BaseException as e:
@@ -475,20 +510,10 @@ def run_matrix(args, runner):
     rows = [json.loads(line) for line in out_summary.read_text().splitlines() if line.strip()]
     failures = [r for r in rows if "failure" in r]
     rows = [r for r in rows if "failure" not in r]
-    scores = []
-    for kv, mtp in VARIANTS:
-        name = f"{kv}-mtp{int(mtp)}"
-        for depth in DEPTHS:
-            subset = [r for r in rows if r["variant"] == name and r["depth"] == depth]
-            scores.append({"variant": name, "depth": depth, "n": len(subset),
-                           "exact": sum(r["exact_match"] for r in subset),
-                           "exact_rate": sum(r["exact_match"] for r in subset) / len(subset) if subset else None,
-                           "field_accuracy": sum(r["field_accuracy"] for r in subset) / len(subset) if subset else None,
-                           "loops": sum(r["loop_detected"] for r in subset),
-                           "truncated": sum(r["truncated"] for r in subset),
-                           "failures": sum(1 for r in failures if r["variant"] == name and r["depth"] == depth)})
+    scores, status = aggregate_scores(rows, failures, documents, VARIANTS, DEPTHS)
     save(out / "scores.json", scores)
     print(out)
+    return status
 
 
 if __name__ == "__main__":

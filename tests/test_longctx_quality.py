@@ -10,9 +10,13 @@ network.
 """
 from __future__ import annotations
 
+import json
 import pathlib
 import sys
+import tempfile
+import types
 import unittest
+from unittest import mock
 
 BENCH_DIR = pathlib.Path(__file__).resolve().parent.parent / "bench"
 sys.path.insert(0, str(BENCH_DIR))
@@ -64,6 +68,152 @@ class TestParsePort(unittest.TestCase):
     def test_missing_port_raises_systemexit(self):
         with self.assertRaises(SystemExit):
             longctx_quality._parse_port("http://127.0.0.1")
+
+
+class TestRunMatrixCompleteness(unittest.TestCase):
+    def test_complete_quality_miss_is_a_successful_measurement(self):
+        rows = [{"variant": "q8q8-mtp0", "depth": 32_000, "exact_match": False,
+                 "field_accuracy": 0.0, "loop_detected": False, "truncated": True},
+                {"variant": "q8q8-mtp0", "depth": 32_000, "exact_match": False,
+                 "field_accuracy": 0.0, "loop_detected": False, "truncated": False}]
+        documents = {32_000: [{"questions": [{}, {}]}]}
+
+        scores, incomplete = longctx_quality.aggregate_scores(
+            rows, [], documents, (("q8q8", False),), (32_000,)
+        )
+
+        self.assertFalse(incomplete)
+        self.assertEqual(scores[0]["expected"], 2)
+        self.assertEqual(scores[0]["completed"], 2)
+        self.assertTrue(scores[0]["complete"])
+        self.assertEqual(scores[0]["missing"], 0)
+        self.assertEqual(scores[0]["exact"], 0)
+        self.assertEqual(scores[0]["exact_rate"], 0)
+        self.assertEqual(scores[0]["truncated"], 1)
+
+    def test_missing_expected_rows_make_matrix_exit_status_fail(self):
+        documents = {32_000: [{"questions": [{}, {}]}]}
+        scores, incomplete = longctx_quality.aggregate_scores(
+            [{"variant": "q8q8-mtp0", "depth": 32_000, "exact_match": True,
+              "field_accuracy": 1.0, "loop_detected": False, "truncated": False}],
+            [], documents, (("q8q8", False),), (32_000,)
+        )
+
+        self.assertTrue(incomplete)
+        self.assertEqual(scores[0]["expected"], 2)
+        self.assertEqual(scores[0]["completed"], 1)
+        self.assertEqual(scores[0]["missing"], 1)
+
+    def test_incomplete_response_is_not_scored_as_a_quality_miss_and_returns_failure(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            model = root / "model.gguf"
+            server = root / "llama-server"
+            model.touch()
+            server.touch()
+
+            questions = [
+                {"prompt": f"question {index}", "expected": {"answer": index},
+                 "needle_index": [index], "needle_token": [index], "question_ids": [f"id-{index}"]}
+                for index in range(3)
+            ]
+            document = {"document_tokens": 32_000, "seed": 42, "document": "fixture",
+                        "questions": questions}
+
+            class FakeMonitor:
+                def __init__(self, pid, file):
+                    self.file = file
+                    self.error = None
+                    self.bad = {}
+                    monitor_files.append(file)
+
+                def start(self):
+                    pass
+
+                def set_phase(self, _phase):
+                    pass
+
+                def stop(self):
+                    pass
+
+            class FakeProcess:
+                pid = 123
+
+                def poll(self):
+                    return None
+
+                def wait(self, timeout=None):
+                    self.waited = True
+                    return 0
+
+            monitor_files = []
+            process = FakeProcess()
+            runner = types.SimpleNamespace(
+                MODEL=model,
+                SERVER=server,
+                PORT=8080,
+                check_power_cap=lambda _depth: {},
+                extra_argv=lambda _extra, _hardcoded: [],
+                Monitor=FakeMonitor,
+                wait_health=lambda _proc, _monitor: None,
+                cool_down=lambda: None,
+                http_json=lambda path, _payload: (
+                    {"prompt": "rendered"} if path == "/apply-template" else {"tokens": [1, 2, 3]}
+                ),
+            )
+
+            def stream_completion(_payload, events_path, _monitor):
+                if events_path.parent.name.endswith("-q0"):
+                    # A terminal output-cap response is a measured quality miss, not a transport failure.
+                    return ({"stop": True, "truncated": True, "stop_type": "limit", "timings": {}}, "{}")
+                if events_path.parent.name.endswith("-q1"):
+                    # A missing terminal stop event means the requested measurement is incomplete.
+                    return ({"stop": False, "truncated": False, "timings": {}}, "{}")
+                raise TimeoutError("request timed out")
+
+            runner.stream_completion = stream_completion
+            args = types.SimpleNamespace(
+                output=root / "out", tokenizer_url="http://127.0.0.1:18080", server=None,
+                ctx=262_144, runner="depth_bench.py", extra="", mtp_n=2,
+            )
+
+            with (
+                mock.patch.object(longctx_quality, "DEPTHS", (32_000,)),
+                mock.patch.object(longctx_quality, "DOCS", 1),
+                mock.patch.object(longctx_quality, "QUESTIONS_PER_DOC", 2),
+                mock.patch.object(longctx_quality, "VARIANTS", (("q8q8", False),)),
+                mock.patch.object(longctx_quality, "Tokenizer", return_value=object()),
+                mock.patch.object(longctx_quality, "build_document", return_value=document),
+                mock.patch.object(longctx_quality.subprocess, "Popen", return_value=process),
+                mock.patch.object(longctx_quality.os, "killpg") as killpg,
+            ):
+                status = longctx_quality.run_matrix(args, runner)
+
+            out = next((root / "out").glob("longctx-*"))
+            score = json.loads((out / "scores.json").read_text())[0]
+            rows = [json.loads(line) for line in (out / "summary.jsonl").read_text().splitlines()]
+            self.assertEqual(status, 1)
+            self.assertEqual(score["expected"], 3)
+            self.assertEqual(score["completed"], 1)
+            self.assertFalse(score["complete"])
+            self.assertEqual(score["exact"], 0)
+            self.assertEqual(score["exact_rate"], 0)
+            self.assertEqual(score["failures"], 2)
+            self.assertEqual(score["missing"], 0)
+            self.assertEqual(score["truncated"], 1)
+            self.assertEqual({row["failure_kind"] for row in rows if "failure" in row},
+                             {"incomplete_response", "request_error"})
+            self.assertTrue(process.waited)
+            self.assertTrue(monitor_files[0].closed)
+            killpg.assert_called_once_with(process.pid, longctx_quality.signal.SIGTERM)
+
+    def test_main_propagates_partial_matrix_status(self):
+        with (
+            mock.patch.object(sys, "argv", ["longctx_quality.py", "--run", "--inhibitor-ok"]),
+            mock.patch.dict("os.environ", {"IA_BENCH_INHIBITED": "1"}),
+            mock.patch.object(longctx_quality, "run_matrix", return_value=1),
+        ):
+            self.assertEqual(longctx_quality.main(), 1)
 
 
 def _notes(exc: BaseException) -> str:
