@@ -14,10 +14,10 @@
   beats IQ3_XXS by ~3% in perplexity and accepts more MTP drafts, despite IQ3_XXS being ~3% faster
   without MTP. On RDNA3, IQ quantizations generate faster than K quantizations at the same
   file size class.
-- Limitation: KLD was measured at 32K of context. At 262K the KV error could accumulate further —
-  this is now checked: a long-context retrieval/quality test (RULER-style) is **done**, 68/68 exact
-  match from 32K to 240K fill (q8_0/q8_0 up to 220K, q8_0/q5_1 at 240K, including on the exact
-  adopted `262k-q8q51-mtp` server flags) — see [`depth.md`](depth.md).
+- Limitation: KLD was measured at 32K of context. A RULER-style retrieval check now extends to
+  240K, but its 68/68 total is pooled across configurations and includes a partial 190K sample;
+  only 8/8 at 240K used the exact adopted `262k-q8q51-mtp` server flags. Retrieval accuracy is not
+  a broad coding-quality evaluation — see [`depth.md`](depth.md).
 
 ## KV cache quantization: KLD vs. f16
 

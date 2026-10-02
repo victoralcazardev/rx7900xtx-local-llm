@@ -7,7 +7,8 @@ other measurement docs. Log and session analysis only: no new GPU run.
 ## Current conclusion (2026-10-01)
 
 - **Long sessions lose prefill time to full cache misses** (2026-10-01, 5.8-hour session at the
-  75% threshold): prefill was 35% of server busy time, not the 10.8% of the 2026-09-28 logs. Six
+  then-configured 75% threshold, later changed to 70%): prefill was 35% of server busy time, not
+  the 10.8% of the 2026-09-28 logs. Six
   requests at ~172K and ~193K depth reused 0 cached tokens with no compaction before them and
   re-processed the whole context (381-456 s each, 42 min in total). Cause open — see "Full cache
   misses in a long session" below. Decode speed and MTP acceptance (0.66) match earlier data.
@@ -33,8 +34,9 @@ other measurement docs. Log and session analysis only: no new GPU run.
 - **Compaction is a full re-process on this hybrid model**: each of the 14 measured compactions
   cost a median ~83 s before the next turn could start, plus the summary's own generation. See
   "Compaction cost on this hybrid model" below.
-- **No server config change.** Three A/B tests remain open: compaction threshold, compaction
-  method order and presence penalty (see "Open A/B tests" below).
+- **No server config change.** Three A/Bs remain unconditional (compaction threshold, method order
+  and presence penalty); checkpoint count is a fourth, conditional A/B only if logs show a
+  mid-context divergence (see "Open A/B tests" below).
 
 ## Data and method
 
@@ -178,14 +180,16 @@ Evidence: [`results/20261001-agent-session-audit/`](../../results/20261001-agent
 
 ## Open A/B tests
 
-All need the same fixed agent task suite (a test repository with a handful of tasks that have
-tests), at least 2 passes per arm, measuring tasks solved, total wall time, exact repeated tool
-calls, output tokens per turn, number of compactions, time to first token after each compaction
-and full re-processes in the server log.
+All need the same fixed agent task suite (a test repository with a handful of coding tasks and
+executable pass/fail tests), at least 2 passes per arm, measuring task pass/fail, total wall time,
+exact repeated tool calls, output tokens per turn, number of compactions, time to first token after
+each compaction and full re-processes in the server log. Define and freeze this task suite before
+using A/B results to change runtime settings.
 
-1. **Compaction threshold**: the harness's current 75% (~196K of 262K) vs. the previous 60%
-   (~157K). The trade-off is set out in "Compaction cost on this hybrid model" above. Only sessions
-   that pass ~150K are affected.
+1. **Compaction threshold**: the harness's current 70% (~183K of 262K) vs. the previous 60%
+   (~157K). The 75% (~196K) setting was used on 2026-10-01, not the current setting. The trade-off
+   is set out in "Compaction cost on this hybrid model" above. Only sessions that pass ~150K are
+   affected.
 2. **Compaction method order**: the effective current order is `handoff` → `shake` → `soft`
    (`remote` isn't configured and `snapcompact`, which renders history as images, was never
    used in these sessions) vs. `shake` first. See the re-process cost above.
@@ -201,7 +205,7 @@ and full re-processes in the server log.
 | Lever | Expected gain | Cost | Status |
 |---|---|---|---|
 | `--reasoning-effort low` | Largest: ~78% of output is reasoning | Quality | Not pursued (quality first) |
-| Earlier compaction / one session per plan phase | Keeps decode in the ~34 tok/s band instead of ~19 | More lossy compactions, ~5 min each | Harness threshold at 75% instead |
+| Earlier compaction / one session per plan phase | Keeps decode in the ~34 tok/s band instead of ~19 | More lossy compactions, ~5 min each | Harness threshold at 70% instead |
 | KVMem (bounded active attention, full history in host RAM) | Decode at depth without dropping history | Retrieval may miss blocks; ROCm beta; ~+10 GiB host RAM | Trial: 2.2x decode at 244K, exact at 240K, awaiting agent run, not adopted — [ENGINES-EXPERIMENTS.md](../ENGINES-EXPERIMENTS.md#kvmem-trial-round-2-and-final-round-2026-09-30-not-adopted) |
 | RDNA3 FlashAttention GQA fix | Decode at depth (kernel at ~24% of memory bandwidth) | None | No upstream PR; rdna-boosts band (RDNA4-gated) is the candidate to test |
 | Server flags (MTP, `-ub`, KV, power cap) | <5% | — | Already measured |

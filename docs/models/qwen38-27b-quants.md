@@ -263,9 +263,9 @@ single daily profile) is documented with real numbers in `docs/measurements/dept
 `docs/measurements/speculative.md`. Summary of the resolution: 262K with q8/q8 + MTP does not fit
 safely (see `docs/measurements/memory.md`); the adopted profile is `262k-q8q51-mtp` (`-c 262144`,
 KV q8_0/q5_1, MTP n=3), which reaches the full native 262K context after all, at 22,630 MiB process
-VRAM. The **long-context quality test (RULER-style retrieval) is done**: 68/68 exact match from
-32K to 240K fill (q8_0/q8_0 up to 220K, q8_0/q5_1 at 240K, including on the exact adopted server
-flags) — see
+VRAM. The **RULER-style retrieval check** totals 68/68 exact matches pooled across configurations
+from 32K to 240K fill; only 8/8 at 240K used the exact adopted server flags. This does not establish
+general coding quality — see
 [`docs/measurements/depth.md`](../measurements/depth.md) and [`docs/STATUS.md`](../STATUS.md).
 
 ## Open questions

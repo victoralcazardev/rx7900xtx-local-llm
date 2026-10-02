@@ -11,14 +11,14 @@ numbers live in [`../STATUS.md`](../STATUS.md).
   `speculative.md`/`memory.md`, and
   [`../../results/20260926-mtp-n3-depth/`](../../results/20260926-mtp-n3-depth/),
   [`../../results/20260926-ubatch256-262k/`](../../results/20260926-ubatch256-262k/).
-- **Long-context quality validated up to 240K fill (68/68 exact match total)**: 52/52 up to 220K
-  (see below) plus 8/8 at 240K on the adopted `262k-q8q51-mtp` profile (KV q8_0/q5_1) — the +27%
-  KLD of q8_0/q5_1 over q8_0/q8_0 does not show up as a retrieval error at this depth — plus a
-  further 8/8 at 240K re-run on the *exact* adopted server flags (MTP n=3, `-ub 256`, not just the
-  KV variant). See "Quality (RULER-style)" below.
-- **System VRAM margin depends on the desktop's own usage, not just the profile**: only ~0.2-0.3
-  GiB of total system headroom across every long-context configuration measured on 2026-09-26 —
-  see `memory.md`. Close heavy GPU applications (video players, browsers with GPU video) before
+- **Long-context retrieval: 68/68 exact matches pooled across configurations, not one run/profile**:
+  the exact adopted flags (`262k-q8q51-mtp`, MTP n=3, `-ub 256`) have 8/8 at 240K; the other 60
+  matches are across earlier configurations and depths, including a partial 190K sample. See
+  "Quality (RULER-style)" below. This is a small retrieval check, not a general coding-quality
+  result.
+- **System VRAM headroom depends on desktop use, not just the profile**: direct 2026-09-26
+  system-wide readings left 12-190 MiB free across the measured long-context configurations; this
+  is separate from per-process VRAM. See `memory.md`. Close heavy GPU applications before
   long-context work, regardless of profile.
 - Everything current is measured under the 272 W power cap (see `thermals-power.md`); the 303 W figures elsewhere in this file are
   historical data points (different power policy), not corrections — see `docs/STYLE.md` §7.
@@ -304,17 +304,17 @@ tokens and process ~255-262 new tokens at 142-152 tok/s; generation 27.9-29.7 to
 23.0-24.0 tok/s on the n=2/no-`-ub 256` run above). Peak process VRAM 22,628 MiB, GTT 8 MiB,
 0 evicted, hotspot 99°C, system VRAM peak 24,432 of 24,560 MiB.
 
-**Cumulative: 68/68 exact match, 32K-240K fill** (60/60 above + this 8/8). Confirms quality holds
-not only for the KV q8_0/q5_1 variant but on the exact server flags (MTP n=3, `-ub 256`) the
-default profile actually launches with — closing the gap left by the n=2/no-`-ub 256` run above
-(also relevant since generated text is not bit-identical across n=2/n=3/`-ub 256` at temperature
-0 for some task types — see `speculative.md`'s "n=4 checked again at 240K").
+**Cumulative: 68/68 exact matches pooled across configurations and 32K-240K fill** (60/60 earlier
+matches plus this 8/8). This exact-flags run alone is 8/8; it does not turn the pooled total into
+68 tests on the adopted profile. The earlier 60 include 44/44 through a partial 190K sample, 8/8
+at 220K, and 8/8 at 240K with MTP n=2 and no `-ub 256`. See `speculative.md` for why generated
+text is not bit-identical across n=2/n=3/`-ub 256` at temperature 0 for some task types.
 
 ## Open questions / pending (priority order)
 
-1. A broader 190K quality sample (the remaining 4 of 5 planned documents, 16 of 20 questions) —
-   deprioritized as follow-up validation of the current `262k-q8q51-mtp` profile (32K/128K are
-   fully validated, and the one 190K document validated exactly).
+1. Broader retrieval samples at 190K and 240K — the existing 190K sample covers one of five
+   planned documents on an earlier profile; the exact adopted-flags 240K check is 8/8 across two
+   documents. Keep both as non-blocking follow-up validation, not evidence of general coding quality.
 2. ~~Real agent-usage MTP acceptance at depth (temperature 1, 3 seeds)~~ — answered 2026-09-30:
    **0.66** over 186,582 drafted tokens of real agent traffic, see
    [`agent-traffic.md`](agent-traffic.md). Original note: the synthetic benchmark above is
@@ -360,8 +360,8 @@ default profile actually launches with — closing the gap left by the n=2/no-`-
   `memory.md` for the full evidence.
 - **2026-09-26, night**: MTP n=4 re-checked at 240K on the exact adopted flags (`-ub 256`) — still
   loses to n=3 (-8% mean tg), as it did at 128K empty-context. Quality re-validated at 240K on the
-  *exact* adopted flags (MTP n=3, `-ub 256`, not just the KV variant): 8/8 exact match, cumulative
-  68/68 from 32K to 240K. See `speculative.md`.
+  *exact* adopted flags (MTP n=3, `-ub 256`, not just the KV variant): 8/8 exact match; the 68/68
+  cumulative total is pooled across configurations from 32K to 240K. See `speculative.md`.
 - **2026-09-26, round 4 (speed research at depth)**: root cause of the long-context decode
   slowdown identified by analysis (GQA-6 attention-bandwidth limit in HIP's FlashAttention
   kernels, ~24% of peak memory bandwidth reached) — see "Why decode slows with depth" above. A

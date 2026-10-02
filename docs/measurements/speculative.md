@@ -427,7 +427,8 @@ Raw data: [`../../results/20260927-depth-240k-none-vs-n3/`](../../results/202609
 - **2026-09-26, later**: n=4 re-checked at 240K on the exact adopted flags (`-ub 256`) — still
   loses to n=3 (-8% mean tg), confirming the 128K-fill screening's call at depth too. Also found
   generated text is not bit-identical across n=2/n=3/`-ub 256` at temperature 0 for essay and
-  code; retrieval quality re-validated on the exact adopted flags (`depth.md`), cumulative 68/68.
+  code; retrieval quality re-validated on the exact adopted flags (`depth.md`), 8/8 at 240K. The
+  68/68 total is pooled across configurations.
 - **2026-09-27**: ran the sudoingX/qwen38-mtp community `probe.py` A/B on the adopted profile
   (empty context: n=3 +85%, n=2 ties, n=4 and p-min lose) and measured the missing spec-off
   reference at 240K fill: MTP n=3 is +109% there, correcting the earlier "gain shrinks at depth"

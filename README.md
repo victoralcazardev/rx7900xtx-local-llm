@@ -18,7 +18,7 @@ guide.
 | Speed at 240K fill | 18.6-26.9 tok/s (mean 23.3), prefill 380 tok/s |
 | Speed, empty context | 68.9 tok/s (37.2 without MTP) |
 | VRAM | 22,630 MiB peak process VRAM at 240K fill |
-| Quality | 68/68 exact-match retrieval, 32K-240K fill |
+| Quality | 68/68 pooled across configurations (32K-240K); 8/8 on exact adopted flags at 240K |
 | Power | 272 W cap (this card's driver minimum; stock 303 W) |
 
 Launch command, flag rationale and open questions: [`docs/STATUS.md`](docs/STATUS.md). Evidence:
@@ -49,10 +49,12 @@ Requires **Python 3.11+**; `scripts/` use only the standard library.
    bundled), or build it (ROCm only, never Vulkan+HIP in one build): [`docs/ENGINES.md`](docs/ENGINES.md).
 2. **Model.** Download `Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp.gguf` (12.1 GB) from
    [`ISTA-DASLab/Qwen3.8-27B-GSQ-RCO-GGUF`](https://huggingface.co/ISTA-DASLab/Qwen3.8-27B-GSQ-RCO-GGUF)
-   (revision not pinned) into `<models_root>/Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp/`, plus
+   (revision not pinned; the original upstream revision was not recorded) into
+   `<models_root>/Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp/`, plus
    `mmproj-Qwen3.8-27B-BF16.gguf` in the same folder if you want vision. These are the SHA256s of
    this repository's own copies (HF publishes none), to confirm your download matches what was
-   measured:
+   measured. They identify the local files, not an upstream HF revision; that revision cannot be
+   recovered from the recorded hashes:
 
    | File | SHA256 |
    |---|---|
@@ -66,8 +68,10 @@ Requires **Python 3.11+**; `scripts/` use only the standard library.
 5. **Launch.** `python3 scripts/launch.py`, and point any OpenAI-compatible client at
    `http://127.0.0.1:8080`. Details: [`docs/sop/launch-model.md`](docs/sop/launch-model.md).
 6. **Optional, recommended.** Cap power to 272 W permanently
-   ([`docs/sop/power-cap.md`](docs/sop/power-cap.md)). At 262K only
-   ~1.2 GiB of VRAM is left for the desktop (see the second troubleshooting entry).
+   ([`docs/sop/power-cap.md`](docs/sop/power-cap.md)). System-wide VRAM headroom varies with other
+   GPU use; the measured adopted 240K-fill run left 190 MiB free. See
+   [`docs/measurements/memory.md`](docs/measurements/memory.md) and close GPU-heavy apps before
+   long-context work.
 
 ## Troubleshooting
 

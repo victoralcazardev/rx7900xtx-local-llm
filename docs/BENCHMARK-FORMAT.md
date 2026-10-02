@@ -61,8 +61,9 @@ deleting them.
   quality score.
 - **Real server** (`llama-server`): the exact flags from `models.toml`, a 1024-token response to a
   fixed prompt. Read `timings.predicted_per_second` and `draft_n_accepted/draft_n` from the response.
-  VRAM: take `mem_info_vram_used` and subtract the desktop's own usage (~0.4 GiB), or prefer
-  per-process `fdinfo` (below) when precision matters.
+  VRAM: `mem_info_vram_used` is system-wide and includes the desktop and other GPU clients; report
+  its remaining headroom directly when that is the metric of interest. Do not subtract a fixed
+  desktop estimate. Use per-process `fdinfo` (below) for the server's own allocation.
 - **Context-full stress test**: fill the context with N real tokens (from a real corpus, e.g.
   `wiki.train.raw`) and request a real response; sample VRAM every second throughout. This is the
   only way to see failures that only appear with a full context, because the KV cache is reserved at

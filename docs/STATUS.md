@@ -44,8 +44,8 @@ llama-server -m <models_root>/Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp/Qwen3.8-27B-GSQ-RCO-
   [speculative.md](measurements/speculative.md#community-probe-ab-at-262k-empty-context-2026-09-27).
 - **Without MTP at 240K fill**: 11.2 tok/s, so MTP n=3 is +109% at depth —
   [speculative.md](measurements/speculative.md#mtp-vs-spec-off-at-240k-fill-adopted-profile-2026-09-27).
-- **Quality**: 68/68 exact match, 0 loops, RULER-style retrieval, 32K-240K fill (8/8 on the exact
-  adopted flags at 240K) —
+- **Quality**: 68/68 pooled across configurations from 32K-240K (0 loops); only 8/8 at 240K used
+  the exact adopted flags —
   [depth.md](measurements/depth.md#quality-ruler-style-200k-q8q8-mtp).
 - **Power**: 272 W costs ~6% prefill vs. 303 W and runs the hotspot 7-8°C cooler (303 W hit 106°C
   in a deep prefill) — [thermals-power.md](measurements/thermals-power.md).
@@ -64,7 +64,7 @@ Sampling is the Qwen3.8-27B card's own; `--min-p 0.0` is set explicitly because 
 | `--spec-draft-n-max 3` | +9-11% mean tg over n=2 at the real 190K/240K depths (a 128K screening favored n=3 only on copy); n=4/5 lose acceptance — [speculative.md](measurements/speculative.md) |
 | `-ub 256` | -350 MiB peak VRAM vs. 512, -5% prefill, no generation cost — [memory.md](measurements/memory.md) |
 | `-np 1` | Single user; one slot + MTP with queuing beats more slots — [concurrency.md](measurements/concurrency.md) |
-| `--ctx-checkpoints 4` | Default is 32; 4 bounds RAM (270-515 MiB each). Cost: one ~42 s re-process of the base prompt per new context (~14.5K tokens now); warm turns still reuse ~all KV — [memory.md](measurements/memory.md#prompt-cache-reuse-and-context-checkpoints-2026-09-29), [TRIED.md](TRIED.md) |
+| `--ctx-checkpoints 4` | Default is 32; 4 bounds RAM (270-515 MiB each). A cold re-process cost ~42 s for the old ~32K base prompt; the current ~14.5K prompt implies ~19 s (estimate, not measured). Warm turns still reuse ~all KV — [memory.md](measurements/memory.md#prompt-cache-reuse-and-context-checkpoints-2026-09-29), [TRIED.md](TRIED.md) |
 | `-ngl all` | All layers on GPU, explicit rather than `auto` |
 | `--reasoning-effort medium` | Template default `xhigh` injects "think carefully..." and overthinks; `medium` adds no instruction — `models.toml` |
 | `--metrics` | Exposes `/metrics` for the token usage ledger — [token-ledger.md](sop/token-ledger.md) |
@@ -72,15 +72,20 @@ Sampling is the Qwen3.8-27B card's own; `--min-p 0.0` is set explicitly because 
 ## Open questions
 
 - **Full cache misses in long sessions**: whole-context re-processing with no compaction, 42 min
-  in one 5.8-hour session; cause open —
+  in one 5.8-hour session; cause open. Current harness threshold is 70% (~183K), not the earlier
+  75% (~196K) —
   [agent-traffic.md](measurements/agent-traffic.md#full-cache-misses-in-a-long-session-2026-10-01).
-- **Compaction threshold and presence penalty** A/B —
+- **Compaction threshold, compaction method order and presence penalty** A/B after a fixed real-task
+  suite exists; checkpoint count is conditional on a logged mid-context divergence. Current threshold
+  is 70% (~183K), while 60% (~157K) is the earlier comparison arm —
   [agent-traffic.md](measurements/agent-traffic.md#open-ab-tests).
 - **KVMem**: 2.2x decode at 244K and exact at 240K, not adopted until a real agent run —
   [ENGINES-EXPERIMENTS.md](ENGINES-EXPERIMENTS.md#kvmem-trial-round-2-and-final-round-2026-09-30-not-adopted).
 - **Qwen3.8-Flash-Next (MoE) via Strata**: not measured —
   [strata-flash-next.md](models/strata-flash-next.md).
-- **Broader quality sample** at 190K/240K (not blocking) — [depth.md](measurements/depth.md).
+- **Broader retrieval samples** at 190K and 240K remain follow-up; the 190K evidence is one document
+  on an earlier profile and the exact-profile 240K check is 8/8 —
+  [depth.md](measurements/depth.md).
 
 ## Speed levers at depth (2026-09-30)
 
@@ -88,11 +93,17 @@ Moved to [agent-traffic.md](measurements/agent-traffic.md#speed-levers-at-depth-
 
 ## Next steps
 
-1. Test the rdna-boosts GQA-6 FlashAttention band on gfx1100 —
+1. Diagnose the next full cache miss from its server log: determine whether the prefix diverged
+   near the start or mid-context before changing checkpoint settings —
+   [agent-traffic.md](measurements/agent-traffic.md#full-cache-misses-in-a-long-session-2026-10-01).
+2. Define a fixed coding-task suite with executable tests and task pass/fail criteria before using
+   agent outcomes to compare compaction or other runtime settings —
+   [agent-traffic.md](measurements/agent-traffic.md#open-ab-tests).
+3. Test the rdna-boosts GQA-6 FlashAttention band on gfx1100 —
    [ENGINES-EXPERIMENTS.md](ENGINES-EXPERIMENTS.md#fork-vs-wait-for-upstream-and-the-rdna-boosts-gqa-6-fa-band-2026-10-01-candidate-not-run).
-2. Cheap A/Bs from third-party repositories (`GGML_CUDA_GRAPH_OPT=1`, reasoning budget, n-gram
+4. Cheap A/Bs from third-party repositories (`GGML_CUDA_GRAPH_OPT=1`, reasoning budget, n-gram
    replay) —
    [ENGINES-EXPERIMENTS.md](ENGINES-EXPERIMENTS.md#candidates-from-third-party-repositories-2026-10-02-not-run).
-3. Next engine update: follow [update-engine.md](sop/update-engine.md) and the
+5. Next engine update: follow [update-engine.md](sop/update-engine.md) and the
    [upstream watchlist](ENGINES-EXPERIMENTS.md#upstream-watchlist-2026-09-29).
-4. GPU care beyond the 272 W cap (undervolt): deferred.
+6. GPU care beyond the 272 W cap (undervolt): deferred.

@@ -1,9 +1,13 @@
 # Sources
 
-External claims checked against this repository's own measurements (`docs/measurements/`). Status:
-**verified** (matches an own test or a primary source read directly), **hypothesis** (plausible,
-not yet tested here), **refuted** (contradicted by an own test or a primary source read directly).
-"Own test" links to where this repository measured the same thing, when it exists.
+A catalog of third-party claims and their evidence, with links to relevant local measurements in
+`docs/measurements/`. Status labels describe the evidence for the claim, not whether this hardware reproduced it:
+**source-checked** means the primary source was read directly; **locally reproduced** means this
+repository measured or exercised the claim and links that evidence in "Own test"; **hypothesis**
+means not independently established; **refuted** means contradicted by a primary source or local
+result; **not applicable** means it does not transfer to this setup. Existing status labels are
+legacy: read their evidence qualifier and the separate "Own test" cell; a bare **Verified** does
+not claim local reproduction. New or edited rows should use the explicit labels above.
 
 ## Engine / backend
 
@@ -98,7 +102,7 @@ not yet tested here), **refuted** (contradicted by an own test or a primary sour
 | Claim | Source | Date | Status | Own test |
 |---|---|---|---|---|
 | Model quality degrades continuously with input length, well before the context window limit (18 models incl. Qwen3) | [Chroma, "Context Rot"](https://www.trychroma.com/research/context-rot) | 2025-07 | Verified (quotes via a summarizing fetch tool; "Qwen" there is Qwen3, not Qwen3.8) | Motivates the compaction-threshold A/B — [`docs/measurements/agent-traffic.md`](measurements/agent-traffic.md#open-ab-tests) |
-| RULER-style multi-key retrieval with distractors is a reasonable long-context quality methodology beyond simple needle-in-haystack | [github.com/NVIDIA/RULER](https://github.com/NVIDIA/RULER) | — | Verified (methodology reference) | Adopted-profile test is complete: 68/68 exact match through 240K; only the broader 190K sample remains pending — see [`docs/measurements/depth.md`](measurements/depth.md) |
+| RULER-style multi-key retrieval with distractors is a reasonable long-context quality methodology beyond simple needle-in-haystack | [github.com/NVIDIA/RULER](https://github.com/NVIDIA/RULER) | — | Source-checked | Local retrieval result: 68/68 pooled across configurations; only 8/8 at 240K used exact adopted flags; broader 190K sample remains pending — see [`docs/measurements/depth.md`](measurements/depth.md) |
 | "ctx"/context figures in social-media posts usually mean *reserved* context (`-c`), not *filled* context — inflated tok/s numbers often hide this | Several X/Twitter threads (§ audit review) | 2026 | Verified (methodology finding) | Applied throughout `docs/measurements/`: every figure states filled depth, not just `-c` |
 
 ## Agent harness / API compatibility (context only)
@@ -107,8 +111,8 @@ This repository's scope is the GPU and the model (`AGENTS.md`); it doesn't recom
 particular coding-agent harness. These entries are recorded as context, not a recommendation.
 
 | Claim | Source | Date | Status | Own test |
-| omp compaction: `compaction.thresholdPercent`/`thresholdTokens` (disabled by default, reserve-based threshold otherwise), `keepRecentTokens` 20000; `/handoff` summarizes and compacts into the same session rather than opening a new one; `compaction.handoffSaveToDisk` writes `handoff-<ISO timestamp>.md` for automatically triggered handoffs only | [oh-my-pi `docs/compaction.md`](https://github.com/can1357/oh-my-pi/blob/main/docs/compaction.md) | 2026-09-30 | Verified (raw markdown): "commits it as a compaction entry on the current session (no new session is created)" | Harness base prompt measured directly: ~14.5K tokens on omp v18.4.4 — [`docs/measurements/agent-traffic.md`](measurements/agent-traffic.md) |
 |---|---|---|---|---|
+| omp compaction: `compaction.thresholdPercent`/`thresholdTokens` (disabled by default, reserve-based threshold otherwise), `keepRecentTokens` 20000; `/handoff` summarizes and compacts into the same session rather than opening a new one; `compaction.handoffSaveToDisk` writes `handoff-<ISO timestamp>.md` for automatically triggered handoffs only | [oh-my-pi `docs/compaction.md`](https://github.com/can1357/oh-my-pi/blob/main/docs/compaction.md) | 2026-09-30 | Source-checked (raw markdown) | Local measurement: harness base prompt ~14.5K tokens on omp v18.4.4 — [`docs/measurements/agent-traffic.md`](measurements/agent-traffic.md) |
 | `llama-server` implements an Anthropic-compatible Messages API endpoint | [Hugging Face blog, ggml-org](https://huggingface.co/blog/ggml-org/anthropic-messages-api-in-llamacpp) | 2026 | Hypothesis | Not exercised here; this repo's own harness wiring (`AGENTS.md`) targets the OpenAI-compatible `baseUrl` shape, not this endpoint |
 | `pi` coding agent and its `oh-my-pi` fork can be configured against an OpenAI-compatible provider pointing at `llama-server`; `pi` has a reported RPC hang issue | [earendil-works/pi](https://github.com/earendil-works/pi), [can1357/oh-my-pi](https://github.com/can1357/oh-my-pi), [pi issue #2078](https://github.com/earendil-works/pi/issues/2078) | 2026 | Hypothesis | Not evaluated against this repository's server — kept here only as context for the harness-agnostic wiring already described in `AGENTS.md` |
 
@@ -137,7 +141,7 @@ raw; the other rows came through a summarizing fetch tool.
 
 | Claim | Source | Date | Status | Own test |
 |---|---|---|---|---|
-| Qwen evaluates Qwen3.8-27B's agentic coding benchmarks (SWE-bench Pro, DeepSWE 1.1, QwenSWEBench) with the Claude Code harness, temperature 1.0 and a 256K context window | [Qwen/Qwen3.8-27B](https://huggingface.co/Qwen/Qwen3.8-27B) (raw README footnotes) | 2026-09-30 | Verified. QwenSWEBench says "an 8-hour timeout, max_tokens=32,768", not "sessions of up to 8 hours". | The window size is not the fill level: this does not show that a near-full window works as well as a half-full one — [`docs/measurements/agent-traffic.md`](measurements/agent-traffic.md#compaction-cost-on-this-hybrid-model-2026-09-30) |
+| Qwen evaluates Qwen3.8-27B's agentic coding benchmarks (SWE-bench Pro, DeepSWE 1.1, QwenSWEBench) with the Claude Code harness, temperature 1.0 and a 256K context window | [Qwen/Qwen3.8-27B](https://huggingface.co/Qwen/Qwen3.8-27B) (raw README footnotes) | 2026-09-30 | Source-checked. QwenSWEBench says "an 8-hour timeout, max_tokens=32,768", not "sessions of up to 8 hours". | No local reproduction; window size is not fill level, so this does not establish near-full quality — [`docs/measurements/agent-traffic.md`](measurements/agent-traffic.md#compaction-cost-on-this-hybrid-model-2026-09-30) |
 | `preserve_thinking` is on by default; retaining historical thinking "is especially beneficial for agent scenarios where decision consistency and reduced redundant reasoning are critical. It also improves KV cache utilization" | [Qwen/Qwen3.8-27B](https://huggingface.co/Qwen/Qwen3.8-27B) (raw README) | 2026-09-30 | Verified | Left at the default; not measured |
 | Input length alone degrades performance by 13.9%-85% even with perfect retrieval, on math, QA and coding, within the models' claimed windows (5 models) | [Du et al., arXiv:2510.05381](https://arxiv.org/abs/2510.05381) | 2025-10 | Verified (abstract, via fetch tool) | Motivates the compaction-threshold A/B; no 60%/75% threshold follows from it |
 | Compaction is lossy (keeps high-level facts, loses specifics) | [Claude Cookbook, context engineering](https://platform.claude.com/cookbook/tool-use-context-engineering-context-engineering-tools); [Claude blog, session management and 1M context](https://claude.com/blog/using-claude-code-session-management-and-1m-context) | 2026 | Verified (fetch tool quotes). "Don't compact if the session fits comfortably" was **not found** on an Anthropic page | Each compaction here also costs a full re-process — [`docs/measurements/agent-traffic.md`](measurements/agent-traffic.md#compaction-cost-on-this-hybrid-model-2026-09-30) |

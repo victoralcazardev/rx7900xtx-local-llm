@@ -86,7 +86,7 @@ owner instead of restating it. The README headline table is the only sanctioned 
 | A conclusion about a topic | `docs/measurements/<topic>.md` "Current conclusion" | STATUS only if the recommendation or a headline number changes |
 | A change to the recommended profile or a policy | `models.toml` and `docs/STATUS.md` | One appended row in `docs/DECISIONS.md` |
 | Something tried that lost or was set aside | One row in `docs/TRIED.md` (item, key numbers, evidence link) | One appended row in `docs/DECISIONS.md` |
-| A third-party claim (issue, post, paper, model card) | One row in `docs/SOURCES.md` with its status: verified, hypothesis or refuted | The topic doc, if it changes a conclusion |
+| A third-party claim (issue, post, paper, model card) | One row in `docs/SOURCES.md` with explicit evidence status (`source-checked`, `locally reproduced`, `hypothesis`, `refuted`, or `not applicable`); report local evidence separately in `Own test` | The topic doc, if it changes a conclusion |
 | An engine build | `docs/ENGINES.md` | STATUS if it becomes the adopted engine |
 | A candidate or trial not yet adopted | `docs/ENGINES-EXPERIMENTS.md` (engines) or an open question in STATUS | — |
 | A repeatable procedure | `docs/sop/<task>.md` | The README docs map, if it is new |
@@ -108,4 +108,3 @@ owner instead of restating it. The README headline table is the only sanctioned 
 - Moving a section keeps its old heading as a one-line pointer, so existing anchors keep working.
 - Before committing documentation, grep for the numbers you changed (`git grep -n "<number>"`)
   and fix or link every other copy.
-

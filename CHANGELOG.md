@@ -16,6 +16,10 @@ All notable changes to this project are documented here. Format follows
 
 ### Changed
 
+- Corrected the documentation's evidence qualifiers: 68/68 retrieval matches are pooled across
+  configurations, only 8/8 used the exact adopted flags, 190 MiB is system-wide free VRAM (not a
+  process delta), the 70% compaction threshold is current, and the original HF revision is unknown
+  ([`docs/measurements/depth.md`](docs/measurements/depth.md)).
 - `scripts/launch.py` writes the server log to `_tmp/logs/` in foreground mode too, echoing it to
   the console ([launch-model.md](docs/sop/launch-model.md)).
 - Checked llama.cpp b11320 (no update) and recorded the fork-vs-wait analysis: no fork, patch on demand; rdna-boosts GQA-6 FA band is the next engine candidate for gfx1100, not run (`docs/ENGINES-EXPERIMENTS.md`).
@@ -44,8 +48,8 @@ All notable changes to this project are documented here. Format follows
   `--spec-draft-p-min` lose; added `bench/probe_ab.py` (`docs/measurements/speculative.md`).
 - MTP n=4 at 240K on the adopted flags: -8% mean tg vs. n=3, 66% vs. 71% acceptance; output is
   not bit-identical across n=2/n=3/`-ub 256` at temperature 0 (`docs/measurements/speculative.md`).
-- Re-validated 240K retrieval on the exact adopted flags: 8/8, cumulative 68/68 exact match
-  (`docs/measurements/depth.md`).
+- Re-validated 240K retrieval on the exact adopted flags: 8/8; pooled cumulative result was 68/68
+  across configurations, not 68/68 on the adopted flags (`docs/measurements/depth.md`).
 - Closed round 4 (speed at depth) with no config change: root cause is a GQA-6 attention-bandwidth
   limit in HIP's quantized-KV FlashAttention (~24% of peak); Vulkan depth screen inconclusive
   (`docs/measurements/depth.md`, `docs/DECISIONS.md`).

@@ -90,6 +90,11 @@ System VRAM (all processes, `mem_info_vram_used`, 24,560 MiB total), peak:
 | 262K, n=3, `-ub 512` | 24,534 MiB | 26 MiB |
 | 262K, n=3, `-ub 256` | 24,370 MiB | 190 MiB |
 
+The 190 MiB is **system-wide free VRAM at peak** (`24,560 - 24,370`), including all GPU clients;
+it is not the server process's VRAM use or an increase of 190 MiB. The process peak for this run
+was 22,630 MiB. Compared with `-ub 512`'s 26 MiB free, this is a 164 MiB increase in system-wide
+headroom.
+
 0 evicted throughout. Desktop idle VRAM this session was ~1.5 GiB (other days ~0.8 GiB) — the
 **"~1.8 GiB system VRAM margin" figure for the 224K profile in `depth.md` was measured with a
 lighter desktop and doesn't generalize**; actual headroom depends on what else is using the GPU at
