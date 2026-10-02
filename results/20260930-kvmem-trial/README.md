@@ -93,7 +93,7 @@ The 240K documents are the exact ones behind the baseline's 8/8 on the adopted f
   acceptance 60-62%; KVMem reports none.
 - The 49,152 run at a 190K target crashed at the end of prefill (~191.5K tokens processed at ~561
   tok/s): `Memory access fault by GPU node-1 ... Reason: Page not present or supervisor privilege`
-  ([`crash-b49k-190k.log`](crash-b49k-190k.log), last 40 lines). One occurrence, not yet reproduced.
+  (`crash-b49k-190k.log`, last 40 lines; raw log kept locally, not tracked). One occurrence, not yet reproduced.
 - The 240K essay is coherent and grounded in the wiki articles. Smoke test at empty context: tg
   71.5 tok/s (336 tokens), VRAM 13.7 GiB.
 
