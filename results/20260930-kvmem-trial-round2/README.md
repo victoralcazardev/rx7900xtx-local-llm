@@ -24,6 +24,12 @@ same harness and prompts, same hardware and power cap (272 W), one sample per ce
 - Scripts: [`scripts/run-r2.sh`](scripts/run-r2.sh), [`scripts/run-final.sh`](scripts/run-final.sh)
   (run from `<repo>/_tmp/`; adjust `<repo>` and `~` paths to rerun).
 
+**Rerun note**: `kvmem_quality.py` resolves the repository root from its own path, including when
+copied beneath `_tmp/`. These archived shell launchers are templates and require replacing
+`<repo>` plus the recorded local model, source, build, and data prerequisites. `run-final.sh`
+now checks the background build's exit status and requires the expected executable before its
+later A/B step; the recorded `BUILD_EXIT=0` below is the original run's evidence, not a fresh rerun.
+
 Documents (git-ignored, regenerable with `bench/longctx_quality.py` and its seeds):
 
 | Document | Run | sha256 |

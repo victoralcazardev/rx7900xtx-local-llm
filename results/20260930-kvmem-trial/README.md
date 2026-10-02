@@ -33,6 +33,11 @@ medium` alone gives no thinking), no `--ctx-checkpoints`, `--metrics` or `--vers
 `--kvmem-budget` is in tokens, GPU KV = budget + gen-reserve, and one generation (thinking
 included) cannot exceed `--kvmem-gen-reserve` (16,384). Timings report no MTP acceptance.
 
+**Rerun note**: `kvmem_quality.py` locates the checked-in evaluator by walking up to the repository
+root, so it works both in this published results directory and when copied under `_tmp/`. The
+archived shell launchers remain templates: replace `<repo>` and provide the local model, source,
+build, and data prerequisites before running them.
+
 ## Method
 
 **Depth** ([`kvmem_depth.py`](kvmem_depth.py)): fresh server per case; wikitext-2 `wiki.train`

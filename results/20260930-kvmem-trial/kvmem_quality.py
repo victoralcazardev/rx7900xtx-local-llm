@@ -8,7 +8,14 @@ usage: kvmem_quality.py --out FILE doc.json [doc.json ...]
 import argparse, importlib.util, json, sys, time, urllib.request
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+def find_repo_root(script_file):
+    for parent in Path(script_file).resolve().parents:
+        if (parent / "bench/longctx_quality.py").is_file():
+            return parent
+    raise RuntimeError(f"Cannot find repository bench/longctx_quality.py above {script_file}")
+
+
+ROOT = find_repo_root(__file__)
 spec = importlib.util.spec_from_file_location("lq", ROOT / "bench/longctx_quality.py")
 lq = importlib.util.module_from_spec(spec); spec.loader.exec_module(lq)
 
