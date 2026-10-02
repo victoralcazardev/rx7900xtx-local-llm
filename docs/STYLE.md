@@ -99,6 +99,9 @@ owner instead of restating it. The README headline table is the only sanctioned 
   result supersedes a bullet, move the bullet to that doc's dated "History" section (§7).
 - "Open questions" lists only open items. When one is answered, remove it and link the answer
   from the owner doc.
+- `docs/STATUS.md` holds only the current state: profile, headline numbers, flag rationale, and
+  open questions and next steps as one line each that link their owner. Results, candidate
+  lists, watch lists and analysis go to the owner doc, never to STATUS.
 - Word budgets: `README.md` ≤ 1,000; `AGENTS.md` ≤ 900; `docs/STATUS.md` ≤ 1,000;
   `docs/TRIED.md` ≤ 1,200. A measurement doc that passes ~5,000 words gets split by sub-topic
   into a new doc, with a pointer section left under the old heading.
