@@ -7,6 +7,7 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- Added an end-to-end coding-quality, cache-diagnosis and reliability experiment order with external evidence limits; no profile or runtime settings changed ([`ENGINES-EXPERIMENTS.md`](docs/ENGINES-EXPERIMENTS.md)).
 - Reviewed four third-party 7900 XTX tuning repositories: 11 source rows and three engine candidates, none run ([SOURCES.md](docs/SOURCES.md#third-party-tuning-repositories-reviewed-2026-10-02)).
 - Audit of a 5.8-hour agent session: six full cache misses at ~172K-194K, VRAM headroom
   ([agent-traffic.md](docs/measurements/agent-traffic.md#full-cache-misses-in-a-long-session-2026-10-01)).

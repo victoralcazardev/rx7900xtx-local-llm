@@ -99,11 +99,10 @@ Moved to [agent-traffic.md](measurements/agent-traffic.md#speed-levers-at-depth-
 2. Define a fixed coding-task suite with executable tests and task pass/fail criteria before using
    agent outcomes to compare compaction or other runtime settings —
    [agent-traffic.md](measurements/agent-traffic.md#open-ab-tests).
-3. Test the rdna-boosts GQA-6 FlashAttention band on gfx1100 —
-   [ENGINES-EXPERIMENTS.md](ENGINES-EXPERIMENTS.md#fork-vs-wait-for-upstream-and-the-rdna-boosts-gqa-6-fa-band-2026-10-01-candidate-not-run).
-4. Cheap A/Bs from third-party repositories (`GGML_CUDA_GRAPH_OPT=1`, reasoning budget, n-gram
-   replay) —
-   [ENGINES-EXPERIMENTS.md](ENGINES-EXPERIMENTS.md#candidates-from-third-party-repositories-2026-10-02-not-run).
-5. Next engine update: follow [update-engine.md](sop/update-engine.md) and the
-   [upstream watchlist](ENGINES-EXPERIMENTS.md#upstream-watchlist-2026-09-29).
+3. After the cache trace and fixed task-suite baseline, run only the quality-gated experiments in
+   their documented order — [ENGINES-EXPERIMENTS.md](ENGINES-EXPERIMENTS.md#end-to-end-quality-and-reliability-before-tuning-2026-10-02-proposed-not-run).
+4. At the next planned engine update, recheck exact pinned upstream candidates; the RDNA4 GQA-6
+   result is not a ready gfx1100 speedup — [upstream watchlist](ENGINES-EXPERIMENTS.md#upstream-watchlist-2026-09-29).
+5. KVMem remains pending the real-agent T6 run —
+   [ENGINES-EXPERIMENTS.md](ENGINES-EXPERIMENTS.md#kvmem-trial-round-2-and-final-round-2026-09-30-not-adopted).
 6. GPU care beyond the 272 W cap (undervolt): deferred.

@@ -2,7 +2,103 @@
 
 Trials (prepared or run, not adopted) and upstream items being monitored. Nothing here is adopted; the
 builds actually in use, with pinned versions and SHA256, are in [`ENGINES.md`](ENGINES.md), and
-tried-and-not-adopted results are in [`TRIED.md`](TRIED.md).
+tried-and-not-adopted results are in [`TRIED.md`](TRIED.md). Proposed experiments below are not local
+results unless explicitly marked as run.
+
+## End-to-end quality and reliability before tuning (2026-10-02, proposed; not run)
+
+**Priority:** preserve the adopted profile until a fixed coding-task suite exists. Retrieval checks
+and pooled results establish retrieval only; they do not establish repository-editing quality. The
+exact adopted flags have 8/8 retrieval at 240K, while 68/68 pools multiple configurations; neither
+is a coding-agent quality score ([`depth.md`](measurements/depth.md#quality-ruler-style-200k-q8q8-mtp)).
+The six full cache misses in the long agent session remain unexplained; do not attribute them to
+checkpoint count or compaction threshold without a diagnostic trace
+([`agent-traffic.md`](measurements/agent-traffic.md#full-cache-misses-in-a-long-session-2026-10-01)).
+
+### Sequence and controls
+
+1. **Capture a baseline, without changing the profile.** On the next naturally occurring cache miss,
+   retain the server log and record prompt/cache token counts, `f_sim_best`, `f_keep`, checkpoint
+   positions and the earliest divergent prefix position. Do not publish raw prompts, tool outputs or
+   private session logs. If the divergence is near the start, compare the effective serialized
+   system prompt, tool schema and conversation prefix first. If it is mid-prefix, record whether a
+   retained checkpoint exists before that position. The current b11160 server already evicts nearby
+   checkpoints and handles the last-user/near-end cases; an older FIFO-eviction report is not proof
+   that this build lacks those fixes ([`memory.md`](measurements/memory.md#prompt-cache-reuse-and-context-checkpoints-2026-09-29), [SOURCES.md](SOURCES.md#engine--backend)).
+2. **Freeze a small coding-task suite before runtime A/Bs.** Use repeatable, real repository tasks
+   with clean worktrees, fixed task prompts, an executable test or explicit pass/fail rubric, and
+   recorded tool-call trajectories. Include short and long-context tasks; use the same model weights,
+   compatible MTP artifact, harness, tools, sampling and task order policy across arms. A task is a
+   success only when its specified tests pass and no required tool/result is omitted. Keep retrieval
+   probes as a separate metric, not a proxy for code quality.
+3. **Run paired, counterbalanced repetitions.** First collect the unchanged baseline, then change
+   exactly one factor at a time. Repeat the same tasks/contexts at approximately 190K and 240K where
+   feasible; report per-task results and sample count, not only an aggregate. Record exact model
+   file hashes, engine commit/build flags, runtime/harness version and effective settings, GPU/host
+   baseline, power cap, context fill, sampling, tools, task seeds and commands. Apart from the one
+   deliberately varied factor, differences in these controls make an arm confounded; do not attribute
+   its outcome to the intended change.
+
+### Metrics and stop gates
+
+- **Primary:** task pass rate, regressions by task, correct tool-call/result handling, incomplete or
+  repeated work, and whether output limits or errors prevented task completion. Require no loss of
+  task correctness before accepting a speed or memory gain.
+- **Latency/cost:** end-to-end wall time; time-to-first-token; prefill and decode rates; p50/p90 by
+  context depth; actual prompt/cache/output token counts; compaction and summary time; cache misses;
+  tool retries and stop reasons. Count tokens, not output characters.
+- **Resource/reliability:** peak process VRAM and system-wide free VRAM as distinct measures, host
+  RSS/free RAM/swap, GPU temperature/power, evictions, server restarts, faults and NaNs. Stop on a
+  GPU memory fault or NaN and diagnose the captured failure; do not hide it with startup retry loops.
+  Stay within the existing 272 W cap and current safety limits.
+- **Decision rule:** report paired task outcomes and latency distributions with conditions. Reject a
+  faster arm if task correctness, tool reliability, output completion or safe resource headroom
+  regresses. Label single-sample, external, estimated and not-run evidence explicitly.
+
+### Ordered experiments after the baseline
+
+1. **Cache-miss diagnosis first.** Only if a trace shows repeatable mid-prefix divergence and a
+   missing usable checkpoint before it, compare `--ctx-checkpoints 4` with `16` in the fixed suite.
+   Track retained positions, host-memory cost and miss recovery time. Locally measured checkpoints
+   ranged about 270–515 MiB at positions around 30.7K–92.9K; their sizes at deeper positions,
+   including 190K/240K, are unknown. Do not extrapolate or raise the count speculatively. If the
+   serialized prefix differs near the beginning, fix/standardize that serialization instead of
+   increasing checkpoints. No cache-cause conclusion is established yet.
+2. **Harness compaction costs.** Inventory actual effective settings and request timelines before
+   changing compaction. The official omp v18.4.4 documentation describes asynchronous snapshot
+   summarization and discarding stale snapshots; it does not establish that this harness currently
+   enables that path. Because this server is configured `-np 1`, possible contention from background
+   summarization is a hypothesis only: compare request timing, cache reuse and wall time under the
+   same single-slot workload before considering any setting change. A local `shake` avoids a model
+   summarization call but rewrites the prefix and can force reprocessing; it is not free. Do not turn
+   on asynchronous compaction as an assumed optimization.
+3. **Compaction and sampling A/Bs.** After the suite baseline, compare the current 70% threshold
+   against 60%, and compare compaction method/order one factor at a time. Keep Qwen's documented
+   sampling and `reasoning_effort=medium` initially: the model card describes medium as a speed/quality
+   balance and warns lower effort can increase failures/retries. Test presence penalty only as its
+   own quality-gated arm; do not silently lower reasoning effort or add unlisted sampling flags.
+4. **Quant-versus-context Pareto (optional).** Compare candidate quants built from the same base
+   weights with compatible MTP artifacts. First compare each quant with the adopted baseline at
+   matched context fill and identical tasks/settings, to isolate quant effects. Then test that
+   quant's lower-context policy as a separate arm; include 64K/128K/190K/240K only where it fits
+   safely. Do not assume a 4-bit quant fits any particular context on this 24 GB card. Report quality
+   and resource/latency tradeoffs; perplexity alone is not an adoption criterion.
+5. **Upstream candidates are routine-update checks, not the first optimization.** Keep b11160 pinned
+   until an exact engine commit is built and validated. PR #28003 has a draft gfx1100 single-token
+   no-MoE Q4_K kernel result, not an IQ3_S or MTP verification result; PR #29393 reports a CUDA
+   prefill gain, while HIP benefit is unmeasured. PR #27489 reports a CUDA memory saving and has no
+   HIP speed evidence. Recheck their exact revisions/status at the next planned engine update; do
+   not choose a floating `latest` tag or claim a local gain. See [SOURCES.md](SOURCES.md#engine--backend).
+6. **Lower-priority candidate checks.** The rdna-boosts GQA-6 route is RDNA4/gfx1201 evidence and
+   is not a ready gfx1100/q8_0-q5_1 speedup; a community report also found slower non-MTP decode.
+   Do not prioritize a fork build ahead of the cache diagnosis and coding suite. If later tested,
+   pin the precise source revision (the fork's release/latest references conflict), verify the
+   exact kernels and backend, and run the same paired quality and performance suite. KVMem remains
+   pending the real-agent T6 run in [its trial record](#kvmem-trial-round-2-and-final-round-2026-09-30-not-adopted);
+   its existing trial numbers are not repeated here or evidence of adoption.
+
+**Status:** all work in this section is proposed and unrun. No configuration, engine, harness setting,
+or profile has changed as a result of this plan.
 
 ## Fork vs. wait for upstream, and the rdna-boosts GQA-6 FA band (2026-10-01, candidate, not run)
 
@@ -22,7 +118,7 @@ speculative layer inputs) only matters with concurrency > 1 and a DFlash drafter
 | [#28433](https://github.com/ggml-org/llama.cpp/issues/28433) draft context sized from `llama_n_ctx` | None; the proposed fix was withdrawn by its contributor; [PR #29208](https://github.com/ggml-org/llama.cpp/pull/29208) (open) clamps to `n_ctx_train` | None: hits multi-slot unified KV, this profile is `-np 1` |
 | [#26432](https://github.com/ggml-org/llama.cpp/issues/26432) silent GTT fallback with MTP | None | None: the 262K profile is measured without spill |
 | [#28867](https://github.com/ggml-org/llama.cpp/issues/28867) gfx1201 FA threshold | None | gfx1201 only |
-| RDNA3 FlashAttention GQA folding (the depth-decode bottleneck, [depth.md](measurements/depth.md#why-decode-slows-with-depth-attention-bandwidth-2026-09-26-round-4)) | No upstream PR; one fork implementation, below | The only lever with a large expected decode gain |
+| RDNA3 FlashAttention GQA folding (the depth-decode bottleneck, [depth.md](measurements/depth.md#why-decode-slows-with-depth-attention-bandwidth-2026-09-26-round-4)) | No upstream PR; one fork implementation, below | Not yet demonstrated as a compatible or beneficial gfx1100/q8_0-q5_1 change; lower priority than cache diagnosis and the coding suite |
 
 Conclusion: do not maintain a fork. Patch on demand: apply a specific change on top of the pinned tag
 (as with `kvmix-vec4` in [`ENGINES.md`](ENGINES.md)), A/B it, and keep it only if it wins.
@@ -51,8 +147,9 @@ times per query token". It routes `n_q <= 8` (decode and MTP verify) to the exis
 
 Test plan (not run):
 
-1. Build the latest fork release (`v16-84e76d8a2-r28` on 2026-10-01) for gfx1100 with the `kvmix`
-   FA-quants flags, widening the band's architecture gate to RDNA3.
+1. Select and pin one exact fork commit/release after reconciling the fork's release and `/releases/latest`
+   references; do not use a floating `latest` tag. Build for gfx1100 with the `kvmix` FA-quants flags,
+   widening the band's architecture gate to RDNA3.
 2. `test-backend-ops -o FLASH_ATTN_EXT` for head 256 with `q8_0`/`q5_1`, and greedy `plain ==
    draft-mtp` at depth.
 3. One A/B against `kvmix` at 190K and 240K fill: decode, prefill and peak VRAM.
@@ -211,8 +308,9 @@ retest (see "Other engines evaluated" in [`ENGINES.md`](ENGINES.md)) pending; th
 | Upstream item | State and relevance | Limit |
 |---|---|---|
 | [#27530](https://github.com/ggml-org/llama.cpp/pull/27530) | Merged; cleanup after failed K/V and recurrent/hybrid state restoration. A robustness candidate. | No measured Qwen throughput or quality gain established here. |
-| [#29393](https://github.com/ggml-org/llama.cpp/pull/29393) | Merged; RMS_NORM+SCALE fusion, with a reported 4.2–4.8% MTP prefill gain. | Reported on CUDA hardware only; no local HIP/gfx1100 validation. The PR touches only `ggml/src/ggml-cuda/ggml-cuda.cu`, `norm.cu` and `norm.cuh`, which the HIP backend also compiles, so the fusion is expected to reach HIP builds (not measured). Expected impact here: prefill only (e.g. a cold 240K fill at ~380 tok/s, ~632 s → ~605 s, ~27 s saved); decode unaffected. Not worth an engine update alone; bundle with the next one (latest upstream release on 2026-09-29: b11255). |
-| [#28003](https://github.com/ggml-org/llama.cpp/pull/28003) | Draft; RDNA3 gfx1100 single-token MMVQ fast path, with the author reporting a Q4_K GEMV result on an RX 7900 XTX. | Not our IQ3_S quant; no local validation. |
+| [#29393](https://github.com/ggml-org/llama.cpp/pull/29393) | Merged 2026-09-25; RMS_NORM+SCALE fusion, with an author-reported 4.2–4.8% MTP prefill gain on two CUDA GPUs. | HIP benefit on gfx1100 is unmeasured; check at the next pinned engine update, not a promised gain or a reason to upgrade alone. |
+| [#28003](https://github.com/ggml-org/llama.cpp/pull/28003) | Draft; gfx1100 single-token, no-MoE RDNA3 GEMV fast path; author reports Q4_K per-GEMV 68.91→62.58 µs and 32-token total 493.9→448.5 ms on a 7900 XTX. | Not measured on IQ3_S, MTP verification batches or this repository's server profile; no local validation. |
+| [#27489](https://github.com/ggml-org/llama.cpp/pull/27489) | Open; single-sequence/single-CUDA-device compute-buffer sharing; author reports 1,042 MiB saved on RTX 4090. | CUDA-only evidence; no HIP proof or speed result. Memory-watch only, not an optimization recommendation. |
 | [#26648](https://github.com/ggml-org/llama.cpp/issues/26648) | MTP sampler assertion at long context on HIP; closed per [`depth.md`](measurements/depth.md). Moved from STATUS 2026-10-02. | Re-check on the next update |
 | [#26038](https://github.com/ggml-org/llama.cpp/issues/26038), [#27282](https://github.com/ggml-org/llama.cpp/issues/27282), [#28433](https://github.com/ggml-org/llama.cpp/issues/28433) | MTP compute and draft-context sizing on HIP; open as of b11178. Moved from STATUS 2026-10-02. | Re-check on the next update |
 | [halo-box/strix-llama.cpp#56](https://github.com/halo-box/strix-llama.cpp/pull/56) | RDNA3 IQ2/IQ3 MMVQ scale change ([`SOURCES.md`](SOURCES.md)). Moved from STATUS 2026-10-02. | Not in upstream |
