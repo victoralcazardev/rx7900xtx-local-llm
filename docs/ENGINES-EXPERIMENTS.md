@@ -184,6 +184,22 @@ profile's (~19-23 tok/s), long-context retrieval matches the current 8/8 exact a
 ~4 GiB of host RAM stays free at 256K, and the agent run shows no output-cap failures and no loss
 of task state. Otherwise record the numbers and drop it.
 
+## Candidates from third-party repositories (2026-10-02, not run)
+
+Source rows and verdicts: [`SOURCES.md`](SOURCES.md#third-party-tuning-repositories-reviewed-2026-10-02).
+Nothing here is adopted; the order and conditions are in the private test plan.
+
+| Candidate | Variable | Why it might matter | Kill criterion |
+|---|---|---|---|
+| `GGML_CUDA_GRAPH_OPT=1` (env var, exists in b11160, off by default) | Environment only, same binary and flags | Enables graph optimization with concurrent streams when HIP graphs are in use; reported +1.4% tg, +1.0% pp at empty context without MTP (dense model) | Under ~2% tg at 190K/240K with MTP n=3, or any output change at greedy, or a VRAM increase |
+| `--spec-type draft-mtp,ngram-map-k` on a replayed multi-turn session | Spec type only | A turboquant-fork build reported -17.4% session wall time that a single-request benchmark cannot see; folds into the prepared n-gram A/B in [`speculative.md`](measurements/speculative.md#n-gram-stacked-on-mtp-how-llamacpp-combines-them-source-reading-2026-09-29) | No wall-time gain across turns, or runaway repetition |
+| `-DGGML_LTO=ON` build | Build flag only | Asserted "+5-15%" with an empty A/B table; low prior because decode is memory-bound | Under ~2% tg or pp, or a longer build for no gain |
+| `GGML_CUDA_DISABLE_GRAPHS=1` | Environment only | Diagnostic for a HIP-graph exec-update hang reported by a third party; not a speed candidate | Run only if a hang appears; never proactively |
+| cafe-llama.cpp fork build (`a0d43f3`, upstream base `f1cee99`), single-backend HIP | Engine build; then `--spec-draft-n-max` 3/4/6 | Hybrid-GDN trunk fusions (`src/models/qwen35.cpp`) may cut the target pass at depth; the author claims cheaper MTP on an RTX 3090, but no draft-cost change for Qwen3.8 was found in the code ([`SOURCES.md`](SOURCES.md#cafe-llamacpp-fork-and-the-quimedesu-x-thread-2026-10-02)); never run on AMD | Under ~5% tg at 190K/240K vs. b11160 `hip-kvmix` n=3, any output change at greedy, a build failure on gfx1100, or a missing `kvmix` FA-quants kernel (the fork is a 275-file diff, not a patch to maintain) |
+
+Not carried here: `--reasoning-budget` (profile-level, see [`STATUS.md`](STATUS.md#next-steps)), undervolt (deferred GPU
+care) and the fork-only `turbo4`/`turbo2` V caches (not in our engine).
+
 ## Upstream watchlist (2026-09-29)
 
 **Keep b11160 pinned: no replacement has been measured on this setup.** The official
@@ -197,6 +213,10 @@ retest (see "Other engines evaluated" in [`ENGINES.md`](ENGINES.md)) pending; th
 | [#27530](https://github.com/ggml-org/llama.cpp/pull/27530) | Merged; cleanup after failed K/V and recurrent/hybrid state restoration. A robustness candidate. | No measured Qwen throughput or quality gain established here. |
 | [#29393](https://github.com/ggml-org/llama.cpp/pull/29393) | Merged; RMS_NORM+SCALE fusion, with a reported 4.2–4.8% MTP prefill gain. | Reported on CUDA hardware only; no local HIP/gfx1100 validation. The PR touches only `ggml/src/ggml-cuda/ggml-cuda.cu`, `norm.cu` and `norm.cuh`, which the HIP backend also compiles, so the fusion is expected to reach HIP builds (not measured). Expected impact here: prefill only (e.g. a cold 240K fill at ~380 tok/s, ~632 s → ~605 s, ~27 s saved); decode unaffected. Not worth an engine update alone; bundle with the next one (latest upstream release on 2026-09-29: b11255). |
 | [#28003](https://github.com/ggml-org/llama.cpp/pull/28003) | Draft; RDNA3 gfx1100 single-token MMVQ fast path, with the author reporting a Q4_K GEMV result on an RX 7900 XTX. | Not our IQ3_S quant; no local validation. |
+| [#26648](https://github.com/ggml-org/llama.cpp/issues/26648) | MTP sampler assertion at long context on HIP; closed per [`depth.md`](measurements/depth.md). Moved from STATUS 2026-10-02. | Re-check on the next update |
+| [#26038](https://github.com/ggml-org/llama.cpp/issues/26038), [#27282](https://github.com/ggml-org/llama.cpp/issues/27282), [#28433](https://github.com/ggml-org/llama.cpp/issues/28433) | MTP compute and draft-context sizing on HIP; open as of b11178. Moved from STATUS 2026-10-02. | Re-check on the next update |
+| [halo-box/strix-llama.cpp#56](https://github.com/halo-box/strix-llama.cpp/pull/56) | RDNA3 IQ2/IQ3 MMVQ scale change ([`SOURCES.md`](SOURCES.md)). Moved from STATUS 2026-10-02. | Not in upstream |
+| [BuffedMod IQ3_S quant](https://huggingface.co/tooltd/Qwen3.8-27B-GSQ-RCO-BuffedMod-GGUF) | Same quant with an upcast `output.weight` ([`SOURCES.md`](SOURCES.md)). Moved from STATUS 2026-10-02. | Model, not engine; untested here |
 
 These items are watchlist candidates only; this document does not assert whether any is included in
 the current b11160 binary. Reassess only after a compatible build is available and benchmarked on
