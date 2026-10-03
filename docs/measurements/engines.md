@@ -340,16 +340,13 @@ a separate, additive effect on top of (or against) this kernel-level gap.
 
 ## Open questions
 
-- ~~Whether the Ubuntu Vulkan tarball runs unmodified on CachyOS~~ — confirmed 2026-09-26: the
-  official `ubuntu-vulkan` b11160 binary ran unmodified for the depth screen above.
 - Real tok/s of Vulkan vs. HIP across the full model lineup beyond what's measured above — the
   community scoreboards above are other models/GPUs of the same chip, order-of-magnitude reference
   only.
 - Whether an LTS kernel is still needed to avoid the P-state bug referenced by
   `CachyOS/linux-cachyos#888`/`#1035` — not seen with kernel 7.2.7 during any of this session's
   measurements (GPU clocked normally throughout), not re-tested directly.
-- ~~A fair Vulkan decode-at-depth re-test (`-ub >= 512`, memory clock pinned)~~ — done 2026-09-29,
-  see "Vulkan re-test with the memory clock pinned" above. Still open: MTP on Vulkan (unverified).
+- MTP on Vulkan (unverified).
 
 ## History
 
@@ -363,6 +360,7 @@ a separate, additive effect on top of (or against) this kernel-level gap.
 - **2026-09-26**: ROCm 10 runtime tested against the ROCm 7.2.4 runtime (same ROCm 10 compiler) —
   rejected, -1..-2% tg / -5% pp with higher variance. BeeLlama v0.4.7 measured for parity — -18%
   tg vs. `hip-kvmix`.
+- **2026-09-26**: the official `ubuntu-vulkan` b11160 binary ran unmodified on CachyOS (used for the depth screen below).
 - **2026-09-26, round 4**: Vulkan vs. HIP depth screen re-tested the memory-clock-throttling
   hypothesis from 2026-09-24 (still reproduces: 456 MHz in 93 of 118 samples) but the run was
   inconclusive for decode at depth because Vulkan's prefill collapses ~5x at `-ub 256` and the run
