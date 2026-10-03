@@ -1,0 +1,227 @@
+{
+  "mtp3-mod": {
+    "n": 18,
+    "median_tg": 71.53085222847727,
+    "min_tg": 49.914110435984945,
+    "max_tg": 137.30573151360423,
+    "total_wall_s": 349.3775483730042,
+    "draft_n": 28869,
+    "accepted_n": 19785
+  },
+  "mtp3-moddef": {
+    "n": 18,
+    "median_tg": 69.26646481349471,
+    "min_tg": 49.669418376743764,
+    "max_tg": 136.48312509573785,
+    "total_wall_s": 360.0806539659952,
+    "draft_n": 34273,
+    "accepted_n": 20075
+  },
+  "mtp3-map": {
+    "n": 18,
+    "median_tg": 71.74890497995861,
+    "min_tg": 50.43956448481285,
+    "max_tg": 133.52189276089752,
+    "total_wall_s": 340.4966645320019,
+    "draft_n": 27051,
+    "accepted_n": 19356
+  },
+  "mtp3-mod/code": {
+    "n": 3,
+    "median_tg": 68.43134003811338,
+    "median_wall_s": 22.365331226999842,
+    "accept": 0.7023319615912208,
+    "predicted_n": [
+      1500,
+      1500,
+      1500
+    ]
+  },
+  "mtp3-mod/editing": {
+    "n": 3,
+    "median_tg": 75.6796578532261,
+    "median_wall_s": 20.865159302000393,
+    "accept": 0.6387474061497831,
+    "predicted_n": [
+      1500,
+      1500,
+      1500
+    ]
+  },
+  "mtp3-mod/spanish": {
+    "n": 3,
+    "median_tg": 51.19168016011965,
+    "median_wall_s": 29.604345228000966,
+    "accept": 0.45254589539314166,
+    "predicted_n": [
+      1500,
+      1500,
+      1500
+    ]
+  },
+  "mtp3-mod/extraction": {
+    "n": 3,
+    "median_tg": 69.355920766336,
+    "median_wall_s": 4.262676862999797,
+    "accept": 0.7164048865619547,
+    "predicted_n": [
+      639,
+      267,
+      239
+    ]
+  },
+  "mtp3-mod/agent": {
+    "n": 3,
+    "median_tg": 136.06774671431097,
+    "median_wall_s": 24.551539034000598,
+    "accept": 0.8193303204601479,
+    "predicted_n": [
+      2863,
+      2855,
+      2821
+    ]
+  },
+  "mtp3-mod/reasoning": {
+    "n": 3,
+    "median_tg": 72.9441098379999,
+    "median_wall_s": 12.830697273999249,
+    "accept": 0.7549251379038613,
+    "predicted_n": [
+      894,
+      683,
+      1155
+    ]
+  },
+  "mtp3-moddef/code": {
+    "n": 3,
+    "median_tg": 69.01323005258678,
+    "median_wall_s": 22.032613714000036,
+    "accept": 0.6931228861330327,
+    "predicted_n": [
+      1500,
+      1500,
+      1500
+    ]
+  },
+  "mtp3-moddef/editing": {
+    "n": 3,
+    "median_tg": 71.68658643539621,
+    "median_wall_s": 21.96681986799922,
+    "accept": 0.48518781006378453,
+    "predicted_n": [
+      1500,
+      1500,
+      1500
+    ]
+  },
+  "mtp3-moddef/spanish": {
+    "n": 3,
+    "median_tg": 50.57604563949969,
+    "median_wall_s": 29.892514343000585,
+    "accept": 0.4407351205530265,
+    "predicted_n": [
+      1500,
+      1500,
+      1500
+    ]
+  },
+  "mtp3-moddef/extraction": {
+    "n": 3,
+    "median_tg": 67.31125812443193,
+    "median_wall_s": 8.31807560299967,
+    "accept": 0.664179104477612,
+    "predicted_n": [
+      639,
+      512,
+      239
+    ]
+  },
+  "mtp3-moddef/agent": {
+    "n": 3,
+    "median_tg": 131.27146068753223,
+    "median_wall_s": 25.872980514999654,
+    "accept": 0.633615952268802,
+    "predicted_n": [
+      2863,
+      2855,
+      2821
+    ]
+  },
+  "mtp3-moddef/reasoning": {
+    "n": 3,
+    "median_tg": 71.91448376683425,
+    "median_wall_s": 12.796094788000119,
+    "accept": 0.725,
+    "predicted_n": [
+      894,
+      683,
+      1155
+    ]
+  },
+  "mtp3-map/code": {
+    "n": 3,
+    "median_tg": 69.14899726803797,
+    "median_wall_s": 21.92655628800094,
+    "accept": 0.644500209117524,
+    "predicted_n": [
+      1500,
+      1500,
+      1500
+    ]
+  },
+  "mtp3-map/editing": {
+    "n": 3,
+    "median_tg": 104.67329606852267,
+    "median_wall_s": 15.369043477001469,
+    "accept": 0.729485669414998,
+    "predicted_n": [
+      1500,
+      1500,
+      1500
+    ]
+  },
+  "mtp3-map/spanish": {
+    "n": 3,
+    "median_tg": 51.97717678353233,
+    "median_wall_s": 29.1733539199995,
+    "accept": 0.454928095405121,
+    "predicted_n": [
+      1500,
+      1500,
+      1500
+    ]
+  },
+  "mtp3-map/extraction": {
+    "n": 3,
+    "median_tg": 71.66649109274424,
+    "median_wall_s": 4.041274612000052,
+    "accept": 0.7178423236514523,
+    "predicted_n": [
+      227,
+      267,
+      234
+    ]
+  },
+  "mtp3-map/agent": {
+    "n": 3,
+    "median_tg": 129.32320608322405,
+    "median_wall_s": 25.97689460499896,
+    "accept": 0.9550867201656743,
+    "predicted_n": [
+      2966,
+      2789,
+      2821
+    ]
+  },
+  "mtp3-map/reasoning": {
+    "n": 3,
+    "median_tg": 71.831318867173,
+    "median_wall_s": 15.131770314999812,
+    "accept": 0.6832010582010583,
+    "predicted_n": [
+      953,
+      977,
+      1018
+    ]
+  }
+}

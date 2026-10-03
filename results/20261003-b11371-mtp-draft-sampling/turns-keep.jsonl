@@ -1,0 +1,8 @@
+{"tag": "b11160-keep", "turn": 1, "prompt_n": 37, "cache_n": 0, "predicted_n": 818, "finish": "stop", "keep_reasoning": true}
+{"tag": "b11160-keep", "turn": 2, "prompt_n": 18, "cache_n": 856, "predicted_n": 634, "finish": "stop", "keep_reasoning": true}
+{"tag": "b11160-keep", "turn": 3, "prompt_n": 18, "cache_n": 1509, "predicted_n": 1013, "finish": "stop", "keep_reasoning": true}
+{"tag": "b11160-keep", "turn": 4, "prompt_n": 18, "cache_n": 2540, "predicted_n": 635, "finish": "stop", "keep_reasoning": true}
+{"tag": "b11371-keep", "turn": 1, "prompt_n": 37, "cache_n": 0, "predicted_n": 818, "finish": "stop", "keep_reasoning": true}
+{"tag": "b11371-keep", "turn": 2, "prompt_n": 20, "cache_n": 854, "predicted_n": 732, "finish": "stop", "keep_reasoning": true}
+{"tag": "b11371-keep", "turn": 3, "prompt_n": 19, "cache_n": 1606, "predicted_n": 1106, "finish": "stop", "keep_reasoning": true}
+{"tag": "b11371-keep", "turn": 4, "prompt_n": 18, "cache_n": 2731, "predicted_n": 456, "finish": "stop", "keep_reasoning": true}
