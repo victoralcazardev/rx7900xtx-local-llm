@@ -145,10 +145,17 @@ results/              # curated result folders, see results/INDEX.md
 | [`docs/measurements/`](docs/measurements/) | Benchmark results by topic (engines, kv-quality, memory, coexistence, depth, speculative, thermals-power, concurrency, agent-traffic) |
 | [`docs/ENGINES.md`](docs/ENGINES.md), [`docs/ENGINES-EXPERIMENTS.md`](docs/ENGINES-EXPERIMENTS.md), [`docs/hardware/`](docs/hardware/), [`docs/models/`](docs/models/) | Engine builds, prepared engine trials and upstream watchlist, GPU/driver specs (Linux and Windows), model and quant provenance |
 | [`docs/BENCHMARK-FORMAT.md`](docs/BENCHMARK-FORMAT.md) | How every number was produced |
-| [`docs/sop/`](docs/sop/) | Procedures: install, launch, add a model, update the engine, measure a backend, power cap, token ledger |
+| [`docs/sop/`](docs/sop/) | Procedures: install, launch, add a model, update the engine, measure a backend, power cap, token ledger, publish sync |
 | [`docs/STYLE.md`](docs/STYLE.md) | Language, units, naming and immutable-evidence rules |
 | `scripts/check-repo.py`, `tests/` | Hygiene check and `python3 -m unittest discover -s tests -v` |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md), `.github/` | How to contribute, CI, issue and PR templates |
+
+## Upstream
+
+This card's results are also published in community projects:
+
+- [local-ai-registry](https://github.com/0xSero/local-ai-registry) (merged): lab `count()` fix (#132) and the Qwen3.8-27B IQ3_S-mtp 262K recipe for this card, 6/6 gates (#133). Its host launch pins the b11160 build, see [`docs/ENGINES.md`](docs/ENGINES.md).
+- [sudoingX/qwen38-mtp #88](https://github.com/sudoingX/qwen38-mtp/pull/88) (open): 262K `q8_0`/`q5_1` row, 37.2 to 68.9 tok/s (+85%) empty context, +109% at 240K fill.
 
 ## Contributing
 
