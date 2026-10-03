@@ -262,7 +262,8 @@ def build_argv(m: Manifest, model: Model, profile_name: str, profile: dict,
             argv += [flag, str(model.sampling[key])]
     argv += list(m.default_flags)
     if "spec_n_max" in profile:
-        argv += ["--spec-type", "draft-mtp", "--spec-draft-n-max", str(profile["spec_n_max"])]
+        argv += ["--spec-type", profile.get("spec_type", "draft-mtp"),
+                 "--spec-draft-n-max", str(profile["spec_n_max"])]
     argv += list(profile.get("flags", []))
     return argv
 

@@ -505,6 +505,14 @@ class TestBuildArgv(unittest.TestCase):
         self.assertIn("--spec-draft-n-max", argv)
         self.assertIn("2", argv)
 
+    def test_spec_type_overrides_mtp_drafter_list(self):
+        m, model = self._manifest_and_model()
+        profile = {"context": 131072, "kv": ["q8_0", "q8_0"], "spec_n_max": 3,
+                   "spec_type": "draft-mtp,ngram-map-k4v"}
+        argv = manifest.build_argv(m, model, "p", profile, backend="hip")
+        i = argv.index("--spec-type")
+        self.assertEqual(argv[i:i + 4], ["--spec-type", "draft-mtp,ngram-map-k4v", "--spec-draft-n-max", "3"])
+
     def test_profile_flags_appended(self):
         m, model = self._manifest_and_model()
         profile = {"context": 131072, "kv": ["q8_0", "q8_0"], "flags": ["--extra", "1"]}
