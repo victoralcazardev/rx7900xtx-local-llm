@@ -409,10 +409,6 @@ Raw data: [`../../results/20260927-depth-240k-none-vs-n3/`](../../results/202609
 
 ## Open questions
 
-- ~~MTP acceptance rate with real agent-style tool use at ~190K (temperature 1, multiple seeds)~~ —
-  answered 2026-09-30: **0.66** over 186,582 drafted tokens, see
-  [`agent-traffic.md`](agent-traffic.md). Original note: the synthetic Wikipedia-summarization benchmark used above is a pessimistic proxy — a third-party
-  report on a different setup saw 85-93% acceptance with real agent traffic (see `depth.md`).
 - How much V q5_1 costs *with* MTP: spec-off pays 25% for it at 240K (vs. V q8_0), but MTP n=3
   with KV q8_0/q8_0 at 262K is not reliable on this card, so it would have to be measured at a
   smaller window (~224K), which gives up the context the default profile exists for.
@@ -468,3 +464,4 @@ Raw data: [`../../results/20260927-depth-240k-none-vs-n3/`](../../results/202609
   pending, not adopted" (empty context agent +55..+63%, editing +36% with `map` only; 240K first
   exposure copy +10..+29% for `mod`/`moddef`; `map` at 240K pending). Superseded by the `map` run
   at 240K and its adoption (same results folder).
+- **2026-09-30**: open question "MTP acceptance with real agent-style tool use at ~190K" answered; the synthetic benchmark was a pessimistic proxy. Result and evidence in [`agent-traffic.md`](agent-traffic.md).

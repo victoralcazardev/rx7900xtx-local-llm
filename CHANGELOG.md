@@ -31,6 +31,7 @@ All notable changes to this project are documented here. Format follows
 
 ### Changed
 
+- Removed answered items from the measurement docs' Open questions (answers kept in History), dropped the duplicate 0.66 MTP acceptance copies, and trimmed the README to its 1,000-word budget ([`docs/measurements/agent-traffic.md`](docs/measurements/agent-traffic.md)).
 - Profile adopts `--spec-type draft-mtp,ngram-map-k4v` and `--cache-ram 12288`; `hip-kvmix` engine moves to b11371 ([`docs/STATUS.md`](docs/STATUS.md)).
 - Rejected `GGML_CUDA_GRAPH_OPT=1` and dropped the rdna-boosts GQA-6 FA band without building it ([`docs/TRIED.md`](docs/TRIED.md)).
 - Hypothesis review with no runs: reframed the speed levers by measured session time share, ranked the

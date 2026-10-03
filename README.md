@@ -49,12 +49,9 @@ Requires **Python 3.11+**; `scripts/` use only the standard library.
    bundled), or build it (ROCm only, never Vulkan+HIP in one build): [`docs/ENGINES.md`](docs/ENGINES.md).
 2. **Model.** Download `Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp.gguf` (12.1 GB) from
    [`ISTA-DASLab/Qwen3.8-27B-GSQ-RCO-GGUF`](https://huggingface.co/ISTA-DASLab/Qwen3.8-27B-GSQ-RCO-GGUF)
-   (revision not pinned; the original upstream revision was not recorded) into
-   `<models_root>/Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp/`, plus
-   `mmproj-Qwen3.8-27B-BF16.gguf` in the same folder if you want vision. These are the SHA256s of
-   this repository's own copies (HF publishes none), to confirm your download matches what was
-   measured. They identify the local files, not an upstream HF revision; that revision cannot be
-   recovered from the recorded hashes:
+   (revision not pinned) into `<models_root>/Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp/`, plus
+   `mmproj-Qwen3.8-27B-BF16.gguf` in the same folder if you want vision. These SHA256s are of this
+   repository's own copies (HF publishes none); they identify local files, not an upstream revision:
 
    | File | SHA256 |
    |---|---|
@@ -68,10 +65,9 @@ Requires **Python 3.11+**; `scripts/` use only the standard library.
 5. **Launch.** `python3 scripts/launch.py`, and point any OpenAI-compatible client at
    `http://127.0.0.1:8080`. Details: [`docs/sop/launch-model.md`](docs/sop/launch-model.md).
 6. **Optional, recommended.** Cap power to 272 W permanently
-   ([`docs/sop/power-cap.md`](docs/sop/power-cap.md)). System-wide VRAM headroom varies with other
-   GPU use; the measured adopted 240K-fill run left 190 MiB free. See
-   [`docs/measurements/memory.md`](docs/measurements/memory.md) and close GPU-heavy apps before
-   long-context work.
+   ([`docs/sop/power-cap.md`](docs/sop/power-cap.md)). VRAM headroom varies with other GPU use; the
+   adopted 240K-fill run left 190 MiB free ([`docs/measurements/memory.md`](docs/measurements/memory.md)).
+   Close GPU-heavy apps before long-context work.
 
 ## Troubleshooting
 
@@ -114,7 +110,7 @@ For CPU fallback, the ROCm/HIP libraries are usually missing from the library pa
 
 262K + vision + MTP doesn't fit with q8/q8 KV: disable vision or use `q8_0/q5_1`
 ([`memory.md`](docs/measurements/memory.md)). KV `q4_0/q4_0` has 4x the KLD of q8/q8
-([`kv-quality.md`](docs/measurements/kv-quality.md)). Close GPU-heavy apps before long-context work.
+([`kv-quality.md`](docs/measurements/kv-quality.md)).
 </details>
 
 <details>
@@ -138,29 +134,27 @@ results/              # curated result folders, see results/INDEX.md
 
 | Doc | What it has |
 |---|---|
-| [`docs/STATUS.md`](docs/STATUS.md) | Current profile, launch command, headline numbers, flags and why, open questions |
+| [`docs/STATUS.md`](docs/STATUS.md) | Current profile, launch command, headline numbers, flag rationale, open questions |
 | [`docs/TRIED.md`](docs/TRIED.md) | Everything tried and not adopted, with numbers and evidence |
 | [`docs/DECISIONS.md`](docs/DECISIONS.md) | Append-only decision log |
 | [`docs/SOURCES.md`](docs/SOURCES.md) | External claims checked against this repository's measurements |
 | [`docs/measurements/`](docs/measurements/) | Benchmark results by topic (engines, kv-quality, memory, coexistence, depth, speculative, thermals-power, concurrency, agent-traffic) |
-| [`docs/ENGINES.md`](docs/ENGINES.md), [`docs/ENGINES-EXPERIMENTS.md`](docs/ENGINES-EXPERIMENTS.md), [`docs/hardware/`](docs/hardware/), [`docs/models/`](docs/models/) | Engine builds, prepared engine trials and upstream watchlist, GPU/driver specs (Linux and Windows), model and quant provenance |
+| [`docs/ENGINES.md`](docs/ENGINES.md), [`docs/ENGINES-EXPERIMENTS.md`](docs/ENGINES-EXPERIMENTS.md), [`docs/hardware/`](docs/hardware/), [`docs/models/`](docs/models/) | Engine builds, engine trials and watchlist, GPU/driver specs, model and quant provenance |
 | [`docs/BENCHMARK-FORMAT.md`](docs/BENCHMARK-FORMAT.md) | How every number was produced |
-| [`docs/sop/`](docs/sop/) | Procedures: install, launch, add a model, update the engine, measure a backend, power cap, token ledger, publish sync |
-| [`docs/STYLE.md`](docs/STYLE.md) | Language, units, naming and immutable-evidence rules |
+| [`docs/sop/`](docs/sop/) | Procedures: install, launch, add a model, update the engine, measure, power cap, token ledger, publish sync |
+| [`docs/STYLE.md`](docs/STYLE.md) | Language, units, naming, evidence rules |
 | `scripts/check-repo.py`, `tests/` | Hygiene check and `python3 -m unittest discover -s tests -v` |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md), `.github/` | How to contribute, CI, issue and PR templates |
 
 ## Upstream
 
-This card's results are also published in community projects:
-
-- [local-ai-registry](https://github.com/0xSero/local-ai-registry) (merged): lab `count()` fix (#132) and the Qwen3.8-27B IQ3_S-mtp 262K recipe for this card, 6/6 gates (#133). Its host launch pins the b11160 build, see [`docs/ENGINES.md`](docs/ENGINES.md).
+- [local-ai-registry](https://github.com/0xSero/local-ai-registry) (merged): lab `count()` fix (#132) and the Qwen3.8-27B IQ3_S-mtp 262K recipe for this card, 6/6 gates (#133). Its host launch pins the b11160 build ([`docs/ENGINES.md`](docs/ENGINES.md)).
 - [sudoingX/qwen38-mtp #88](https://github.com/sudoingX/qwen38-mtp/pull/88) (open): 262K `q8_0`/`q5_1` row, 37.2 to 68.9 tok/s (+85%) empty context, +109% at 240K fill.
 
 ## Contributing
 
-Issues and pull requests are welcome: script bugs, docs fixes, or a reproducible result from the
-same or a similar GPU ([`CONTRIBUTING.md`](CONTRIBUTING.md), or the
+Issues and pull requests are welcome: script bugs, docs fixes, or reproducible results from a
+similar GPU ([`CONTRIBUTING.md`](CONTRIBUTING.md), or the
 [share-results form](.github/ISSUE_TEMPLATE/share_results.yml)).
 
 Built by **Victor Alcazar** — <https://victoralcazar.com>. Code (`scripts/`, `bench/`) is MIT;

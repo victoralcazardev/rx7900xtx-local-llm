@@ -323,26 +323,14 @@ text is not bit-identical across n=2/n=3/`-ub 256` at temperature 0 for some tas
 
 ## Open questions / pending (priority order)
 
-1. ~~Broader retrieval samples at 190K and 240K~~ — answered 2026-10-03: 40/40 exact on the
-   adopted flags, see
-   [`../../results/20261003-longctx-quality-190k-240k/`](../../results/20261003-longctx-quality-190k-240k/README.md).
-2. ~~Real agent-usage MTP acceptance at depth (temperature 1, 3 seeds)~~ — answered 2026-09-30:
-   **0.66** over 186,582 drafted tokens of real agent traffic, see
-   [`agent-traffic.md`](agent-traffic.md). Original note: the synthetic benchmark above is
-   pessimistic — a third-party report (`sweeps/radeon.md`,
-   [sudoingX/qwen38-mtp](https://github.com/sudoingX/qwen38-mtp/blob/master/sweeps/radeon.md))
-   measured **~93% acceptance** with a real agent (Hermes, MTP n=3 + p-min 0.75, 29-37K context) on
-   a 7900 GRE — our synthetic figures likely undervalue real usage.
-3. Statistical repetition: the 5-10-prompt, multi-seed MTP acceptance campaign originally planned was
+1. Statistical repetition: the 5-10-prompt, multi-seed MTP acceptance campaign originally planned was
    not completed — most depth numbers above are single- or double-sample.
-4. Quality beyond English wikitext (Spanish and code tasks with a verifiable answer) — perplexity on
+2. Quality beyond English wikitext (Spanish and code tasks with a verifiable answer) — perplexity on
    English wikitext-2 only ranks variants of the same model, it isn't a quality test on its own.
-5. A third-party report of the same model on a 7900 XTX via **Windows/Vulkan** claims 41 → 85 tok/s
+3. A third-party report of the same model on a 7900 XTX via **Windows/Vulkan** claims 41 → 85 tok/s
    with MTP ([sudoingX/qwen38-mtp](https://github.com/sudoingX/qwen38-mtp)) — not reproduced here
    (Linux only so far); Windows/Vulkan doesn't appear to suffer the Linux memory-clock throttling
    described in `engines.md`.
-6. ~~262K with KV `q8_0/q5_1` was not attempted in the 224K/240K ladder above~~ — done 2026-09-26,
-   see "240K, `262k-q8q51-mtp`" above and `speculative.md`'s "MTP n=3 confirmed at depth".
 
 ## History
 
@@ -391,3 +379,4 @@ text is not bit-identical across n=2/n=3/`-ub 256` at temperature 0 for some tas
   - The 272 W cap was adopted after a 303 W run overheated: about 6% slower prefill than the
     older 303 W measurements at a comparable depth, with more thermal margin (hotspot 98-101°C vs.
     100-106°C at 303 W).
+- **2026-09-30**: open question "real agent-usage MTP acceptance at depth" answered (the synthetic benchmark undervalued real usage); result in [`agent-traffic.md`](agent-traffic.md).
