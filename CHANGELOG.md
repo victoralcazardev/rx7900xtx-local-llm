@@ -7,6 +7,7 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- Moved the KVMem trial write-up out of the experiments queue; added a KVMem row to TRIED ([`docs/measurements/kvmem.md`](docs/measurements/kvmem.md)).
 - SOP to keep the repo description, README, release and upstream links in sync after a push ([`sop/publish-sync.md`](docs/sop/publish-sync.md)).
 - README links the upstream contributions: local-ai-registry recipe (merged) and qwen38-mtp #88 (open) ([`README.md`](README.md#upstream)).
 - Published the b11371 `hip-kvmix` engine as a GitHub release; quick start points to it ([`ENGINES.md`](docs/ENGINES.md)).
