@@ -22,6 +22,10 @@ BENCH_MODEL=... BENCH_WIKI=... python3 sidecache.py <engine>/llama-server <tag> 
 Arms: `--cache-ram 8192` (default) on b11160, `--cache-ram 12288` on b11371. A `0` arm was
 cancelled: the 8192 arm already showed the failure.
 
+Caveat: the two arms also differ in engine (b11160 vs. b11371; speed- and token-identical in
+[`20261003-b11371-mtp-draft-sampling/`](../20261003-b11371-mtp-draft-sampling/README.md)). The
+cause is shown by the 8192 arm's own server log (the eviction line below), not by the comparison.
+
 ## Results
 
 | Step | 8192 MiB: cached / new tokens, prompt time | 12288 MiB: cached / new tokens, prompt time |

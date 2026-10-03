@@ -66,7 +66,8 @@ on copy. Its output SHA equals the MTP-only control on every task (lossless at t
 | copy | 27.03 | 43.85 | +62% (rep 1: 38.59, +43%) |
 | code | 18.71 | 18.61 | -0.5% |
 
-Peak process VRAM 22,634 MiB, GTT 8 MiB.
+Peak process VRAM 22,634 MiB, GTT 8 MiB. This arm ran after a 25-minute GPU rest (hotspot 48°C at start, so the
+bench's pre-variant cooldown was 0 s); essay and code match the control, so the copy gain is not thermal.
 
 ## Conclusion
 
