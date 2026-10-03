@@ -225,15 +225,17 @@ Goal checked: can vLLM replace llama.cpp here at 200K-262K context on one 24 GB 
 | Claim | Source | Date | Status | Own test |
 |---|---|---|---|---|
 | HyperQwen (patched vLLM 0.30.0, int8 Marlin GEMM, KVarN 4/2-bit KV, MTP and DFlash2) gives Qwen3.8-27B 127 tok/s, 381 while quoting the prompt, and 67/164 at 240K on one RTX 3090 | [syv-ai/HyperQwen](https://github.com/syv-ai/HyperQwen) | 2026-10 | source-checked (README): CUDA only, no ROCm/HIP path mentioned; fill depth behind the 240K figure not confirmed | not applicable (NVIDIA kernels) |
-| vLLM lists the Radeon RX 7900 series (gfx1100) as a ROCm target | [vLLM GPU install docs](https://docs.vllm.ai/en/latest/getting_started/installation/gpu/) | 2026-10 | hypothesis (agent summary, not opened) | none |
-| On AMD GPUs vLLM supports only FP8 W8A8 and GGUF; AWQ, GPTQ, Marlin, INT8 W8A8 and bitsandbytes are unsupported. GGUF is "highly experimental and under-optimized" | [quantization README](https://github.com/vllm-project/vllm/blob/main/docs/features/quantization/README.md), [GGUF docs](https://docs.vllm.ai/en/latest/features/quantization/gguf/) | 2026-10 | source-checked (table); GGUF quote from agent summary | none |
+| vLLM lists the Radeon RX 7900 series (gfx1100/1101) as a ROCm target, ROCm 6.3 or newer; v0.28.0 notes "ROCm enablement on gfx11" | [vLLM GPU install docs](https://docs.vllm.ai/en/latest/getting_started/installation/gpu/), [releases](https://github.com/vllm-project/vllm/releases) | 2026-10 | source-checked (page opened via WebFetch summary) | none |
+| On AMD GPUs vLLM supports only FP8 W8A8 and GGUF; AWQ, GPTQ, Marlin, INT8 W8A8 and bitsandbytes are unsupported. GGUF is "highly experimental and under-optimized" | [quantization README](https://github.com/vllm-project/vllm/blob/main/docs/features/quantization/README.md), [GGUF docs](https://docs.vllm.ai/en/latest/features/quantization/gguf/) | 2026-10 | source-checked (table and GGUF quote); the table is stale: it has no compressed-tensors W4A16 row, which runs on gfx1100 per #56992 | none |
 | Qwen3.8-27B INT4 W4A16 on a 7900 XTX, vLLM 0.27.1.dev, 2K context, no MTP: 29.1 tok/s with bf16 KV, 21.6 with fp8 KV (gfx11 has no native FP8) | [vLLM issue #56992](https://github.com/vllm-project/vllm/issues/56992) | 2026 | source-checked | none; compare 68.9 tok/s here at empty context with MTP n=3 |
-| Unmerged PR ("DO NOT MERGE") adds gfx1100 W4A16 GEMM and INT8/INT4 KV; 113-119 tok/s with MTP k=3 up to 167K, on **4x** 7900 XTX (TP4) | [vLLM PR #57925](https://github.com/vllm-project/vllm/pull/57925) | 2026 | hypothesis (agent summary, not opened) | none; no single-GPU number |
-| vLLM MTP speculative decoding for Qwen 27B is tested on MI300X/MI355X only, not Radeon | [vLLM blog 2026-08-23](https://vllm.ai/blog/2026-08-23-speculative-decoding-amd-gpus) | 2026-08 | hypothesis (agent summary, not opened) | none |
+| Unmerged PR ("DO NOT MERGE") adds gfx1100 W4A16 GEMM and INT8/INT4 KV; 113-119 tok/s with MTP k=3 up to 167K, on **4x** 7900 XTX (TP4) | [vLLM PR #57925](https://github.com/vllm-project/vllm/pull/57925) | 2026-09 | source-checked (page opened via WebFetch summary): draft tracking branch, no split-out PR merged, "No CI covers gfx1100" | none; no single-GPU number |
+| vLLM MTP speculative decoding for Qwen 27B is tested on MI300X/MI355X only, not Radeon | [vLLM blog 2026-08-23](https://vllm.ai/blog/2026-08-23-speculative-decoding-amd-gpus) | 2026-08 | source-checked (page opened via WebFetch summary) | none |
 
 Conclusion: not pursued. Mainline vLLM has no validated 4-bit path for gfx1100, the only
 single-card number is less than half of ours without MTP, and 262K on 24 GB depends on unmerged
-KV code. Revisit if PR #57925 or an INT8/INT4 KV backend merges.
+KV code (INT8 KV for gfx11 is still an open request, [#33480](https://github.com/vllm-project/vllm/issues/33480)).
+Re-checked 2026-10-03 against the pages above: unchanged. Revisit when the INT8 KV and RDNA3
+attention kernels of PR #57925 land as separate merged PRs.
 
 ## vLLM ROCm forks and low-bit llama.cpp forks (2026-10-03)
 
