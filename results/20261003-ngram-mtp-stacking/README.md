@@ -69,6 +69,21 @@ on copy. Its output SHA equals the MTP-only control on every task (lossless at t
 Peak process VRAM 22,634 MiB, GTT 8 MiB. This arm ran after a 25-minute GPU rest (hotspot 48°C at start, so the
 bench's pre-variant cooldown was 0 s); essay and code match the control, so the copy gain is not thermal.
 
+## 240K at temperature 1 (production sampling)
+
+Same command with `--temperature 1` (seeds 9, 10, 11, as in the MTP-only control of
+[`20261003-b11371-mtp-draft-sampling/`](../20261003-b11371-mtp-draft-sampling/README.md#240k-at-temperature-1-s2c)),
+b11371, median of 3:
+
+| Task | `n3` | `map` | Delta |
+|---|---|---|---|
+| code | 16.79 | 16.82 | +0.2% |
+| copy | 27.36 | 38.26 (33.15-57.03) | +40% |
+| essay | 24.83 | 24.93 | +0.4% |
+
+Each seed produced the same output SHA as the MTP-only control, so the gain is speed only. Total
+warm wall time over the 9 runs: 170.5 s vs. 158.9 s (-6.8%).
+
 ## Conclusion
 
 **Adopted `--spec-type draft-mtp,ngram-map-k4v`** (profile key `spec_type` in `models.toml`). It
@@ -78,4 +93,4 @@ output, no repetition loops, no VRAM change. `ngram-mod` is not adopted: its cro
 makes the benchmark unreliable and it loses on editing at empty context; it may still help real
 agent loops (T09 replay).
 
-**Raw data**: `empty-ngram-aggregate.json`, `depth240k-ngram-mod-summary.jsonl`, `depth240k-ngram-map-b11371-summary.jsonl`.
+**Raw data**: `empty-ngram-aggregate.json`, `depth240k-ngram-mod-summary.jsonl`, `depth240k-ngram-map-b11371-summary.jsonl`, `depth240k-temp1-ngram-map-b11371-summary.jsonl`.
