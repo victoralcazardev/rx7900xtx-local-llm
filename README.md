@@ -150,6 +150,13 @@ results/              # curated result folders, see results/INDEX.md
 | `scripts/check-repo.py`, `tests/` | Hygiene check and `python3 -m unittest discover -s tests -v` |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md), `.github/` | How to contribute, CI, issue and PR templates |
 
+## Upstream
+
+This card's results are also published in community projects:
+
+- [local-ai-registry](https://github.com/0xSero/local-ai-registry) (merged): lab `count()` fix (#132) and the Qwen3.8-27B IQ3_S-mtp 262K recipe for this card, 6/6 gates (#133). Its host launch pins the b11160 build, see [`docs/ENGINES.md`](docs/ENGINES.md).
+- [sudoingX/qwen38-mtp #88](https://github.com/sudoingX/qwen38-mtp/pull/88) (open): 262K `q8_0`/`q5_1` row, 37.2 to 68.9 tok/s (+85%) empty context, +109% at 240K fill.
+
 ## Contributing
 
 Issues and pull requests are welcome: script bugs, docs fixes, or a reproducible result from the
