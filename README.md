@@ -110,7 +110,7 @@ For CPU fallback, the ROCm/HIP libraries are usually missing from the library pa
 
 262K + vision + MTP doesn't fit with q8/q8 KV: disable vision or use `q8_0/q5_1`
 ([`memory.md`](docs/measurements/memory.md)). KV `q4_0/q4_0` has 4x the KLD of q8/q8
-([`kv-quality.md`](docs/measurements/kv-quality.md)). 
+([`kv-quality.md`](docs/measurements/kv-quality.md)).
 </details>
 
 <details>
@@ -141,14 +141,14 @@ results/              # curated result folders, see results/INDEX.md
 | [`docs/measurements/`](docs/measurements/) | Benchmark results by topic (engines, kv-quality, memory, coexistence, depth, speculative, thermals-power, concurrency, agent-traffic) |
 | [`docs/ENGINES.md`](docs/ENGINES.md), [`docs/ENGINES-EXPERIMENTS.md`](docs/ENGINES-EXPERIMENTS.md), [`docs/hardware/`](docs/hardware/), [`docs/models/`](docs/models/) | Engine builds, engine trials and watchlist, GPU/driver specs, model and quant provenance |
 | [`docs/BENCHMARK-FORMAT.md`](docs/BENCHMARK-FORMAT.md) | How every number was produced |
-| [`docs/sop/`](docs/sop/) | Procedures: launch, add a model, update the engine, measure, power cap, publish sync |
+| [`docs/sop/`](docs/sop/) | Procedures: install, launch, add a model, update the engine, measure, power cap, token ledger, publish sync |
 | [`docs/STYLE.md`](docs/STYLE.md) | Language, units, naming, evidence rules |
 | `scripts/check-repo.py`, `tests/` | Hygiene check and `python3 -m unittest discover -s tests -v` |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md), `.github/` | How to contribute, CI, issue and PR templates |
 
 ## Upstream
 
-- [local-ai-registry](https://github.com/0xSero/local-ai-registry) (merged): lab `count()` fix (#132) and the Qwen3.8-27B IQ3_S-mtp 262K recipe for this card, 6/6 gates (#133).
+- [local-ai-registry](https://github.com/0xSero/local-ai-registry) (merged): lab `count()` fix (#132) and the Qwen3.8-27B IQ3_S-mtp 262K recipe for this card, 6/6 gates (#133). Its host launch pins the b11160 build ([`docs/ENGINES.md`](docs/ENGINES.md)).
 - [sudoingX/qwen38-mtp #88](https://github.com/sudoingX/qwen38-mtp/pull/88) (open): 262K `q8_0`/`q5_1` row, 37.2 to 68.9 tok/s (+85%) empty context, +109% at 240K fill.
 
 ## Contributing
