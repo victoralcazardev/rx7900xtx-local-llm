@@ -17,8 +17,8 @@ other measurement docs. Log and session analysis only: no new GPU run.
   2,744. `--reasoning-effort low` would be the largest speed lever, but it is **not pursued**:
   quality has priority over speed for this workload (see `docs/DECISIONS.md`, 2026-09-30).
 - **MTP acceptance with real agent traffic at temperature 1.0: 0.66** (186,582 drafted tokens),
-  vs. 0.71 on the synthetic temperature-0 depth benchmark at 240K fill. This answers the open
-  question in `docs/STATUS.md`; the gap is small and does not change the n=3 choice.
+  vs. 0.71 on the synthetic temperature-0 depth benchmark at 240K fill. The gap is small and does
+  not change the n=3 choice.
 - **Tool-call loops are rare**: 2.6% of 1,551 tool calls exactly repeat an earlier call in the same
   session (same tool, same arguments), and most of those are legitimate polling of a
   state-machine CLI. Only 1 back-to-back identical call. The longest turns are long but
@@ -34,9 +34,7 @@ other measurement docs. Log and session analysis only: no new GPU run.
 - **Compaction is a full re-process on this hybrid model**: each of the 14 measured compactions
   cost a median ~83 s before the next turn could start, plus the summary's own generation. See
   "Compaction cost on this hybrid model" below.
-- **No server config change.** Three A/Bs remain unconditional (compaction threshold, method order
-  and presence penalty); checkpoint count is a fourth, conditional A/B only if logs show a
-  mid-context divergence (see "Open A/B tests" below).
+- **No server config change.** Pending A/Bs: "Open A/B tests" below.
 
 ## Data and method
 
@@ -174,41 +172,36 @@ Evidence: [`results/20261001-agent-session-audit/`](../../results/20261001-agent
   of server time and context never passed 149K. Both miss depths lie above 157K, so a lower
   threshold may avoid them — a correlation across two days, not a test.
 - Next step: `scripts/launch.py` now always writes a log (2026-10-01). When a miss repeats, read
-  where the prompt diverged. Near the start means the harness changed early content and more
-  checkpoints can't help; mid-context means test `--ctx-checkpoints` 16 (open A/B 4 below). Host
-  RAM is that test's cost: checkpoints measured 270-515 MiB each up to ~93K and grow with depth.
+  where the prompt diverged: near the start means the harness changed early content and more
+  checkpoints can't help; mid-context means test `--ctx-checkpoints` 16 (open A/B 3 below). The
+  ranked hypotheses and the log-classification step are in the
+  [hypothesis review](../ENGINES-EXPERIMENTS.md#hypothesis-review-2026-10-03-no-runs).
 
 ## Open A/B tests
 
-All need the same fixed agent task suite (a test repository with a handful of coding tasks and
-executable pass/fail tests), at least 2 passes per arm, measuring task pass/fail, total wall time,
-exact repeated tool calls, output tokens per turn, number of compactions, time to first token after
-each compaction and full re-processes in the server log. Define and freeze this task suite before
-using A/B results to change runtime settings.
-
-1. **Compaction threshold**: the harness's current 70% (~183K of 262K) vs. the previous 60%
-   (~157K). The 75% (~196K) setting was used on 2026-10-01, not the current setting. The trade-off
-   is set out in "Compaction cost on this hybrid model" above. Only sessions that pass ~150K are
-   affected.
-2. **Compaction method order**: the effective current order is `handoff` → `shake` → `soft`
-   (`remote` isn't configured and `snapcompact`, which renders history as images, was never
-   used in these sessions) vs. `shake` first. See the re-process cost above.
-3. **Context checkpoints** (only if the log shows a mid-context divergence): `--ctx-checkpoints 4`
-   vs. 16, counting full re-processes, their time and peak host RAM.
-4. **Presence penalty**: `--presence-penalty 0` (Qwen3.8 card's thinking-mode value, the current
-   setting) vs. `1.0`. The data above shows little repetition to fix, and the card warns that
-   higher values can cause language mixing, which matters for non-English work — adopt only if the
-   A/B shows fewer repeated tool calls or shorter reasoning without a quality or language cost.
+Four arms, all gated on the fixed coding-task suite: compaction threshold (70% vs. 60%), compaction
+method order (`handoff`-first vs. `shake`-first), context checkpoints (4 vs. 16, only after a logged
+mid-context divergence) and presence penalty (0 vs. 1.0, only if loops are observed). Suite,
+controls, metrics and order: [ENGINES-EXPERIMENTS.md](../ENGINES-EXPERIMENTS.md#end-to-end-quality-and-reliability-before-tuning-2026-10-02-proposed-not-run).
 
 ## Speed levers at depth (2026-09-30)
 
-| Lever | Expected gain | Cost | Status |
+Rewritten 2026-10-03 from the 5.8-hour session audit (shares are of server busy time,
+[`results/20261001-agent-session-audit/`](../../results/20261001-agent-session-audit/README.md));
+the argument behind each row is in the [hypothesis review](../ENGINES-EXPERIMENTS.md#hypothesis-review-2026-10-03-no-runs). Plan items are
+`odd/tasks/test-plan-2026-10.md` IDs (private).
+
+| Lever | Share of session time it touches | Expected effect | Status / plan item |
 |---|---|---|---|
-| `--reasoning-effort low` | Largest: ~78% of output is reasoning | Quality | Not pursued (quality first) |
-| Earlier compaction / one session per plan phase | Keeps decode in the ~34 tok/s band instead of ~19 | More lossy compactions, ~5 min each | Harness threshold at 70% instead |
-| KVMem (bounded active attention, full history in host RAM) | Decode at depth without dropping history | Retrieval may miss blocks; ROCm beta; ~+10 GiB host RAM | Trial: 2.2x decode at 244K, exact at 240K, awaiting agent run, not adopted — [ENGINES-EXPERIMENTS.md](../ENGINES-EXPERIMENTS.md#kvmem-trial-round-2-and-final-round-2026-09-30-not-adopted) |
-| RDNA3 FlashAttention GQA fix | Decode at depth (kernel at ~24% of memory bandwidth) | None | No upstream PR; rdna-boosts band (RDNA4-gated) is the candidate to test |
-| Server flags (MTP, `-ub`, KV, power cap) | <5% | — | Already measured |
+| Full cache misses (six whole-context re-processes) | 13% of busy | Removing them is worth up to 13% of wall time; no quality cost | Diagnose from the server log first — T20 |
+| `preserve_thinking` / context growth | Each compaction ≈5 min; depth sets the decode band | Fewer compactions and shallower average depth, if the harness returns reasoning in history | Ledger check first, then a replayed-session A/B — T21 |
+| Thinking length, `--reasoning-budget` | ~78% of output characters | Fewer completion tokens; the cached prefix is kept | Cost measurement only; adoption gated on the coding suite — T04 |
+| `--reasoning-effort low` | Same ~78% | Largest cut, but injects a system instruction and the card warns of more failures | Not pursued (quality first) |
+| Prefill rate: harness tool-output size, `GGML_CUDA_GRAPH_OPT`, PR #29393 | 35% of busy | A prefill gain of x% moves at most 0.35x of wall time | T07; routine engine update |
+| Decode kernel, GQA-6 FlashAttention on RDNA3 | 65% of busy, more at depth | Ceiling up to ~2x decode at depth ([depth.md](depth.md#why-decode-slows-with-depth-attention-bandwidth-2026-09-26-round-4)) | Only build worth a session — T11 |
+| n-gram stacked on MTP, for code | Decode on code turns (the slowest band) | Higher acceptance on repeated code; measure ms/token, not acceptance | T08 / T09 |
+| KVMem | Decode at depth | Bounded active attention; retrieval risk | Plan item 6, pending the real-agent run — [ENGINES-EXPERIMENTS.md](../ENGINES-EXPERIMENTS.md#kvmem-trial-round-2-and-final-round-2026-09-30-not-adopted) |
+| Server flags (MTP, `-ub`, KV, power cap) | <5% | — | Already measured — [TRIED.md](../TRIED.md) |
 
 ## History
 

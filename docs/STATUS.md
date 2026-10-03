@@ -64,7 +64,7 @@ Sampling is the Qwen3.8-27B card's own; `--min-p 0.0` is set explicitly because 
 | `--spec-draft-n-max 3` | +9-11% mean tg over n=2 at the real 190K/240K depths (a 128K screening favored n=3 only on copy); n=4/5 lose acceptance — [speculative.md](measurements/speculative.md) |
 | `-ub 256` | -350 MiB peak VRAM vs. 512, -5% prefill, no generation cost — [memory.md](measurements/memory.md) |
 | `-np 1` | Single user; one slot + MTP with queuing beats more slots — [concurrency.md](measurements/concurrency.md) |
-| `--ctx-checkpoints 4` | Default is 32; 4 bounds RAM (270-515 MiB each). A cold re-process cost ~42 s for the old ~32K base prompt; the current ~14.5K prompt implies ~19 s (estimate, not measured). Warm turns still reuse ~all KV — [memory.md](measurements/memory.md#prompt-cache-reuse-and-context-checkpoints-2026-09-29), [TRIED.md](TRIED.md) |
+| `--ctx-checkpoints 4` | Default is 32; 4 bounds RAM and warm turns still reuse ~all KV — [memory.md](measurements/memory.md#prompt-cache-reuse-and-context-checkpoints-2026-09-29), [TRIED.md](TRIED.md) |
 | `-ngl all` | All layers on GPU, explicit rather than `auto` |
 | `--reasoning-effort medium` | Template default `xhigh` injects "think carefully..." and overthinks; `medium` adds no instruction — `models.toml` |
 | `--metrics` | Exposes `/metrics` for the token usage ledger — [token-ledger.md](sop/token-ledger.md) |
@@ -72,37 +72,25 @@ Sampling is the Qwen3.8-27B card's own; `--min-p 0.0` is set explicitly because 
 ## Open questions
 
 - **Full cache misses in long sessions**: whole-context re-processing with no compaction, 42 min
-  in one 5.8-hour session; cause open. Current harness threshold is 70% (~183K), not the earlier
-  75% (~196K) —
+  in one 5.8-hour session, cause open; diagnose the next miss from its server log (prefix diverged
+  near the start or mid-context) before changing checkpoint settings. Current harness threshold is
+  70% (~183K) —
   [agent-traffic.md](measurements/agent-traffic.md#full-cache-misses-in-a-long-session-2026-10-01).
-- **Compaction threshold, compaction method order and presence penalty** A/B after a fixed real-task
-  suite exists; checkpoint count is conditional on a logged mid-context divergence. Current threshold
-  is 70% (~183K), while 60% (~157K) is the earlier comparison arm —
+- **Compaction threshold, compaction method order and presence penalty** A/B only after a fixed
+  coding-task suite with executable tests and pass/fail criteria exists; checkpoint count is
+  conditional on a logged mid-context divergence; 60% (~157K) is the comparison arm —
   [agent-traffic.md](measurements/agent-traffic.md#open-ab-tests).
-- **KVMem**: 2.2x decode at 244K and exact at 240K, not adopted until a real agent run —
+- **KVMem**: not adopted until a real agent run —
   [ENGINES-EXPERIMENTS.md](ENGINES-EXPERIMENTS.md#kvmem-trial-round-2-and-final-round-2026-09-30-not-adopted).
 - **Qwen3.8-Flash-Next (MoE) via Strata**: not measured —
   [strata-flash-next.md](models/strata-flash-next.md).
-- **Broader retrieval samples** at 190K and 240K remain follow-up; the 190K evidence is one document
-  on an earlier profile and the exact-profile 240K check is 8/8 —
-  [depth.md](measurements/depth.md).
-
-## Speed levers at depth (2026-09-30)
-
-Moved to [agent-traffic.md](measurements/agent-traffic.md#speed-levers-at-depth-2026-09-30).
+- **Broader retrieval samples** at 190K and 240K — [depth.md](measurements/depth.md).
 
 ## Next steps
 
-1. Diagnose the next full cache miss from its server log: determine whether the prefix diverged
-   near the start or mid-context before changing checkpoint settings —
-   [agent-traffic.md](measurements/agent-traffic.md#full-cache-misses-in-a-long-session-2026-10-01).
-2. Define a fixed coding-task suite with executable tests and task pass/fail criteria before using
-   agent outcomes to compare compaction or other runtime settings —
-   [agent-traffic.md](measurements/agent-traffic.md#open-ab-tests).
-3. After the cache trace and fixed task-suite baseline, run only the quality-gated experiments in
-   their documented order — [ENGINES-EXPERIMENTS.md](ENGINES-EXPERIMENTS.md#end-to-end-quality-and-reliability-before-tuning-2026-10-02-proposed-not-run).
-4. At the next planned engine update, recheck exact pinned upstream candidates; the RDNA4 GQA-6
-   result is not a ready gfx1100 speedup — [upstream watchlist](ENGINES-EXPERIMENTS.md#upstream-watchlist-2026-09-29).
-5. KVMem remains pending the real-agent T6 run —
-   [ENGINES-EXPERIMENTS.md](ENGINES-EXPERIMENTS.md#kvmem-trial-round-2-and-final-round-2026-09-30-not-adopted).
-6. GPU care beyond the 272 W cap (undervolt): deferred.
+1. No-GPU diagnostics first: classify the next cache miss from the server log and check whether
+   the harness returns reasoning in history (`preserve_thinking` lever) —
+   [ENGINES-EXPERIMENTS.md](ENGINES-EXPERIMENTS.md#hypothesis-review-2026-10-03-no-runs).
+2. Then run only the quality-gated experiments in their documented order —
+   [ENGINES-EXPERIMENTS.md](ENGINES-EXPERIMENTS.md#end-to-end-quality-and-reliability-before-tuning-2026-10-02-proposed-not-run).
+3. GPU care beyond the 272 W cap (undervolt): deferred — [sop/power-cap.md](sop/power-cap.md).

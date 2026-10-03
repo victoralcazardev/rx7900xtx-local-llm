@@ -100,6 +100,117 @@ checkpoint count or compaction threshold without a diagnostic trace
 **Status:** all work in this section is proposed and unrun. No configuration, engine, harness setting,
 or profile has changed as a result of this plan.
 
+## Hypothesis review (2026-10-03, no runs)
+
+A desk review of the optimization hypotheses against the 5.8-hour session audit
+([`results/20261001-agent-session-audit/`](../results/20261001-agent-session-audit/README.md),
+[`agent-traffic.md`](measurements/agent-traffic.md)). Nothing was run and no setting changed; the
+outcome is a re-weighted levers table ([`agent-traffic.md`](measurements/agent-traffic.md#speed-levers-at-depth-2026-09-30))
+and three no-GPU diagnostics added to the private test plan (T20-T22).
+
+### Where the time goes
+
+| Component | Time | Share of busy |
+|---|---|---|
+| Server busy | 19,915 s | 100% |
+| Decode | 12,916 s | 65% |
+| Uncached prefill | 6,999 s | 35% (10.8% in the 2026-09-28 logs) |
+| of which: 6 full cache misses | 2,512 s | 13% |
+| of which: 3 post-compaction re-processes | 162 s | <1% |
+
+About 78% of decode output is thinking characters. The 2026-09-30 levers table under-weighted prefill:
+a decode-kernel gain of x% moves at most 0.65x of wall time, a prefill gain moves 0.35x, and removing
+the misses alone is worth 13%.
+
+### Cache-miss hypotheses, ranked, and the no-GPU diagnostic
+
+The six misses have no server log (the server ran in the foreground; `scripts/launch.py` always
+writes the log since commit 5b8d31b), so the cause is open. Hypotheses, most to least likely given
+the miss pattern (each prompt = previous + ~1K tokens, at ~172K and ~193K under a 75%, ~196K
+threshold):
+
+| # | Hypothesis | What it predicts in the log |
+|---|---|---|
+| a | The harness rewrote a message older than the oldest retained checkpoint | Earliest divergence below every checkpoint position |
+| b | Checkpoint coverage: since PR #22929 one checkpoint goes before the latest user message, otherwise only every `--checkpoint-min-step` (8,192 tokens, b11160 default), and the 4 are evicted FIFO ([memory.md](measurements/memory.md#prompt-cache-reuse-and-context-checkpoints-2026-09-29)), so a long tool loop keeps a narrow window | Divergence mid-context, no checkpoint between it and the prompt end |
+| c | **New.** Harness history mutation just below the compaction threshold: harnesses commonly prune or truncate old tool results, or inject reminders, as the context nears the threshold; that rewrites an early position and defeats every checkpoint | Divergence near the start, only on requests close to the threshold |
+| d | For later: with `preserve_thinking` the template keeps all reasoning. If it were ever false, the strip happens at the previous real user query (tool turns don't count, `last_query_index`), an early divergence the checkpoint before the last user message is designed to cover, but only if that checkpoint survived FIFO eviction | Not applicable at the current default |
+
+Hypothesis (c) is testable without GPU: diff the serialized prompts of consecutive requests (the
+omp request log, or a stdlib logging proxy on `:8080`) and read `f_sim_best`, `f_keep` and the
+checkpoint positions in the server log. `--checkpoint-min-step` (verified in b11160 `--help`) is the
+knob paired with `--ctx-checkpoints` for coverage; it is not yet in the plan.
+
+**Diagnostic (test-plan T20, no GPU):** from the next session's `_tmp/logs/` server log, extract
+per request `n_prompt`, cache-hit tokens, `f_sim_best`, `f_keep`, the checkpoint list and the earliest
+divergent position; classify each miss as (a), (b) or (c). A small stdlib parser is justified once the
+log format is confirmed.
+
+### Context growth: `preserve_thinking` (new, highest potential, unmeasured)
+
+Template fact (GGUF `tokenizer.chat_template`): past assistant reasoning is kept unless
+`preserve_thinking` is false, and only turns before the last real user query are stripped.
+`--chat-template-kwargs '{"preserve_thinking": false}'` exists in b11160 (verified in `--help`).
+If the harness returns `reasoning_content` in history, ~78% of every turn's output stays in context:
+at ~1,080 mean output tokens per turn, roughly 840 thinking tokens per turn accumulate, which would
+be the dominant driver of reaching the compaction threshold (each compaction ≈5 min,
+[agent-traffic.md](measurements/agent-traffic.md#compaction-cost-on-this-hybrid-model-2026-09-30)).
+
+Unknowns to settle first, no GPU:
+
+1. Does omp v18.4.4 send `reasoning_content` back? Check from the token ledger: per-turn
+   prompt-new delta vs. the previous completion tokens. If the delta ≈ visible text + tool
+   arguments only, the harness already drops reasoning and this lever does not exist.
+2. The card's exact wording on `preserve_thinking` ([SOURCES.md](SOURCES.md) quotes "improves KV
+   cache utilization"): verify the claim and whether the card ties it to agent quality. Adoption
+   follows the card rule in [`AGENTS.md`](../AGENTS.md).
+
+Expected trade: far fewer compactions and a shallower average depth (faster decode band) against
+one re-process at each real user query, bounded by checkpoint coverage (hypothesis d). Quality
+risk: multi-step tool reasoning across user queries loses prior thinking; gate on the coding suite.
+Test-plan T21: ledger analysis first, then a replayed-session A/B.
+
+### Reasoning budget (T04): gate corrected
+
+Retrieval probes need little thinking, so an exact-match retrieval benchmark cannot detect harm from
+a truncated budget on coding tasks; it can only measure token savings. T04 stays for cost
+measurement (completion tokens, `finish_reason`, empty-content count), but adoption requires the
+coding suite. `--reasoning-budget` keeps the `medium` system block, so it does not change the cached
+prefix; by contrast `--reasoning-effort low` injects "Keep your thinking brief" into the system
+message, so switching effort mid-session invalidates the prefix. The `AGENTS.md` thinking rule still
+applies.
+
+### Decode at depth: ceiling and MTP on code
+
+[depth.md](measurements/depth.md#why-decode-slows-with-depth-attention-bandwidth-2026-09-26-round-4):
+attention runs at ~24% of memory bandwidth because `ncols2 = 2` fetches each K/V element 3 times; at
+239K no-MTP decode is 62.5 ms/token vs. 25.8 ms empty. The ceiling of a correct GQA-6 kernel is
+therefore up to ~2x decode at depth, larger than every flag-level candidate combined, which is why
+T11 stays the only build worth a session.
+
+Code tasks decode slowest (18.6 vs. 24.4/26.9 tok/s at 240K, [STATUS.md](STATUS.md#headline-numbers))
+and at 190K with n=2 code accepted 215/365 (59%) vs. copy 261/275 (95%)
+([speculative.md](measurements/speculative.md#ab-at-190k--c-204800-kv-q8q8-kvmix-vs-vec4-mtp-n2)).
+Two levers follow: n-gram-map-k stacking (T08/T09) targets exactly the repeated-code case; and
+`--spec-draft-p-min` raises acceptance without speed, because an MTP step costs ~117 ms at 240K
+regardless of acceptance, so ms/token is the metric, not acceptance. Sampling temperature is a known
+acceptance factor that the card rule forbids changing.
+
+### Levers table
+
+Owner: [`agent-traffic.md`](measurements/agent-traffic.md#speed-levers-at-depth-2026-09-30)
+(rewritten 2026-10-03 with the shares above; replaces the 2026-09-30 table).
+
+### Questioned and parked (no test)
+
+- 224K `q8_0/q8_0` + 80% threshold vs. 262K `q8_0/q5_1` + 70%: same effective working context
+  (~180K) with lower KV KLD ([kv-quality.md](measurements/kv-quality.md)), but 0.3 GiB margin at 240K
+  ([depth.md](measurements/depth.md#context-window-ladder-224k-and-240k-272-w-2026-09-25)) and the provider contract is fixed at 262144; not worth a run while both KV mixes are near-lossless.
+- `-ub 512` (+5% prefill, +350 MiB): the session peak left 724 MiB free, so no.
+- Presence penalty (T03): observed repetition is low; demoted to "run only if loops are observed".
+- T07 as a gate for T08-T12: dependency dropped; the adopted profile is the control regardless of
+  T07's outcome.
+
 ## Fork vs. wait for upstream, and the rdna-boosts GQA-6 FA band (2026-10-01, candidate, not run)
 
 Question: instead of waiting for the tracked upstream items, carry them as patches on our own build?
@@ -284,7 +395,7 @@ of task state. Otherwise record the numbers and drop it.
 ## Candidates from third-party repositories (2026-10-02, not run)
 
 Source rows and verdicts: [`SOURCES.md`](SOURCES.md#third-party-tuning-repositories-reviewed-2026-10-02).
-Nothing here is adopted; the order and conditions are in the private test plan.
+Nothing here is adopted.
 
 | Candidate | Variable | Why it might matter | Kill criterion |
 |---|---|---|---|
@@ -294,7 +405,7 @@ Nothing here is adopted; the order and conditions are in the private test plan.
 | `GGML_CUDA_DISABLE_GRAPHS=1` | Environment only | Diagnostic for a HIP-graph exec-update hang reported by a third party; not a speed candidate | Run only if a hang appears; never proactively |
 | cafe-llama.cpp fork build (`a0d43f3`, upstream base `f1cee99`), single-backend HIP | Engine build; then `--spec-draft-n-max` 3/4/6 | Hybrid-GDN trunk fusions (`src/models/qwen35.cpp`) may cut the target pass at depth; the author claims cheaper MTP on an RTX 3090, but no draft-cost change for Qwen3.8 was found in the code ([`SOURCES.md`](SOURCES.md#cafe-llamacpp-fork-and-the-quimedesu-x-thread-2026-10-02)); never run on AMD | Under ~5% tg at 190K/240K vs. b11160 `hip-kvmix` n=3, any output change at greedy, a build failure on gfx1100, or a missing `kvmix` FA-quants kernel (the fork is a 275-file diff, not a patch to maintain) |
 
-Not carried here: `--reasoning-budget` (profile-level, see [`STATUS.md`](STATUS.md#next-steps)), undervolt (deferred GPU
+Not carried here: `--reasoning-budget` (profile-level, see the [hypothesis review](#hypothesis-review-2026-10-03-no-runs)), undervolt (deferred GPU
 care) and the fork-only `turbo4`/`turbo2` V caches (not in our engine).
 
 ## Upstream watchlist (2026-09-29)
@@ -302,8 +413,8 @@ care) and the fork-only `turbo4`/`turbo2` V caches (not in our engine).
 **Keep b11160 pinned: no replacement has been measured on this setup.** The official
 [llama.cpp v0.5.0 release](https://github.com/ggml-org/llama.cpp/releases/tag/v0.5.0) lists nightly
 b11146, older than this repository's b11160 baseline; its official ROCm binary also lacks the
-`q8_0`/`q5_1` FlashAttention kernel required by the current profile. Keep the clock-pinned Vulkan
-retest (see "Other engines evaluated" in [`ENGINES.md`](ENGINES.md)) pending; the upstream items below are monitoring candidates, not evidence to upgrade.
+`q8_0`/`q5_1` FlashAttention kernel required by the current profile. The upstream items below are
+monitoring candidates, not evidence to upgrade.
 
 | Upstream item | State and relevance | Limit |
 |---|---|---|

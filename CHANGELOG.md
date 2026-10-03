@@ -11,26 +11,31 @@ All notable changes to this project are documented here. Format follows
 - Reviewed four third-party 7900 XTX tuning repositories: 11 source rows and three engine candidates, none run ([SOURCES.md](docs/SOURCES.md#third-party-tuning-repositories-reviewed-2026-10-02)).
 - Audit of a 5.8-hour agent session: six full cache misses at ~172K-194K, VRAM headroom
   ([agent-traffic.md](docs/measurements/agent-traffic.md#full-cache-misses-in-a-long-session-2026-10-01)).
-
 - Published the `hip-kvmix` engine artifact as the
   [`engine-b11160-rocm10-gfx1100-kvmix` GitHub release](https://github.com/victoralcazardev/rx7900xtx-local-llm/releases/tag/engine-b11160-rocm10-gfx1100-kvmix).
 
 ### Changed
 
+- Hypothesis review with no runs: reframed the speed levers by measured session time share, ranked the
+  cache-miss hypotheses, added `preserve_thinking` and harness history mutation as hypotheses, and
+  pruned duplicate open questions and stale pointers; no profile change
+  ([`ENGINES-EXPERIMENTS.md`](docs/ENGINES-EXPERIMENTS.md#hypothesis-review-2026-10-03-no-runs)).
+- KVMem rerun helpers fail safely instead of leaving a half-written result (`results/`).
+- Bench scripts return nonzero on incomplete measurements and close telemetry on exit (`bench/`).
 - Corrected the documentation's evidence qualifiers: 68/68 retrieval matches are pooled across
   configurations, only 8/8 used the exact adopted flags, 190 MiB is system-wide free VRAM (not a
   process delta), the 70% compaction threshold is current, and the original HF revision is unknown
   ([`docs/measurements/depth.md`](docs/measurements/depth.md)).
 - `scripts/launch.py` writes the server log to `_tmp/logs/` in foreground mode too, echoing it to
   the console ([launch-model.md](docs/sop/launch-model.md)).
-- Checked llama.cpp b11320 (no update) and recorded the fork-vs-wait analysis: no fork, patch on demand; rdna-boosts GQA-6 FA band is the next engine candidate for gfx1100, not run (`docs/ENGINES-EXPERIMENTS.md`).
+- Checked llama.cpp b11320 (no update) and recorded the fork-vs-wait analysis: no fork, patch on demand; rdna-boosts GQA-6 FA band recorded as a gfx1100 engine candidate, not run; demoted to plan item 6 behind the cache-miss diagnosis and coding suite on 2026-10-02 (`docs/ENGINES-EXPERIMENTS.md`).
 - Ran KVMem trial round 2 and a final round: `--kvmem-block-tokens 32` fixes the 240K retrieval miss (8/8), budget 49,152 crash reproduced, candidate (budget 28,672, block 32) 2.2x decode at 244K and exact at 190K-240K; still not adopted pending the agent run (`results/20260930-kvmem-trial-round2/README.md`).
 - Ran KVMem trial round 1 on ROCm (2.3x decode at 244K, ~15 GiB VRAM; 7/8 retrieval at budget 28,672, 8/8 at 49,152, one 190K crash): promising, not adopted (`results/20260930-kvmem-trial/README.md`).
 - Rewrote `AGENTS.md` as a short index (read-when pointers, rules, commands, evidence discipline)
   and added the documentation workflow (single owner per fact, routing table, word budgets) as
   `docs/STYLE.md` §8.
 - Corrected host RAM to 32 GiB installed / 31.25 GiB usable; added a speed-levers summary
-  (`docs/STATUS.md`).
+  ([agent-traffic.md](docs/measurements/agent-traffic.md#speed-levers-at-depth-2026-09-30)).
 - Enabled harness `compaction.handoffSaveToDisk` and prepared a KVMem trial (`docs/ENGINES.md`).
 - Measured compaction cost (14 compactions, median ~83 s to next turn), checked a third-party
   compaction/KVMem claim, set the harness threshold to 75% (`docs/measurements/agent-traffic.md`,
