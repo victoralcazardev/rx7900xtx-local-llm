@@ -31,6 +31,7 @@ row: what was tried, the key numbers, where the evidence is.
 | Lemonade b1331/b1332 | Its build does not enable the FA quant kernels K `q8_0` + V `q5_1` needs; A/B dropped. | [ENGINES.md](ENGINES.md) |
 | `nasone32/llama.cpp-RDNA3-7900xtx-opt` | Older snapshot than b11160, no binaries; patches target RDNA3.5/RDNA4 or prefill, sparse attention is for another architecture. Discarded. | [ENGINES.md](ENGINES.md) |
 | exllamav3-rocm (+ patched TabbyAPI) | Read-only audit found no code or license blocker; deprioritized: 15.3 GB EXL3 model leaves less VRAM headroom, author's numbers not comparable. | [ENGINES.md](ENGINES.md), [SOURCES.md](SOURCES.md) |
+| vLLM (ROCm) and HyperQwen (CUDA) | Not run. HyperQwen's kernels are CUDA only. Mainline vLLM supports no 4-bit format on AMD; the one 7900 XTX number is 29.1 tok/s (27B INT4, 2K, no MTP) vs. 68.9 here; 262K on 24 GB needs unmerged KV code. | [SOURCES.md](SOURCES.md#vllm-on-rocm-and-hyperqwen-2026-10-03) |
 | Unmeasured speed candidates (2026-09-26, each <5% or blocked by VRAM/context) | llama.cpp PR #29393 outside a regular engine update; fork adaptive MTP (`draft-mtp-adaptive`; upstream PR #27210's author advises against it below draft depth 7); building ik_llama.cpp; `GGML_CUDA_GRAPH_OPT=1` and `-DGGML_LTO=ON` (third-party claims, [ENGINES-EXPERIMENTS.md](ENGINES-EXPERIMENTS.md#candidates-from-third-party-repositories-2026-10-02-not-run)). | [depth.md](measurements/depth.md#why-decode-slows-with-depth-attention-bandwidth-2026-09-26-round-4) |
 
 ## Models, quantization and speculative alternatives

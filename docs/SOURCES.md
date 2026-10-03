@@ -205,6 +205,23 @@ b11160 `hip-kvmix`; likely gains arrive through upstream (GDN fusions, the rdna-
 | AMD's own fork is a maintained ROCm line | [AMD-Ecosystem/llama.cpp](https://github.com/AMD-Ecosystem/llama.cpp) (ROCm/llama.cpp redirects here) | Refuted as a performance lead: 10 commits ahead, 341 behind `ggml-org/master` on 2026-10-02 | Upstream mirror |
 | Other candidates | BeeLlama preview-v0.4.8 (upstream sync only), lemonade-sdk/llamacpp-rocm b1336 (master rebuild), PrismML-Eng/llama.cpp `prism` (no HIP evidence), koboldcpp-rocm (last push 2026-07-29), mozilla-ai/llamafile (packaging), rocktboy1982/llama-cpp-7900xt-optimization (turbo4 V, short context) | Checked 2026-10-02 | Not applicable. No KIVI/QJL/PolarQuant or EAGLE/tree-speculation fork for gfx1100 + `qwen35` was found |
 
+## vLLM on ROCm and HyperQwen (2026-10-03)
+
+Goal checked: can vLLM replace llama.cpp here at 200K-262K context on one 24 GB card? No run.
+
+| Claim | Source | Date | Status | Own test |
+|---|---|---|---|---|
+| HyperQwen (patched vLLM 0.30.0, int8 Marlin GEMM, KVarN 4/2-bit KV, MTP and DFlash2) gives Qwen3.8-27B 127 tok/s, 381 while quoting the prompt, and 67/164 at 240K on one RTX 3090 | [syv-ai/HyperQwen](https://github.com/syv-ai/HyperQwen) | 2026-10 | source-checked (README): CUDA only, no ROCm/HIP path mentioned; fill depth behind the 240K figure not confirmed | not applicable (NVIDIA kernels) |
+| vLLM lists the Radeon RX 7900 series (gfx1100) as a ROCm target | [vLLM GPU install docs](https://docs.vllm.ai/en/latest/getting_started/installation/gpu/) | 2026-10 | hypothesis (agent summary, not opened) | none |
+| On AMD GPUs vLLM supports only FP8 W8A8 and GGUF; AWQ, GPTQ, Marlin, INT8 W8A8 and bitsandbytes are unsupported. GGUF is "highly experimental and under-optimized" | [quantization README](https://github.com/vllm-project/vllm/blob/main/docs/features/quantization/README.md), [GGUF docs](https://docs.vllm.ai/en/latest/features/quantization/gguf/) | 2026-10 | source-checked (table); GGUF quote from agent summary | none |
+| Qwen3.8-27B INT4 W4A16 on a 7900 XTX, vLLM 0.27.1.dev, 2K context, no MTP: 29.1 tok/s with bf16 KV, 21.6 with fp8 KV (gfx11 has no native FP8) | [vLLM issue #56992](https://github.com/vllm-project/vllm/issues/56992) | 2026 | source-checked | none; compare 68.9 tok/s here at empty context with MTP n=3 |
+| Unmerged PR ("DO NOT MERGE") adds gfx1100 W4A16 GEMM and INT8/INT4 KV; 113-119 tok/s with MTP k=3 up to 167K, on **4x** 7900 XTX (TP4) | [vLLM PR #57925](https://github.com/vllm-project/vllm/pull/57925) | 2026 | hypothesis (agent summary, not opened) | none; no single-GPU number |
+| vLLM MTP speculative decoding for Qwen 27B is tested on MI300X/MI355X only, not Radeon | [vLLM blog 2026-08-23](https://vllm.ai/blog/2026-08-23-speculative-decoding-amd-gpus) | 2026-08 | hypothesis (agent summary, not opened) | none |
+
+Conclusion: not pursued. Mainline vLLM has no validated 4-bit path for gfx1100, the only
+single-card number is less than half of ours without MTP, and 262K on 24 GB depends on unmerged
+KV code. Revisit if PR #57925 or an INT8/INT4 KV backend merges.
+
 ## Not pursued
 
 - `unsloth/Qwen3.8-27B-GGUF` `UD-IQ3_S` (12 GB) as an alternative quant — candidate for a

@@ -7,6 +7,7 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- Reviewed vLLM on ROCm and HyperQwen as llama.cpp replacements at 200K-262K context: not pursued, no run ([SOURCES.md](docs/SOURCES.md#vllm-on-rocm-and-hyperqwen-2026-10-03)).
 - Added an end-to-end coding-quality, cache-diagnosis and reliability experiment order with external evidence limits; no profile or runtime settings changed ([`ENGINES-EXPERIMENTS.md`](docs/ENGINES-EXPERIMENTS.md)).
 - Reviewed four third-party 7900 XTX tuning repositories: 11 source rows and three engine candidates, none run ([SOURCES.md](docs/SOURCES.md#third-party-tuning-repositories-reviewed-2026-10-02)).
 - Audit of a 5.8-hour agent session: six full cache misses at ~172K-194K, VRAM headroom
