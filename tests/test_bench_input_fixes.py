@@ -75,6 +75,13 @@ class TestSpecDepthVariants(unittest.TestCase):
         self.assertIn("invalid choice", stderr.getvalue())
         self.assertIn("dfl5", stderr.getvalue())
 
+    def test_payload_keeps_greedy_default_and_varies_seed_when_sampling(self):
+        greedy = spec_depth_bench.build_payload([1, 2], 0.0, 3)
+        self.assertEqual((greedy["temperature"], greedy["seed"]), (0.0, 7))
+        sampled = [spec_depth_bench.build_payload([1, 2], 1.0, rep) for rep in (2, 3)]
+        self.assertEqual([p["temperature"] for p in sampled], [1.0, 1.0])
+        self.assertEqual([p["seed"] for p in sampled], [9, 10])
+
 
 class TestSpecBenchVariants(unittest.TestCase):
     def test_variants_accepts_known_names(self):
