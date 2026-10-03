@@ -17,6 +17,7 @@ import depth_bench as b
 VARIANTS = {'none': [], 'n1': ['--spec-type', 'draft-mtp', '--spec-draft-n-max', '1'],
             'n2': ['--spec-type', 'draft-mtp', '--spec-draft-n-max', '2'],
             'n3': ['--spec-type', 'draft-mtp', '--spec-draft-n-max', '3'],
+            'n3-prob': ['--spec-type', 'draft-mtp', '--spec-draft-n-max', '3', '--spec-draft-sampling', 'probabilistic'],
             'n3-mod': ['--spec-type', 'draft-mtp,ngram-mod', '--spec-draft-n-max', '3', '--spec-ngram-mod-n-match', '24',
                        '--spec-ngram-mod-n-min', '8', '--spec-ngram-mod-n-max', '32'],
             'n3-moddef': ['--spec-type', 'draft-mtp,ngram-mod', '--spec-draft-n-max', '3'],
