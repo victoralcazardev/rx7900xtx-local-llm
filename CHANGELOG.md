@@ -7,6 +7,15 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- Measured llama.cpp b11371 (neutral vs. b11160) and `--spec-draft-sampling probabilistic` (not adopted, pending) ([`results/20261003-b11371-mtp-draft-sampling/`](results/20261003-b11371-mtp-draft-sampling/README.md)).
+- Measured n-gram drafting stacked on MTP n=3: large gains on copy-heavy tasks at empty context and 240K ([`docs/measurements/speculative.md`](docs/measurements/speculative.md)).
+- Full retrieval sample on the adopted flags: 40/40 exact at 190K and 240K ([`docs/measurements/depth.md`](docs/measurements/depth.md)).
+- Root cause of the 2026-10-01 full cache misses (harness speculative compaction on the local slot) and the harness compaction change ([`docs/measurements/agent-traffic.md`](docs/measurements/agent-traffic.md#root-cause-speculative-compaction-on-the-local-slot-2026-10-03)).
+- Host prompt cache: the default 8 GiB cannot keep a ~180K state across a side request; 12 GiB can ([`results/20261003-cache-ram-side-request/`](results/20261003-cache-ram-side-request/README.md)).
+- KVarN speed screen on BeeLlama at 128K: -37% decode, rejected ([`results/20261003-kvarn-beellama-screen/`](results/20261003-kvarn-beellama-screen/README.md)).
+- FlashAttention attribution for this model's shape: ~55% of a 240K MTP step ([`results/20261003-fa-attribution-qwen38-shape/`](results/20261003-fa-attribution-qwen38-shape/README.md)).
+- Reviewed Paiton, vllm-radiance, ROCmFPX, BeeLlama preview-v0.4.8 and KVarN sizes: not applicable or pending ([`docs/SOURCES.md`](docs/SOURCES.md#vllm-rocm-forks-and-low-bit-llamacpp-forks-2026-10-03)).
+- Reconciled the optimization queue with actual bench behavior, documented the temperature-zero blocker for deep probabilistic-MTP trials, and added gated tool-output, request-locality and verify-path experiments; no runtime change ([`docs/ENGINES-EXPERIMENTS.md`](docs/ENGINES-EXPERIMENTS.md#executable-optimization-queue-review-2026-10-03-not-run)).
 - Reviewed vLLM on ROCm and HyperQwen as llama.cpp replacements at 200K-262K context: not pursued, no run ([SOURCES.md](docs/SOURCES.md#vllm-on-rocm-and-hyperqwen-2026-10-03)).
 - Added an end-to-end coding-quality, cache-diagnosis and reliability experiment order with external evidence limits; no profile or runtime settings changed ([`ENGINES-EXPERIMENTS.md`](docs/ENGINES-EXPERIMENTS.md)).
 - Reviewed four third-party 7900 XTX tuning repositories: 11 source rows and three engine candidates, none run ([SOURCES.md](docs/SOURCES.md#third-party-tuning-repositories-reviewed-2026-10-02)).
@@ -17,6 +26,8 @@ All notable changes to this project are documented here. Format follows
 
 ### Changed
 
+- Profile adopts `--spec-type draft-mtp,ngram-map-k4v` and `--cache-ram 12288`; `hip-kvmix` engine moves to b11371 ([`docs/STATUS.md`](docs/STATUS.md)).
+- Rejected `GGML_CUDA_GRAPH_OPT=1` and dropped the rdna-boosts GQA-6 FA band without building it ([`docs/TRIED.md`](docs/TRIED.md)).
 - Hypothesis review with no runs: reframed the speed levers by measured session time share, ranked the
   cache-miss hypotheses, added `preserve_thinking` and harness history mutation as hypotheses, and
   pruned duplicate open questions and stale pointers; no profile change

@@ -10,8 +10,10 @@ other measurement docs. Log and session analysis only: no new GPU run.
   then-configured 75% threshold, later changed to 70%): prefill was 35% of server busy time, not
   the 10.8% of the 2026-09-28 logs. Six
   requests at ~172K and ~193K depth reused 0 cached tokens with no compaction before them and
-  re-processed the whole context (381-456 s each, 42 min in total). Cause open — see "Full cache
-  misses in a long session" below. Decode speed and MTP acceptance (0.66) match earlier data.
+  re-processed the whole context (381-456 s each, 42 min in total). **Cause (found 2026-10-03):
+  the harness's speculative compaction ran on the same single local slot** and queued the main
+  agent behind it — see "Root cause" below. Decode speed and MTP acceptance (0.66) match earlier
+  data.
 - **Reasoning dominates generated output**: ~78% of output characters are thinking at
   `--reasoning-effort medium` (1,301 agent turns). Mean output is ~1,080 tokens per turn, p90
   2,744. `--reasoning-effort low` would be the largest speed lever, but it is **not pursued**:
@@ -162,7 +164,7 @@ Evidence: [`results/20261001-agent-session-audit/`](../../results/20261001-agent
 - Six turns were a full re-process with no compaction before them: the prompt was the previous one
   plus ~1K tokens, yet cache read was 0. Two per compaction epoch, at ~172K and ~193K. Together
   2,512 s, against 162 s for the three post-compaction re-processes.
-- Not yet explained. Hypotheses: the harness rewrites a message older than the oldest of the 4
+- Not yet explained on 2026-10-01 (explained 2026-10-03, see "Root cause" below). Hypotheses then: the harness rewrites a message older than the oldest of the 4
   kept context checkpoints (`--ctx-checkpoints 4`), or checkpoint placement leaves no checkpoint
   before the divergence (since llama.cpp PR #22929 the server checkpoints before the latest user
   message and otherwise only every `--checkpoint-min-step` = 8,192 tokens). The 2026-09-29 test in
@@ -177,10 +179,38 @@ Evidence: [`results/20261001-agent-session-audit/`](../../results/20261001-agent
   ranked hypotheses and the log-classification step are in the
   [hypothesis review](../ENGINES-EXPERIMENTS.md#hypothesis-review-2026-10-03-no-runs).
 
+### Root cause: speculative compaction on the local slot (2026-10-03)
+
+Log and session-file correlation, no GPU run.
+
+- All six full misses coincide to the minute with the harness's "Speculative compaction armed"
+  events. omp 18.5.0's speculative compaction (`asyncEnabled`, default true) generated the
+  `handoff` summary with the session model on the single local slot; with
+  `maxInFlightRequests: 1` the main agent queued behind it (15 waits of 368-837 s). This happened
+  twice per compaction epoch (~172K and ~193K): the first summary is discarded when the context
+  grows by more than `keepRecentTokens` (20,000). The summary request replaced the slot's KV, so
+  the main request then re-prefilled from 0. The server-side host prompt cache did not cover it
+  ([`memory.md`](memory.md#host-prompt-cache-eviction-with-a-side-request-2026-10-03)).
+- **Operator change 2026-10-03** (harness settings, not a server change): for the local model,
+  `compactionModel` points to a cloud model and `compaction.methodOrder` is
+  `[soft, handoff, shake]` (`soft` = "Summarize in place with a compaction model"; the model's
+  `compactionModel` is the first candidate); `asyncEnabled` back at its default. Trade-off: the
+  session history is sent to the cloud compaction model.
+- Effect unmeasured until the next real session. Success criteria: no in-flight wait > 60 s, no
+  full miss outside a compaction, and no compaction summary request on the local server.
+
+### Multi-turn prefix reuse with reasoning (2026-10-03)
+
+When the client sends `reasoning_content` back, turns 2-4 process only 18-20 new tokens on b11160
+and b11371 (servers log "chat template supports preserving reasoning, it is enabled by default").
+A client that drops reasoning makes the server re-process the previous answer every turn —
+[`results/20261003-b11371-mtp-draft-sampling/`](../../results/20261003-b11371-mtp-draft-sampling/README.md).
+
 ## Open A/B tests
 
 Four arms, all gated on the fixed coding-task suite: compaction threshold (70% vs. 60%), compaction
-method order (`handoff`-first vs. `shake`-first), context checkpoints (4 vs. 16, only after a logged
+method order (`handoff`-first vs. `shake`-first; the operator moved to `soft`-first on a cloud
+compaction model on 2026-10-03, see "Root cause"), context checkpoints (4 vs. 16, only after a logged
 mid-context divergence) and presence penalty (0 vs. 1.0, only if loops are observed). Suite,
 controls, metrics and order: [ENGINES-EXPERIMENTS.md](../ENGINES-EXPERIMENTS.md#end-to-end-quality-and-reliability-before-tuning-2026-10-02-proposed-not-run).
 
@@ -193,15 +223,18 @@ the argument behind each row is in the [hypothesis review](../ENGINES-EXPERIMENT
 
 | Lever | Share of session time it touches | Expected effect | Status / plan item |
 |---|---|---|---|
-| Full cache misses (six whole-context re-processes) | 13% of busy | Removing them is worth up to 13% of wall time; no quality cost | Diagnose from the server log first — T20 |
-| `preserve_thinking` / context growth | Each compaction ≈5 min; depth sets the decode band | Fewer compactions and shallower average depth, if the harness returns reasoning in history | Ledger check first, then a replayed-session A/B — T21 |
-| Thinking length, `--reasoning-budget` | ~78% of output characters | Fewer completion tokens; the cached prefix is kept | Cost measurement only; adoption gated on the coding suite — T04 |
-| `--reasoning-effort low` | Same ~78% | Largest cut, but injects a system instruction and the card warns of more failures | Not pursued (quality first) |
-| Prefill rate: harness tool-output size, `GGML_CUDA_GRAPH_OPT`, PR #29393 | 35% of busy | A prefill gain of x% moves at most 0.35x of wall time | T07; routine engine update |
-| Decode kernel, GQA-6 FlashAttention on RDNA3 | 65% of busy, more at depth | Ceiling up to ~2x decode at depth ([depth.md](depth.md#why-decode-slows-with-depth-attention-bandwidth-2026-09-26-round-4)) | Only build worth a session — T11 |
+| Full cache misses (six whole-context re-processes) | 13% of busy | At most the recorded miss time is recoverable; a fix's cost and task-wall benefit remain unknown | Diagnose from the server log first — T20 |
+| `preserve_thinking` / context growth | Retained reasoning-token share unknown | Potentially shallower context, but extra prefill/reasoning and quality loss can offset it | Inspect actual requests/rendering first; keep vendor default — T21 |
+| Thinking length, `--reasoning-budget` | ~78% of output characters, not tokens | Fewer tokens are possible, not proven quality-preserving | Conditional on empty-content/length trigger, then coding-suite gate — T04 |
+| `--reasoning-effort low` | Reasoning output; token share unmeasured | May shorten answers but also increase failures/retries | Not pursued (quality first) |
+| Prefill: new tool-output volume, graph optimization, engine changes | 35% of busy | Less work or higher throughput; throughput gain is not equal to time saved | Emission A/B T25; T07; routine engine update |
+| Decode kernel, GQA-6 FlashAttention on RDNA3 | 65% of busy, more at depth | Unmeasured roofline opportunity, not a task-speed forecast | Profile actual MTP shapes first — T27, then T11 |
 | n-gram stacked on MTP, for code | Decode on code turns (the slowest band) | Higher acceptance on repeated code; measure ms/token, not acceptance | T08 / T09 |
 | KVMem | Decode at depth | Bounded active attention; retrieval risk | Plan item 6, pending the real-agent run — [ENGINES-EXPERIMENTS.md](../ENGINES-EXPERIMENTS.md#kvmem-trial-round-2-and-final-round-2026-09-30-not-adopted) |
-| Server flags (MTP, `-ub`, KV, power cap) | <5% | — | Already measured — [TRIED.md](../TRIED.md) |
+| Remaining small flag sweeps (`-ub`, draft thresholds) | Not measured as a session share | Low-priority hypotheses, not a guaranteed <5% bound | Existing outcomes and unmeasured values — [TRIED.md](../TRIED.md) |
+
+Current execution order, new hypotheses and calculated busy-time bounds:
+[`ENGINES-EXPERIMENTS.md`](../ENGINES-EXPERIMENTS.md#executable-optimization-queue-review-2026-10-03-not-run).
 
 ## History
 
@@ -209,3 +242,6 @@ the argument behind each row is in the [hypothesis review](../ENGINES-EXPERIMENT
   prefill: 89% of server time is generation, 11% prefill (301 requests, two server logs). Prefix
   caching already keeps prefill small, so speed work should target generated tokens and decode
   speed at depth, not prompt processing.
+- **2026-10-01, superseded 2026-10-03.** "Six requests at ~172K and ~193K reused 0 cached tokens
+  with no compaction before them. Cause open." Root cause: speculative compaction on the local slot
+  (see above).

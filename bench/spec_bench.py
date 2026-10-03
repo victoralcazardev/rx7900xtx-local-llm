@@ -21,6 +21,7 @@ PROMPTS = {
  'reasoning': 'En una biblioteca hay 120 libros. El lunes se prestan 35 y se devuelven 12; el martes se prestan 28 y se devuelven 19. De los disponibles el miércoles se reservan 17. Explica cuántos quedan sin reservar y comprueba las cuentas.'}
 VARIANTS={'none':[], 'mtp2':['--spec-type','draft-mtp','--spec-draft-n-max','2'],
  'mtp3':['--spec-type','draft-mtp','--spec-draft-n-max','3'],
+ 'mtp3-prob':['--spec-type','draft-mtp','--spec-draft-n-max','3','--spec-draft-sampling','probabilistic'],
  'mtp2-map':['--spec-type','draft-mtp,ngram-map-k4v','--spec-draft-n-max','2'],
  'mtp2-mod':['--spec-type','draft-mtp,ngram-mod','--spec-draft-n-max','2','--spec-ngram-mod-n-match','24','--spec-ngram-mod-n-min','8','--spec-ngram-mod-n-max','32'],
  'mtp2-moddef':['--spec-type','draft-mtp,ngram-mod','--spec-draft-n-max','2'],

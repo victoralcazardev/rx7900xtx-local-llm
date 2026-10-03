@@ -24,10 +24,21 @@ Headline numbers and the adopted flags: [`../STATUS.md`](../STATUS.md).
 - **DFlash2 does not beat MTP** once measured at depth (190K): slower on two of three task types,
   ties on the third, and costs more VRAM. A third-party claim that DFlash2 wins at all depths on a
   different GPU (RTX 3090) does not reproduce here.
-- **n-gram stacked on MTP**: a single sample suggests it can help on repetitive content (code edits,
-  +6%) and hurt on reasoning (−8%); not adopted without repeated measurement. The A/B on the
-  adopted n=3 profile is prepared but not run — see "n-gram stacked on MTP: how llama.cpp
-  combines them" below.
+- **`--spec-type draft-mtp,ngram-map-k4v` adopted (2026-10-03)**: at 240K (b11371, temperature
+  0, median of 3) copy 43.85 vs. 27.03 tok/s (+62%; first rep +43%), essay -0.2%, code -0.5%, output
+  SHA identical to MTP-only, peak VRAM 22,634 MiB; empty context (temperature 1) agent +55%, editing
+  +36%, extraction +5%, code 0%, reasoning -2%, spanish -1%. `ngram-mod` not adopted: its pool is
+  shared across requests (b11160 `common/speculative.cpp:1870`), which inflates repeated-prompt
+  benches, and it loses on editing —
+  [`results/20261003-ngram-mtp-stacking/`](../../results/20261003-ngram-mtp-stacking/README.md).
+- **llama.cpp b11371 (`99b9548`) is speed/VRAM-neutral vs. b11160** (same tokens at a fixed seed;
+  72.2 vs. 72.4 tok/s empty; 24.64/27.03/18.71 vs. 24.55/26.92/18.71 at 240K; peak 22,631 MiB).
+  Its `--spec-draft-sampling probabilistic` (PR #27694) loses 5% median at empty context
+  (temperature 1) and is about even at 240K (temperature 1: code +12.4%, copy -2.7%, essay -4.6%,
+  wall -2.1%): not adopted, pending a real coding-session replay. b11371 is the `hip-kvmix` engine
+  since 2026-10-03 ([`../ENGINES.md`](../ENGINES.md)). At temperature 0 it is
+  token-identical to greedy, so temperature-0 rows measure only its overhead —
+  [`results/20261003-b11371-mtp-draft-sampling/`](../../results/20261003-b11371-mtp-draft-sampling/README.md).
 - The **root cause of MTP's depth slowdown is identified but not fully explained**: verifying ≥3
   tokens per step (MTP n≥2) routes through the FlashAttention TILE kernel, which converts the whole
   KV cache to f16 on every step; a fork that removes that conversion only recovered ~2.5% of the
@@ -106,7 +117,7 @@ n=3), with ngram-map-k4v (not ngram-mod), at empty context only (the adopted pro
 copied; may hurt reasoning, where a match is a poor predictor and a long wrong draft costs a
 verification pass.
 
-**Prepared, not yet run** (the GPU is in daily use; nothing below has been executed):
+**Run on 2026-10-03** (results in "Current conclusion" above). The commands as prepared:
 
 ```
 # empty context, 6 tasks x 3 seeds
@@ -405,8 +416,8 @@ Raw data: [`../../results/20260927-depth-240k-none-vs-n3/`](../../results/202609
 - How much V q5_1 costs *with* MTP: spec-off pays 25% for it at 240K (vs. V q8_0), but MTP n=3
   with KV q8_0/q8_0 at 262K is not reliable on this card, so it would have to be measured at a
   smaller window (~224K), which gives up the context the default profile exists for.
-- Whether ngram-mod stacked on MTP n=3 helps agentic editing at empty context and at 240K without
-  hurting reasoning (prepared, not run; see "n-gram stacked on MTP: how llama.cpp combines them").
+- `ngram-mod` stacked on MTP and probabilistic drafting: only via a real coding-session replay
+  (T09), since repeated-prompt benches inflate `ngram-mod` (see "Current conclusion").
 - Whether a future llama.cpp release picks up #27282 (shared MTP compute arena) or #26038, which
   would reduce MTP's VRAM/compute overhead at depth.
 
@@ -449,3 +460,11 @@ Raw data: [`../../results/20260927-depth-240k-none-vs-n3/`](../../results/202609
   - The earlier "+15-50% at depth" reading of MTP's gain compared against a KV q8_0/q8_0 spec-off
     baseline; spec-off with the adopted V q5_1 is 25% slower than with V q8_0 at 240K (11.2 vs.
     14.9 tok/s), so that baseline flattered spec-off (corrected 2026-09-27).
+- **2026-10-03, moved from "Current conclusion"**: "n-gram stacked on MTP: a single sample suggests
+  it can help on repetitive content (code edits, +6%) and hurt on reasoning (-8%); not adopted
+  without repeated measurement." Superseded by the n=3 stacking run
+  ([`results/20261003-ngram-mtp-stacking/`](../../results/20261003-ngram-mtp-stacking/README.md)).
+- **2026-10-03, later, moved from "Current conclusion"**: "n-gram stacked on MTP n=3: promising,
+  pending, not adopted" (empty context agent +55..+63%, editing +36% with `map` only; 240K first
+  exposure copy +10..+29% for `mod`/`moddef`; `map` at 240K pending). Superseded by the `map` run
+  at 240K and its adoption (same results folder).

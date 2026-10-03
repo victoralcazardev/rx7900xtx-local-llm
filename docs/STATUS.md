@@ -19,7 +19,7 @@ default when no alias is given.
 - Model: Qwen3.8-27B GSQ-RCO `IQ3_S-mtp` (native MTP head baked in), 12.1 GB, PPL 6.734 ± 0.084;
   `mmproj-Qwen3.8-27B-BF16.gguf` present but vision disabled. Other quants:
   [`models/qwen38-27b-quants.md`](models/qwen38-27b-quants.md).
-- Engine: llama.cpp b11160 `hip-kvmix` (own ROCm build with FlashAttention kernels for K `q8_0` +
+- Engine: llama.cpp b11371 `hip-kvmix` (own ROCm build with FlashAttention kernels for K `q8_0` +
   V `q5_1`); ROCm/HIP beats Vulkan 2-3.5x on generation here, Vulkan is reference-only.
   [`ENGINES.md`](ENGINES.md).
 - Power: 272 W permanent cap (driver minimum; stock 303 W) — [`sop/power-cap.md`](sop/power-cap.md).
@@ -32,18 +32,22 @@ llama-server -m <models_root>/Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp/Qwen3.8-27B-GSQ-RCO-
   --port 8080 -c 262144 -ctk q8_0 -ctv q5_1 \
   --temp 1.0 --top-p 0.95 --top-k 20 --min-p 0.0 \
   -fa on -np 1 --ctx-checkpoints 4 -ngl all --metrics \
-  --spec-type draft-mtp --spec-draft-n-max 3 -ub 256 --reasoning-effort medium
+  --spec-type draft-mtp,ngram-map-k4v --spec-draft-n-max 3 -ub 256 --reasoning-effort medium \
+  --cache-ram 12288
 ```
 
 ## Headline numbers
 
-- **240K fill, essay/copy/code**: 24.4 / 26.9 / 18.6 tok/s (mean 23.3), prefill 380 tok/s, peak
+- **240K fill, essay/copy/code (MTP only)**: 24.4 / 26.9 / 18.6 tok/s (mean 23.3), prefill 380 tok/s, peak
   process VRAM 22,630 MiB, 0 evicted —
   [speculative.md](measurements/speculative.md), [memory.md](measurements/memory.md).
 - **Empty context**: 68.9 tok/s (37.2 without MTP, +85%), community `probe.py`, 3 passes —
   [speculative.md](measurements/speculative.md#community-probe-ab-at-262k-empty-context-2026-09-27).
 - **Without MTP at 240K fill**: 11.2 tok/s, so MTP n=3 is +109% at depth —
   [speculative.md](measurements/speculative.md#mtp-vs-spec-off-at-240k-fill-adopted-profile-2026-09-27).
+- **n-gram map on MTP**: copy at 240K 43.9 vs. 27.0 tok/s (+62%), agent/editing at empty context
+  +55% / +36%, other tasks -0-2%, temperature-0 output identical —
+  [results](../results/20261003-ngram-mtp-stacking/README.md).
 - **Quality**: 68/68 pooled across configurations from 32K-240K (0 loops); only 8/8 at 240K used
   the exact adopted flags —
   [depth.md](measurements/depth.md#quality-ruler-style-200k-q8q8-mtp).
@@ -60,22 +64,21 @@ Sampling is the Qwen3.8-27B card's own; `--min-p 0.0` is set explicitly because 
 | `-c 262144` | Full native context; matches the wired `local-262k` provider |
 | `-ctk q8_0 -ctv q5_1` | `q8_0/q8_0` is near-free (KLD 0.000587 vs. f16); `q5_1` V costs +27% KLD but fits 262K in 24 GB; `q4_0/q4_0` has 4x KLD — [kv-quality.md](measurements/kv-quality.md) |
 | `-fa on` | Mandatory with a quantized V cache; avoids a silent slow-path fallback — [engines.md](measurements/engines.md) |
-| `--spec-type draft-mtp` | Uses the MTP head in the GGUF, no separate draft model — [qwen38-27b-quants.md](models/qwen38-27b-quants.md) |
+| `--spec-type draft-mtp,ngram-map-k4v` | MTP head in the GGUF (no separate draft model) plus an n-gram drafter over the slot's own tokens: large gains when output copies context, lossless at temperature 0 — [qwen38-27b-quants.md](models/qwen38-27b-quants.md), [speculative.md](measurements/speculative.md) |
 | `--spec-draft-n-max 3` | +9-11% mean tg over n=2 at the real 190K/240K depths (a 128K screening favored n=3 only on copy); n=4/5 lose acceptance — [speculative.md](measurements/speculative.md) |
 | `-ub 256` | -350 MiB peak VRAM vs. 512, -5% prefill, no generation cost — [memory.md](measurements/memory.md) |
 | `-np 1` | Single user; one slot + MTP with queuing beats more slots — [concurrency.md](measurements/concurrency.md) |
 | `--ctx-checkpoints 4` | Default is 32; 4 bounds RAM and warm turns still reuse ~all KV — [memory.md](measurements/memory.md#prompt-cache-reuse-and-context-checkpoints-2026-09-29), [TRIED.md](TRIED.md) |
+| `--cache-ram 12288` | The 8192 default evicts a ~180K main state (7.7 GiB) when a side request is cached (412 s re-prefill); 12288 restores it in 1.8 s; up to ~4 GiB more host RAM — [memory.md](measurements/memory.md#host-prompt-cache-eviction-with-a-side-request-2026-10-03) |
 | `-ngl all` | All layers on GPU, explicit rather than `auto` |
 | `--reasoning-effort medium` | Template default `xhigh` injects "think carefully..." and overthinks; `medium` adds no instruction — `models.toml` |
 | `--metrics` | Exposes `/metrics` for the token usage ledger — [token-ledger.md](sop/token-ledger.md) |
 
 ## Open questions
 
-- **Full cache misses in long sessions**: whole-context re-processing with no compaction, 42 min
-  in one 5.8-hour session, cause open; diagnose the next miss from its server log (prefix diverged
-  near the start or mid-context) before changing checkpoint settings. Current harness threshold is
-  70% (~183K) —
-  [agent-traffic.md](measurements/agent-traffic.md#full-cache-misses-in-a-long-session-2026-10-01).
+- **Full cache misses in long sessions**: cause found (harness speculative compaction on the single
+  local slot); a harness compaction change is in place, effect unmeasured —
+  [agent-traffic.md](measurements/agent-traffic.md#root-cause-speculative-compaction-on-the-local-slot-2026-10-03).
 - **Compaction threshold, compaction method order and presence penalty** A/B only after a fixed
   coding-task suite with executable tests and pass/fail criteria exists; checkpoint count is
   conditional on a logged mid-context divergence; 60% (~157K) is the comparison arm —
@@ -84,13 +87,17 @@ Sampling is the Qwen3.8-27B card's own; `--min-p 0.0` is set explicitly because 
   [ENGINES-EXPERIMENTS.md](ENGINES-EXPERIMENTS.md#kvmem-trial-round-2-and-final-round-2026-09-30-not-adopted).
 - **Qwen3.8-Flash-Next (MoE) via Strata**: not measured —
   [strata-flash-next.md](models/strata-flash-next.md).
-- **Broader retrieval samples** at 190K and 240K — [depth.md](measurements/depth.md).
 
 ## Next steps
 
-1. No-GPU diagnostics first: classify the next cache miss from the server log and check whether
-   the harness returns reasoning in history (`preserve_thinking` lever) —
-   [ENGINES-EXPERIMENTS.md](ENGINES-EXPERIMENTS.md#hypothesis-review-2026-10-03-no-runs).
-2. Then run only the quality-gated experiments in their documented order —
-   [ENGINES-EXPERIMENTS.md](ENGINES-EXPERIMENTS.md#end-to-end-quality-and-reliability-before-tuning-2026-10-02-proposed-not-run).
-3. GPU care beyond the 272 W cap (undervolt): deferred — [sop/power-cap.md](sop/power-cap.md).
+1. Measure the harness compaction change in the next real session (no in-flight wait > 60 s, no
+   full miss outside compaction) —
+   [agent-traffic.md](measurements/agent-traffic.md#root-cause-speculative-compaction-on-the-local-slot-2026-10-03).
+2. Kernel: a native quantized-KV FlashAttention verify kernel (FA is ~55% of a 240K MTP step;
+   upper bound ~+30% decode); development, not started —
+   [FA attribution](../results/20261003-fa-attribution-qwen38-shape/README.md).
+3. `ngram-mod` and probabilistic drafting only via a real coding-session replay (T09) —
+   [speculative.md](measurements/speculative.md).
+4. Run the quality-gated tool-output, request-locality and engine experiments in that order —
+   [priorities and prerequisites](ENGINES-EXPERIMENTS.md#queue-reconciliation-and-priority).
+5. GPU care beyond the 272 W cap (undervolt): deferred — [sop/power-cap.md](sop/power-cap.md).

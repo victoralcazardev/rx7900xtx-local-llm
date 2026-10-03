@@ -1,0 +1,8 @@
+{"tag": "b11160", "turn": 1, "prompt_n": 37, "cache_n": 0, "predicted_n": 818, "finish": "stop"}
+{"tag": "b11160", "turn": 2, "prompt_n": 577, "cache_n": 33, "predicted_n": 1025, "finish": "stop"}
+{"tag": "b11160", "turn": 3, "prompt_n": 894, "cache_n": 606, "predicted_n": 1210, "finish": "stop"}
+{"tag": "b11160", "turn": 4, "prompt_n": 1041, "cache_n": 1496, "predicted_n": 598, "finish": "stop"}
+{"tag": "b11371", "turn": 1, "prompt_n": 37, "cache_n": 0, "predicted_n": 818, "finish": "stop"}
+{"tag": "b11371", "turn": 2, "prompt_n": 577, "cache_n": 33, "predicted_n": 1025, "finish": "stop"}
+{"tag": "b11371", "turn": 3, "prompt_n": 894, "cache_n": 606, "predicted_n": 1210, "finish": "stop"}
+{"tag": "b11371", "turn": 4, "prompt_n": 1041, "cache_n": 1496, "predicted_n": 598, "finish": "stop"}

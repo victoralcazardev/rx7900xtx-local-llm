@@ -13,9 +13,9 @@ guide.
 
 | | |
 |---|---|
-| Profile | `qwen38-iq3s-mtp` / `262k-q8q51-mtp` (IQ3_S-mtp, KV `q8_0`/`q5_1`, MTP n=3) |
+| Profile | `qwen38-iq3s-mtp` / `262k-q8q51-mtp` (IQ3_S-mtp, KV `q8_0`/`q5_1`, MTP n=3 + `ngram-map-k4v`) |
 | Context | 262,144 tokens (native, no YaRN) |
-| Speed at 240K fill | 18.6-26.9 tok/s (mean 23.3), prefill 380 tok/s |
+| Speed at 240K fill | 18.6-26.9 tok/s MTP-only (copy 43.9 with n-gram), prefill 380 tok/s |
 | Speed, empty context | 68.9 tok/s (37.2 without MTP) |
 | VRAM | 22,630 MiB peak process VRAM at 240K fill |
 | Quality | 68/68 pooled across configurations (32K-240K); 8/8 on exact adopted flags at 240K |
@@ -32,7 +32,7 @@ Launch command, flag rationale and open questions: [`docs/STATUS.md`](docs/STATU
 | CPU / RAM | Ryzen 7 5700X (8C/16T), 32 GiB (31.25 GiB usable) plus zram swap |
 | Board / storage | Gigabyte B450 AORUS PRO, NVMe (Kingston A2000 500 GB) |
 | OS / drivers | CachyOS (Arch-based), kernel 7.2.7, Mesa 26.2.3, ROCm runtime 7.2.4 |
-| Engine | llama.cpp b11160 (`70c4e1582`) `hip-kvmix`, ROCm 10.0.0 compiler (TheRock wheels) |
+| Engine | llama.cpp b11371 (`99b9548`) `hip-kvmix`, ROCm 10.0.0 compiler (TheRock wheels) |
 
 CPU and RAM barely matter (every layer runs on the GPU); GPU and driver notes:
 [`docs/hardware/gpu-7900xtx.md`](docs/hardware/gpu-7900xtx.md).

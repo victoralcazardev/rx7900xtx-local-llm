@@ -17,9 +17,11 @@ import depth_bench as b
 VARIANTS = {'none': [], 'n1': ['--spec-type', 'draft-mtp', '--spec-draft-n-max', '1'],
             'n2': ['--spec-type', 'draft-mtp', '--spec-draft-n-max', '2'],
             'n3': ['--spec-type', 'draft-mtp', '--spec-draft-n-max', '3'],
+            'n3-prob': ['--spec-type', 'draft-mtp', '--spec-draft-n-max', '3', '--spec-draft-sampling', 'probabilistic'],
             'n3-mod': ['--spec-type', 'draft-mtp,ngram-mod', '--spec-draft-n-max', '3', '--spec-ngram-mod-n-match', '24',
                        '--spec-ngram-mod-n-min', '8', '--spec-ngram-mod-n-max', '32'],
             'n3-moddef': ['--spec-type', 'draft-mtp,ngram-mod', '--spec-draft-n-max', '3'],
+            'n3-map': ['--spec-type', 'draft-mtp,ngram-map-k4v', '--spec-draft-n-max', '3'],
             'dfl5': ['-md', os.environ.get('BENCH_DFLASH_MODEL', ''), '-ngld', 'all',
                      '--spec-type', 'draft-dflash', '--spec-draft-n-max', '5', '--spec-draft-p-min', '0.4'],
             'dfl3': ['-md', os.environ.get('BENCH_DFLASH_MODEL', ''), '-ngld', 'all',
@@ -33,6 +35,13 @@ TASKS = {
     'code': 'Escribe una función Python que cuente la frecuencia de cada palabra del texto anterior, con type hints y pruebas unitarias.'}
 OUTPUT_TOKENS = 400
 
+def build_payload(ids, temperature, rep):
+    """Request body for one rep: greedy seed 7 at temperature 0, else seed 7+rep (independent samples)."""
+    return {'prompt': ids, 'n_predict': OUTPUT_TOKENS, 'temperature': temperature, 'top_k': 20, 'min_p': 0,
+            'seed': 7 + rep if temperature > 0 else 7, 'stream': True, 'return_progress': True, 'cache_prompt': True,
+            'ignore_eos': False, 'timings_per_token': True}
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument('--run', action='store_true', required=True)
@@ -44,6 +53,8 @@ def main():
     ap.add_argument('--variants', nargs='+', choices=tuple(VARIANTS), default=list(VARIANTS))
     ap.add_argument('--server', help='alternate llama-server binary (e.g. the vec4 engine)')
     ap.add_argument('--tag', default='')
+    ap.add_argument('--temperature', type=float, default=0.0,
+                    help='request temperature; above 0 each rep uses seed 7+rep (default 0: greedy, seed 7)')
     ap.add_argument('--extra', default='',
                      help='extra llama-server flags appended to every variant, for A/B-testing '
                           'a new flag without editing this script, e.g. '
@@ -80,9 +91,7 @@ def main():
                     rendered = b.http_json('/apply-template', {'messages': msgs})['prompt']
                     ids = b.http_json('/tokenize', {'content': rendered, 'add_special': False})['tokens']
                     for rep in range(1, a.reps + 2):  # the 1st is a prefill warm-up, doesn't count
-                        payload = {'prompt': ids, 'n_predict': OUTPUT_TOKENS, 'temperature': 0, 'top_k': 20, 'min_p': 0,
-                                   'seed': 7, 'stream': True, 'return_progress': True, 'cache_prompt': True,
-                                   'ignore_eos': False, 'timings_per_token': True}
+                        payload = build_payload(ids, a.temperature, rep)
                         mon.set_phase('prefill' if rep == 1 else 'warm')
                         t0 = time.monotonic()
                         final, content = b.stream_completion(payload, case / f'{task}-{rep}.sse', mon)

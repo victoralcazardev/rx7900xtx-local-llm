@@ -1,0 +1,8 @@
+{"tag": "cram8192", "cache_ram": "8192", "step": "main-cold", "n_prompt": 180009, "cache_n": 0, "prompt_n": 180009, "prompt_s": 408.9, "wall_s": 410.7, "rss_anon_mib": 2786}
+{"tag": "cram8192", "cache_ram": "8192", "step": "main-warm", "n_prompt": 180008, "cache_n": 179749, "prompt_n": 259, "prompt_s": 2.6, "wall_s": 4.5, "rss_anon_mib": 2784}
+{"tag": "cram8192", "cache_ram": "8192", "step": "side", "n_prompt": 20007, "cache_n": 0, "prompt_n": 20007, "prompt_s": 26.4, "wall_s": 32.3, "rss_anon_mib": 9046}
+{"tag": "cram8192", "cache_ram": "8192", "step": "main-after-side", "n_prompt": 180010, "cache_n": 0, "prompt_n": 180010, "prompt_s": 412.4, "wall_s": 414.7, "rss_anon_mib": 3883}
+{"tag": "cram12288-b11371", "cache_ram": "12288", "step": "main-cold", "n_prompt": 180009, "cache_n": 0, "prompt_n": 180009, "prompt_s": 405.3, "wall_s": 406.3, "rss_anon_mib": 2861}
+{"tag": "cram12288-b11371", "cache_ram": "12288", "step": "main-warm", "n_prompt": 180008, "cache_n": 179749, "prompt_n": 259, "prompt_s": 1.4, "wall_s": 3.0, "rss_anon_mib": 2878}
+{"tag": "cram12288-b11371", "cache_ram": "12288", "step": "side", "n_prompt": 20007, "cache_n": 0, "prompt_n": 20007, "prompt_s": 25.8, "wall_s": 31.7, "rss_anon_mib": 9088}
+{"tag": "cram12288-b11371", "cache_ram": "12288", "step": "main-after-side", "n_prompt": 180010, "cache_n": 179749, "prompt_n": 261, "prompt_s": 1.8, "wall_s": 4.9, "rss_anon_mib": 4802}
