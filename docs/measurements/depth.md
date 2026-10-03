@@ -16,6 +16,11 @@ numbers live in [`../STATUS.md`](../STATUS.md).
   matches are across earlier configurations and depths, including a partial 190K sample. See
   "Quality (RULER-style)" below. This is a small retrieval check, not a general coding-quality
   result.
+- **Full retrieval sample on the adopted flags (2026-10-03): 40/40 exact** at 190K and 240K
+  (5 documents x 4 questions each), 0 loops or truncations; decode 31.2-34.8 / 27.6-29.5 tok/s,
+  cold prefill 429-434 / 379 tok/s, peak process VRAM 22,643 MiB. Retrieval only, not coding
+  quality —
+  [`../../results/20261003-longctx-quality-190k-240k/`](../../results/20261003-longctx-quality-190k-240k/README.md).
 - **System VRAM headroom depends on desktop use, not just the profile**: direct 2026-09-26
   system-wide readings left 12-190 MiB free across the measured long-context configurations; this
   is separate from per-process VRAM. See `memory.md`. Close heavy GPU applications before
@@ -83,6 +88,12 @@ already on by default (`ggml/CMakeLists.txt:216`) — not an untapped lever.
 
 None of these were measured directly on this GPU beyond the Vulkan screen above; see
 `docs/SOURCES.md` for verification status of each claim.
+
+**Follow-up, FA attribution (2026-10-03)**: an op-level measurement of this exact shape puts
+FlashAttention at ~55% of a 240K MTP verify step (4.57 ms/op x 16 layers ≈ 73 ms of ~134 ms); the
+quantized-KV path costs 1.8x f16 at the verify width and runs at ~10% of nominal bandwidth. A native
+quantized-KV verify kernel could give up to ~+30% decode at 240K (upper bound; development, not
+started) — [`results/20261003-fa-attribution-qwen38-shape/`](../../results/20261003-fa-attribution-qwen38-shape/README.md).
 
 ## Context, KV and MTP: server-real matrix (empty-context baseline)
 
@@ -312,9 +323,9 @@ text is not bit-identical across n=2/n=3/`-ub 256` at temperature 0 for some tas
 
 ## Open questions / pending (priority order)
 
-1. Broader retrieval samples at 190K and 240K — the existing 190K sample covers one of five
-   planned documents on an earlier profile; the exact adopted-flags 240K check is 8/8 across two
-   documents. Keep both as non-blocking follow-up validation, not evidence of general coding quality.
+1. ~~Broader retrieval samples at 190K and 240K~~ — answered 2026-10-03: 40/40 exact on the
+   adopted flags, see
+   [`../../results/20261003-longctx-quality-190k-240k/`](../../results/20261003-longctx-quality-190k-240k/README.md).
 2. ~~Real agent-usage MTP acceptance at depth (temperature 1, 3 seeds)~~ — answered 2026-09-30:
    **0.66** over 186,582 drafted tokens of real agent traffic, see
    [`agent-traffic.md`](agent-traffic.md). Original note: the synthetic benchmark above is

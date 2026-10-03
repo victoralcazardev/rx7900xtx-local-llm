@@ -32,7 +32,12 @@
 - **Host RAM, observed 2026-09-30**: with the weights in VRAM, `llama-server` still holds about
   12 GiB of anonymous host RAM. Most of it is likely the default 8 GiB prompt cache
   (`--cache-ram`); the rest is context checkpoints and HIP host buffers. This is bounded and
-  expected. Lower `--cache-ram` only if host RAM is tight — see "Host RAM footprint" below.
+  expected. Lower `--cache-ram` only if host RAM is tight — see "Host RAM footprint" below. The
+  profile now sets `--cache-ram 12288` (next bullet): up to ~4 GiB more host RAM than that reading.
+- **`--cache-ram 12288` adopted (2026-10-03)**: the 8192 default cannot hold a ~180K state plus any
+  other entry (one 20K side request evicted the 7,672.7 MiB main entry; 412 s re-prefill); 12288
+  restored 179,749 cached tokens in 1.8 s. An entry is ~43.6 KB per token (240K ~10 GiB, 262K
+  ~11.2 GiB) — see "Host prompt-cache eviction" below.
 
 ## VRAM breakdown at load (`-lv 4` log, 262K context, MiB)
 
@@ -192,6 +197,19 @@ Read once at ~200K context with the desktop running
 and other processes ~870 MiB. The process figure is 337 MiB above the 22,630 MiB of the
 2026-09-26 `-ub 256` reading at 240K fill; the cause was not investigated. No spill, but no room
 for a larger quant or compute buffer either.
+
+## Host prompt-cache eviction with a side request (2026-10-03)
+
+Server-side test with `--cache-ram 8192` (the default): when an unrelated
+20K side request arrived, the slot's 180K main-prompt state was saved to the host cache as a
+7,672.7 MiB entry. Saving the side request's state then evicted it ("making room for prompt cache
+entry, removing oldest entry"), and the next main request re-processed from 0 (412 s). So the
+default cap cannot keep a ~180K state plus any other entry; this is how a side request on the single
+slot turns into a full miss ([`agent-traffic.md`](agent-traffic.md#root-cause-speculative-compaction-on-the-local-slot-2026-10-03)).
+With `--cache-ram 12288` (b11371) both entries fit: the main request restored 179,749 cached
+tokens and processed 261 new ones in 1.8 s. Server `RssAnon` peaked at ~9.1 GiB in both arms during
+the side step; host RAM is 31.25 GiB usable (see "Host RAM footprint"). Adopted —
+[`results/20261003-cache-ram-side-request/`](../../results/20261003-cache-ram-side-request/README.md).
 
 ## Open questions
 

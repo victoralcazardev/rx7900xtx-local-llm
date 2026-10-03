@@ -8,8 +8,9 @@
   memory clock pinned at 1249 MHz (2026-09-29), HIP still wins tg +63% at depth 0 and +18% at 64K
   — see "Vulkan re-test with the memory clock pinned" below. This is a Linux/RADV driver behavior,
   not a kernel P-state bug.
-- **Engine in use**: llama.cpp `b11160` `hip-kvmix` — an own gfx1100 build (or its published
-  prebuilt release, see [`../ENGINES.md`](../ENGINES.md)) with the same ROCm 10 toolchain as the
+- **Engine in use**: llama.cpp `b11371` `hip-kvmix` (since 2026-10-03; speed-neutral vs. b11160,
+  whose published prebuilt release stays the registry pin; b11371 has no release asset) — an own
+  gfx1100 build ([`../ENGINES.md`](../ENGINES.md)) with the same ROCm 10 toolchain as the
   official Ubuntu ROCm 10.0 binary. It matches the official binary's speed, and it is **required**
   for the adopted KV `q8_0`/`q5_1` profile: the official binary doesn't ship kernels for that
   mix. Building with the older ROCm 7.2.4 (Arch's system package) is about 9% slower.
@@ -171,6 +172,10 @@ older base ~b10830, hypothesis, not isolated — see
 [Anbeeld/beellama.cpp#111](https://github.com/Anbeeld/beellama.cpp/issues/111)). KLD/KVarN
 verdict in [`kv-quality.md`](kv-quality.md#beellama-kvarn-kld-2026-09-26); raw data in
 [`../../results/20260926-beellama-kvarn/`](../../results/20260926-beellama-kvarn/).
+
+KVarN speed screen (2026-10-03): kvarn5/kvarn4 tg64 at 128K 10.53 tok/s vs. `hip-kvmix` (b11371)
+q8_0/q5_1 16.64 (-37%) and BeeLlama q8_0/q5_1 13.12; pp512 at 128K 92.5 vs. 383.3. Rejected —
+[`../../results/20261003-kvarn-beellama-screen/`](../../results/20261003-kvarn-beellama-screen/README.md).
 
 ## Vulkan depth screen (2026-09-26)
 
@@ -372,3 +377,6 @@ a separate, additive effect on top of (or against) this kernel-level gap.
   closed by the 2026-09-29 re-test (`-ub 512`, memory clock pinned): pinning nearly doubles Vulkan
   decode at 64K (10.64 → 19.77 tok/s) but HIP still wins everywhere. Vulkan stays reference-only
   for this model — see "Vulkan re-test with the memory clock pinned" above.
+- **2026-10-03, moved from "Current conclusion"**: "Engine in use: llama.cpp `b11160` `hip-kvmix`
+  — an own gfx1100 build (or its published prebuilt release)". Superseded by the switch to b11371
+  ([`../DECISIONS.md`](../DECISIONS.md)).

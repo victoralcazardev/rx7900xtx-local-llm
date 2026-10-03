@@ -9,6 +9,19 @@ result; **not applicable** means it does not transfer to this setup. Existing st
 legacy: read their evidence qualifier and the separate "Own test" cell; a bare **Verified** does
 not claim local reproduction. New or edited rows should use the explicit labels above.
 
+## Optimization queue source checks (2026-10-03)
+
+| Claim | Source | Date | Status | Own test |
+|---|---|---|---|---|
+| Probabilistic drafting/rejection sampling is available for simple draft and MTP; temperature zero is the author's unchanged-acceptance control, not evidence of the nonzero-temperature benefit | [llama.cpp PR #27694](https://github.com/ggml-org/llama.cpp/pull/27694), merged as `1fb7ef3e3327f18f1e99d294115b8493d54e196a` | 2026-10-03 | source-checked (primary PR text and merge metadata); external throughput is not a gfx1100/240K result | Candidate b11371 `99b9548` reports the option in `--help`; no GPU run in this review. The local deep bench hardcodes request temperature zero — [measurement prerequisite](ENGINES-EXPERIMENTS.md#p0-make-the-measurements-answer-the-intended-question). |
+| Checkpoint eviction is not pure FIFO: under pressure it first removes nearby checkpoints from older tasks, then removes oldest entries if still full; restore rejects a checkpoint beyond `pos_next` and checks its valid position range | [b11160 `server-context.cpp` at `70c4e1582`](https://github.com/ggml-org/llama.cpp/blob/70c4e1582/tools/server/server-context.cpp) (`create_checkpoint`, restore search) | 2026-10-03 | source-checked (pinned implementation); neither count × stride nor a checkpoint after divergence guarantees reuse | No miss reproduced here; request-trace and one-factor coverage protocol in [ENGINES-EXPERIMENTS.md](ENGINES-EXPERIMENTS.md#p0-one-prefix-trace-then-a-conditional-checkpoint-experiment). |
+| For the GQA-6/head-256 quantized-KV verify shape with four query tokens, b11160 selects TILE, with `ncols1=4`, `ncols2=2` and f16 K/V staging; RDNA's MMA selector also deliberately prefers two-head folding | [b11160 `fattn.cu`](https://github.com/ggml-org/llama.cpp/blob/70c4e1582/ggml/src/ggml-cuda/fattn.cu), [`fattn-tile.cuh`](https://github.com/ggml-org/llama.cpp/blob/70c4e1582/ggml/src/ggml-cuda/fattn-tile.cuh) | 2026-10-03 | source-checked for this shape; actual verify-shape distribution and timing unmeasured | Motivates profiling and a narrowly gated selector experiment, not a blanket fork transplant — [T27](ENGINES-EXPERIMENTS.md#new-t27-profile-the-mtp-verification-path-before-porting-kernels). |
+| Request `chat_template_kwargs` overwrite server template defaults key by key | [b11160 `server-common.cpp`](https://github.com/ggml-org/llama.cpp/blob/70c4e1582/tools/server/server-common.cpp#L1332-L1336) | 2026-10-03 | source-checked; no assumption about the current client's request | A preservation A/B must verify the rendered request, not merely add a server flag — [trace protocol](ENGINES-EXPERIMENTS.md#p0-one-prefix-trace-then-a-conditional-checkpoint-experiment). |
+
+The official Qwen card's preserved-reasoning guidance was rechecked in the same review; its claim
+remains owned by the [context/compaction source row](#context-length-and-compaction-claims-reviewed-2026-09-30).
+T25–T27 are local experimental hypotheses, not third-party performance claims.
+
 ## Engine / backend
 
 | Claim | Source | Date | Status | Own test |
@@ -199,7 +212,7 @@ b11160 `hip-kvmix`; likely gains arrive through upstream (GDN fusions, the rdna-
 
 | Claim | Source | Status | Note |
 |---|---|---|---|
-| A HIP flash-attention kernel A/B override | [TheTom/llama-cpp-turboquant](https://github.com/TheTom/llama-cpp-turboquant) branch `codex/hip-fa-kernel-ab` @ `cc1a791` (2026-09-06) | Verified that the branch and commit exist; behaviour on gfx1100 with `q8_0`/`q5_1` not checked | Worth a source read only; no RDNA3 numbers |
+| A HIP flash-attention kernel A/B override | [TheTom commit `cc1a791`](https://github.com/TheTom/llama-cpp-turboquant/commit/cc1a791) (2026-09-06), rechecked 2026-10-03 | source-checked: 16 added lines force TILE or shape-gated MMA with `GGML_HIP_FA_KERNEL`; no new kernel | Diagnostic capability, not evidence of a gfx1100 mixed-KV speedup. T19 source-read complete; any selector A/B belongs to T27 on the pinned baseline, not an entire fork build. |
 | 41 tok/s baseline, 68 tok/s on reasoning, 98 tok/s on repetitive content on an RX 7900 XTX | [theGiallo/llama-7900xtx-qwen3.8-27b](https://github.com/theGiallo/llama-7900xtx-qwen3.8-27b) @ `8739978` (README) | Hypothesis (README only) | Upstream + DFlash2 + a ROCmFP4 weight quant with RDNA3 WMMA MMQ/MMVQ kernels; `q4_0` KV at 256K conflicts with the KV-quality policy, DFlash2 already lost here, fp4 needs another model file |
 | ROCm, Vulkan and Metal issues will not be resolved by the maintainers | [ikawrakow/ik_llama.cpp](https://github.com/ikawrakow/ik_llama.cpp) @ `5f89bfc`, `README.md:14` | Verified | Active, with `qwen35` and MTP fixes, but no HIP support path; not applicable |
 | AMD's own fork is a maintained ROCm line | [AMD-Ecosystem/llama.cpp](https://github.com/AMD-Ecosystem/llama.cpp) (ROCm/llama.cpp redirects here) | Refuted as a performance lead: 10 commits ahead, 341 behind `ggml-org/master` on 2026-10-02 | Upstream mirror |
@@ -221,6 +234,18 @@ Goal checked: can vLLM replace llama.cpp here at 200K-262K context on one 24 GB 
 Conclusion: not pursued. Mainline vLLM has no validated 4-bit path for gfx1100, the only
 single-card number is less than half of ours without MTP, and 262K on 24 GB depends on unmerged
 KV code. Revisit if PR #57925 or an INT8/INT4 KV backend merges.
+
+## vLLM ROCm forks and low-bit llama.cpp forks (2026-10-03)
+
+Checked for one gfx1100 at 200K-262K context. No run.
+
+| Claim | Source | Date | Status | Own test |
+|---|---|---|---|---|
+| Paiton: vLLM plugin plus a proprietary compiled runtime; "Tested GPU: one Radeon AI PRO R9700, 32 GB, RDNA4 / gfx1201. Other GPUs have not been qualified." Its Qwen3.8 guide (3-bit W3A4 + DFlash2) reports 72-76 tok/s decode at a 257,992-token prompt (TTFT 126 s) | [Eliovp-BV/paiton-vllm-plugin](https://github.com/Eliovp-BV/paiton-vllm-plugin) | 2026-10 | not applicable (gfx1201, FP8/FP4 WMMA, closed runtime) | none; only a reference that depth decode can be much faster with better kernels |
+| vllm-radiance: vLLM v0.30.0 fork with hand-written gfx1201 kernels, ROCm 7.14; primary qualified setup is two R9700 (TP2) with mandatory FP8 KV | [magiccodingman/vllm-radiance](https://github.com/magiccodingman/vllm-radiance) | 2026-10 | not applicable (gfx1201, two GPUs, FP8 KV) | none |
+| ROCmFPX: llama.cpp fork with AMD FP2-FP8 weight formats; for gfx1100 "dedicated build scripts are provided; results vary". A post claiming "ROCmFPX v2 TP2 + MTP5 + Ngram on 2x R9700" has no published numbers | [charlie12345/ROCmFPX](https://github.com/charlie12345/ROCmFPX) | 2026-10 | source-checked (README); the TP2 claim unverified | none; needs another model file |
+| BeeLlama: the only release after the tested v0.4.7 is preview-v0.4.8 (2026-10-01), an upstream sync still built with ROCm 7.2 | [Anbeeld/beellama.cpp](https://github.com/Anbeeld/beellama.cpp) | 2026-10-01 | source-checked (release list) | v0.4.7 measured 2026-09-26 ([TRIED.md](TRIED.md)) |
+| KVarN (Huawei, arXiv 2606.03458): at 262,144 tokens kvarn5/kvarn4 KV would take 4,992 MiB vs. 7,424 MiB for our `q8_0`/`q5_1` | [author article](https://anbeeld.com/articles/kvarn-kv-cache-implementation-and-benchmarks) | 2026-10 | source-checked (sizes computed for this model) | KLD measured 2026-09-26 (~2.7x q8/q8); speed screen 2026-10-03: tg64 @128K 10.53 vs. 16.64 tok/s for `hip-kvmix` q8_0/q5_1 (-37%), rejected — [`results/20261003-kvarn-beellama-screen/`](../results/20261003-kvarn-beellama-screen/README.md) |
 
 ## Not pursued
 
