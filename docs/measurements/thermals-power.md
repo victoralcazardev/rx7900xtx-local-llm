@@ -93,10 +93,26 @@ JSON, and prints a warning to stderr for each card whose active cap is above the
 `BENCH_EXPECT_POWER_CAP_W` value (an invalid value is ignored with a warning, not a crash) for a
 deep run (depth or `-c` ≥ 128K). It never writes `power1_cap` itself. See `bench/README.md`.
 
+## Power draw at 240K, and what is left below 272 W (2026-10-03)
+
+Telemetry from the 240K `n3-map` run at temperature 1 (b11371, adopted flags; `power1_average`
+sampled by the bench monitor): median **271 W in prefill (2,590 samples) and 271 W in decode
+(818 samples)**, maxima 309 W / 303 W. Decode at depth is therefore **power-limited at the 272 W
+cap**, not only prefill. 272 W is the driver minimum (`power1_cap_min`), so the cap cannot go lower.
+
+The remaining levers are a core-clock cap and a voltage offset through `pp_od_clk_voltage`, which
+does not exist on this machine: overdrive is off (`ppfeaturemask` `0xfff7bfff`, bit `0x4000`
+clear). Enabling it needs a kernel parameter and a reboot
+([procedure](../sop/power-cap.md#below-272-w-clock-cap-and-undervolt)). Because decode is
+power-limited, an undervolt should give the same or higher clocks at 272 W (same or better tg,
+lower hotspot); a clock cap trades speed for J/token. Neither is measured here; no published
+llama.cpp undervolt benchmark for this card was found. Test plan: T17 (greedy output hash after
+every step, since an unstable compute undervolt can corrupt output silently).
+
 ## Open questions (future work, not prioritized this session)
 
-- Undervolting, and `pp_power_profile_mode` COMPUTE profile on Vulkan (would need `sudo`, reversible)
-  — not attempted.
+- Undervolting / clock cap (needs overdrive, see above) and `pp_power_profile_mode` COMPUTE
+  profile on Vulkan — not attempted.
 - Whether 272 W changes throughput/temperature at 240K+ the same ~6%/7-8°C it does at 190K — only
   measured directly at 190K (this section) and by proxy at 224K/240K (`depth.md`'s ladder, no 303 W
   comparison at those depths).

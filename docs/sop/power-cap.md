@@ -56,3 +56,34 @@ cat /sys/class/drm/card*/device/hwmon/hwmon*/power1_cap   # expect 272000000
 journalctl -u gpu-power-cap
 ```
 
+## Below 272 W: clock cap and undervolt
+
+272 W is this card's minimum power cap, and decode at depth already runs at it
+([evidence](../measurements/thermals-power.md#power-draw-at-240k-and-what-is-left-below-272-w-2026-10-03)).
+Going further needs the overdrive interface (`pp_od_clk_voltage`), which the driver only exposes
+with the overdrive bit (`0x4000`) set in `amdgpu.ppfeaturemask`.
+
+1. Enable overdrive (GRUB; on other bootloaders add the same parameter to the kernel command line):
+
+   ```bash
+   cat /sys/module/amdgpu/parameters/ppfeaturemask      # e.g. 0xfff7bfff (bit 0x4000 clear)
+   # Add amdgpu.ppfeaturemask=0xfff7ffff (your current mask | 0x4000) to GRUB_CMDLINE_LINUX_DEFAULT:
+   sudoedit /etc/default/grub
+   sudo grub-mkconfig -o /boot/grub/grub.cfg
+   # reboot, then confirm the file exists:
+   cat /sys/class/drm/card*/device/pp_od_clk_voltage
+   ```
+
+2. Apply one change at a time (as root, on the card's `device/` directory), commit with `c`,
+   reset with `r`. Settings do not survive a reboot:
+
+   ```bash
+   echo "vo -50"   > pp_od_clk_voltage && echo c > pp_od_clk_voltage   # voltage offset (mV)
+   echo "s 1 2200" > pp_od_clk_voltage && echo c > pp_od_clk_voltage   # core clock cap (MHz)
+   echo r > pp_od_clk_voltage && echo c > pp_od_clk_voltage            # back to defaults
+   ```
+
+3. Validate each step with the T17 protocol before keeping it: `spec_depth_bench.py` at 240K
+   (n3 x3, temperature 0) for tg, hotspot and `power1_average`, plus an identical greedy output
+   hash against the default settings. A changed hash, a crash or a GPU reset means the offset is
+   too aggressive: reset and go back one step. Do not lower the memory clock (decode needs it).

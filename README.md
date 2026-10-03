@@ -43,9 +43,9 @@ Requires **Python 3.11+**; `scripts/` use only the standard library.
 
 1. **Engine (required).** Official llama.cpp binaries lack the FlashAttention kernels for K `q8_0`
    + V `q5_1`. Download the prebuilt `hip-kvmix` build from the
-   [`engine-b11160-rocm10-gfx1100-kvmix`](https://github.com/victoralcazardev/rx7900xtx-local-llm/releases/tag/engine-b11160-rocm10-gfx1100-kvmix)
-   release (`llama-b11160-rocm10-gfx1100-kvmix-linux-x64.tar.gz`, sha256
-   `f1cb8e2683c94cc5891a11af7876058d50e2c0556f0ffeb92d2451bf659fc3ec`; the ROCm runtime is not
+   [`engine-b11371-rocm10-gfx1100-kvmix`](https://github.com/victoralcazardev/rx7900xtx-local-llm/releases/tag/engine-b11371-rocm10-gfx1100-kvmix)
+   release (`llama-b11371-rocm10-gfx1100-kvmix-linux-x64.tar.gz`, sha256
+   `159d2be7538f0932ae41c787a2e14bf849a796b6597eb0d0e1416393b92a137b`; the ROCm runtime is not
    bundled), or build it (ROCm only, never Vulkan+HIP in one build): [`docs/ENGINES.md`](docs/ENGINES.md).
 2. **Model.** Download `Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp.gguf` (12.1 GB) from
    [`ISTA-DASLab/Qwen3.8-27B-GSQ-RCO-GGUF`](https://huggingface.co/ISTA-DASLab/Qwen3.8-27B-GSQ-RCO-GGUF)
