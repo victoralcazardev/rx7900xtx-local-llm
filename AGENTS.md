@@ -11,7 +11,7 @@ Radeon RX 7900 XTX (24 GB, RDNA3, gfx1100)** with `llama-server` (ROCm/HIP; Vulk
 | `docs/STYLE.md` §8 | Before writing or moving any doc, result or finding |
 | `docs/TRIED.md` | Before proposing a flag, engine, quant or setting: it may already have lost |
 | `docs/DECISIONS.md` | Before changing the profile, `models.toml` or a documented policy |
-| `docs/sop/` | Launching, adding a model, updating the engine, measuring a backend, power cap |
+| `docs/sop/` | Launching, adding a model, updating the engine, measuring a backend, power cap, syncing GitHub info after a push |
 | `docs/measurements/<topic>.md` | Detailed evidence behind a number in STATUS |
 
 ## Repository rules
