@@ -7,6 +7,8 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- Published the b11371 `hip-kvmix` engine as a GitHub release; quick start points to it ([`ENGINES.md`](docs/ENGINES.md)).
+- Power at depth: decode at 240K is power-limited at the 272 W minimum; overdrive procedure for an undervolt/clock cap ([`sop/power-cap.md`](docs/sop/power-cap.md)).
 - Measured llama.cpp b11371 (neutral vs. b11160) and `--spec-draft-sampling probabilistic` (not adopted, pending) ([`results/20261003-b11371-mtp-draft-sampling/`](results/20261003-b11371-mtp-draft-sampling/README.md)).
 - Measured n-gram drafting stacked on MTP n=3: large gains on copy-heavy tasks at empty context and 240K ([`docs/measurements/speculative.md`](docs/measurements/speculative.md)).
 - Full retrieval sample on the adopted flags: 40/40 exact at 190K and 240K ([`docs/measurements/depth.md`](docs/measurements/depth.md)).

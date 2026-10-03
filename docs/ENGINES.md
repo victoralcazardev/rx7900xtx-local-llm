@@ -40,8 +40,11 @@ commit 99b9548)` (the build number comes from the local clone). Runtime: system 
 b11160 build. `--help` vs. b11160 adds only `--rpc` and `--spec-draft-sampling` (default `greedy`);
 no default changed for the `models.toml` flags. Speed, VRAM and generated tokens equal b11160
 ([`results/20261003-b11371-mtp-draft-sampling/`](../results/20261003-b11371-mtp-draft-sampling/README.md));
-adopted as the newer base, not for speed. Not yet published as a release asset: the
-`engine-b11160-...` release stays the published, registry-pinned build.
+adopted as the newer base, not for speed. **Prebuilt download**: GitHub release
+[`engine-b11371-rocm10-gfx1100-kvmix`](https://github.com/victoralcazardev/rx7900xtx-local-llm/releases/tag/engine-b11371-rocm10-gfx1100-kvmix),
+`llama-b11371-rocm10-gfx1100-kvmix-linux-x64.tar.gz`, sha256
+`159d2be7538f0932ae41c787a2e14bf849a796b6597eb0d0e1416393b92a137b` (same layout as the b11160 asset;
+ROCm runtime not bundled). The local-ai-registry recipe still pins the b11160 asset below.
 
 ### `llama-b11160-linux-rocm10-gfx1100-kvmix` (previous `hip-kvmix` engine)
 
