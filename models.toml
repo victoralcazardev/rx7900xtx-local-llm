@@ -6,7 +6,8 @@
 # - `[defaults].flags` are the flags that ALREADY change the binary's default. Re-verified
 #   against the engine's `--help` (see docs/measurements/). Re-verify with every new engine
 #   build: a default can change between versions or backends.
-# - MTP profiles add `--spec-type draft-mtp --spec-draft-n-max N`.
+# - MTP profiles add `--spec-type draft-mtp --spec-draft-n-max N`; optional `spec_type` replaces
+#   the drafter list (e.g. "draft-mtp,ngram-map-k4v").
 # - Optional profile keys: `backend` (overrides the model's), `vision = false`
 #   (skip loading the mmproj) and `vram_gib` (MEASURED peak of the process with a full
 #   context; launch.py warns if that much free VRAM + 0.5 GiB isn't available). Engines:
@@ -52,6 +53,10 @@ backend = "hip-kvmix"
 context = 262144
 kv = ["q8_0", "q5_1"]
 spec_n_max = 3
+# MTP + per-request n-gram map (2026-10-03, results/20261003-ngram-mtp-stacking/): +36..+63% on
+# tasks that copy context (agent, editing; copy +62% at 240K), -0..-2% elsewhere, temperature-0
+# output identical to MTP alone, same VRAM. `ngram-map-k4v` indexes the current slot sequence.
+spec_type = "draft-mtp,ngram-map-k4v"
 vision = false
 vram_gib = 22.2
 # Qwen3.8 card: reasoning_effort xhigh (template default) / medium / low. xhigh injects "think
@@ -59,4 +64,8 @@ vram_gib = 22.2
 # instruction (balanced, per the card). low = "keep your thinking brief". `-ub 256` measured
 # 2026-09-26 (docs/measurements/memory.md): less VRAM margin pressure than the `-ub 512` default,
 # small pp cost. Both flags verified in --help.
-flags = ["-ub", "256", "--reasoning-effort", "medium"]
+# `--cache-ram 12288` (2026-10-03, results/20261003-cache-ram-side-request/): the 8192 MiB default
+# evicts a ~180K main state (7.7 GiB host entry) as soon as another request's state is saved, so
+# the main conversation re-prefilled for 412 s after one 20K side request; with 12288 it resumed
+# from 179,749 cached tokens in 1.8 s. Costs up to ~4 GiB more host RAM (32 GiB host).
+flags = ["-ub", "256", "--reasoning-effort", "medium", "--cache-ram", "12288"]
