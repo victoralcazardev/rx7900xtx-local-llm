@@ -17,7 +17,8 @@
 - Limitation: KLD was measured at 32K of context. A RULER-style retrieval check now extends to
   240K: 68/68 pooled across configurations, plus 40/40 at 190K/240K on the adopted KV/MTP flags
   (b11160, temperature 0, thinking off, without the n-gram map). Retrieval accuracy is not a broad
-  coding-quality evaluation, and 60-180K is not yet covered — see [`depth.md`](depth.md).
+  coding-quality evaluation. Recall on real agent history at 80K and 176K under production
+  sampling (2026-10-04) showed no position-dependent loss — see [`depth.md`](depth.md).
 
 ## KV cache quantization: KLD vs. f16
 

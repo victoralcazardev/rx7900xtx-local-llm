@@ -7,6 +7,10 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- `scripts/launch.py` starts a passive GPU thermal/VRAM logger (`scripts/gpu_watch.py`) and writes `<log>.gpu.csv` next to the server log on Linux ([`docs/sop/launch-model.md`](docs/sop/launch-model.md)).
+- llama.cpp PR #29509 on b11371: bit-identical checkpoint restores and constant 149.6 MiB checkpoints; in local trial use ([`results/20261004-pr29509-checkpoint-restore/`](results/20261004-pr29509-checkpoint-restore/README.md)).
+- Recall on real agent history at 80K and 176K with production sampling: no position-dependent loss ([`results/20261004-real-history-recall-80k-176k/`](results/20261004-real-history-recall-80k-176k/README.md)).
+- Remaining cache-miss classes after the compaction change, from one session ([`docs/measurements/agent-traffic.md`](docs/measurements/agent-traffic.md#remaining-miss-classes-after-the-compaction-change-2026-10-04-single-session)).
 - Moved the KVMem trial write-up out of the experiments queue; added a KVMem row to TRIED ([`docs/measurements/kvmem.md`](docs/measurements/kvmem.md)).
 - SOP to keep the repo description, README, release and upstream links in sync after a push ([`sop/publish-sync.md`](docs/sop/publish-sync.md)).
 - README links the upstream contributions: local-ai-registry recipe (merged) and qwen38-mtp #88 (open) ([`README.md`](README.md#upstream)).
@@ -31,6 +35,7 @@ All notable changes to this project are documented here. Format follows
 
 ### Changed
 
+- Scoped long-context retrieval claims to the 40/40 run's settings (b11160, temperature 0, thinking off, no n-gram map) ([`docs/measurements/depth.md`](docs/measurements/depth.md)).
 - Removed answered items from the measurement docs' Open questions (answers kept in History), dropped the duplicate 0.66 MTP acceptance copies, and trimmed the README to its 1,000-word budget ([`docs/measurements/agent-traffic.md`](docs/measurements/agent-traffic.md)).
 - Profile adopts `--spec-type draft-mtp,ngram-map-k4v` and `--cache-ram 12288`; `hip-kvmix` engine moves to b11371 ([`docs/STATUS.md`](docs/STATUS.md)).
 - Rejected `GGML_CUDA_GRAPH_OPT=1` and dropped the rdna-boosts GQA-6 FA band without building it ([`docs/TRIED.md`](docs/TRIED.md)).

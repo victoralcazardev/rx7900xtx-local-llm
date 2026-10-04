@@ -38,6 +38,12 @@
   other entry (one 20K side request evicted the 7,672.7 MiB main entry; 412 s re-prefill); 12288
   restored 179,749 cached tokens in 1.8 s. An entry is ~43.6 KB per token (240K ~10 GiB, 262K
   ~11.2 GiB) — see "Host prompt-cache eviction" below.
+- **Prompt checkpoints with llama.cpp PR #29509 (2026-10-04, local trial)**: on b11371 each
+  checkpoint also stores the MTP draft KV, so it grows as ~149.6 MiB + ~4,120 B per token
+  (194.756 MiB at 11,486 tokens; ~869 MiB at 183K by extrapolation). With the patch every
+  checkpoint is a constant 149.626 MiB and restores are bit-identical (8/8, first-token top-5
+  logprobs Δ0). Deep-context RSS not measured —
+  [`results/20261004-pr29509-checkpoint-restore/`](../../results/20261004-pr29509-checkpoint-restore/README.md).
 
 ## VRAM breakdown at load (`-lv 4` log, 262K context, MiB)
 

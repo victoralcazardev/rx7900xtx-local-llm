@@ -5,6 +5,19 @@ builds actually in use, with pinned versions and SHA256, are in [`ENGINES.md`](E
 tried-and-not-adopted results are in [`TRIED.md`](TRIED.md). Proposed experiments below are not local
 results unless explicitly marked as run.
 
+## llama.cpp PR #29509 local trial (2026-10-04)
+
+- **What**: b11371 (`99b9548`) plus [#29509](https://github.com/ggml-org/llama.cpp/pull/29509)
+  (head `b3c2735`), which stops storing the MTP draft KV in prompt checkpoints. Own build with the
+  same [`ENGINES.md`](ENGINES.md) recipe; not published as a release. The PR is open and unreviewed.
+- **Evidence**: restores bit-identical to plain b11371 (8/8 per arm, first-token top-5 logprobs Δ0,
+  same text and acceptance); checkpoints a constant 149.626 MiB instead of growing ~4,120 B per
+  token — [`results/20261004-pr29509-checkpoint-restore/`](../results/20261004-pr29509-checkpoint-restore/README.md).
+  Speed and deep-context RSS not measured.
+- **Status**: in local trial use since 2026-10-04 as the `hip-kvmix` engine. Rollback: plain b11371.
+  Re-evaluate when #29509 or [#28873](https://github.com/ggml-org/llama.cpp/pull/28873) (honors
+  `PARTIAL_ONLY` in non-SWA KV; also open) merges.
+
 ## Executable optimization queue review (2026-10-03, not run)
 
 **Scope:** review of the manifest, existing measurements, private test queue and actual bench

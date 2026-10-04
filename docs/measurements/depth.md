@@ -17,6 +17,14 @@ numbers live in [`../STATUS.md`](../STATUS.md).
   matches are across earlier configurations and depths, including a partial 190K sample. See
   "Quality (RULER-style)" below. This is a small retrieval check, not a general coding-quality
   result.
+- **Recall on real agent history at production settings (2026-10-04; b11371, full production argv,
+  temperature 1.0 with 3 seeds plus temperature 0, thinking on)**: 16 frozen questions per depth on
+  81,620- and 178,645-token prefixes of one real session. 80K: 16, 15, 15/16 and t0 15/16; 176K:
+  14, 14, 14/16 and t0 15/16. Misses are one ambiguous question, one fact the longer history later
+  renames (the model answers the latest name) and one off-task answer; excluding the first two,
+  176K is 14/14, 13/14, 14/14, 14/14. No position-dependent recall loss up to ~178K. Small sample,
+  recall only, not coding quality —
+  [`../../results/20261004-real-history-recall-80k-176k/`](../../results/20261004-real-history-recall-80k-176k/README.md).
 - **Full retrieval sample on the adopted KV/MTP flags (2026-10-03; b11160, temperature 0, thinking
   off, no n-gram map): 40/40 exact** at 190K and 240K
   (5 documents x 4 questions each), 0 loops or truncations; decode 31.2-34.8 / 27.6-29.5 tok/s,
