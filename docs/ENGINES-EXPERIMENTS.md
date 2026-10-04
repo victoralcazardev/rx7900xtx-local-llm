@@ -263,7 +263,7 @@ code and the results now available. Everything else above stands.
 
 **Priority:** preserve the adopted profile until a fixed coding-task suite exists. Retrieval checks
 and pooled results establish retrieval only; they do not establish repository-editing quality. The
-exact adopted flags have 8/8 retrieval at 240K, while 68/68 pools multiple configurations; neither
+adopted KV/MTP flags have 40/40 retrieval at 190K/240K, while 68/68 pools multiple configurations; neither
 is a coding-agent quality score ([`depth.md`](measurements/depth.md#quality-ruler-style-200k-q8q8-mtp)).
 The six full cache misses in the long agent session remain unexplained; do not attribute them to
 checkpoint count or compaction threshold without a diagnostic trace

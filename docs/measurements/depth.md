@@ -12,11 +12,13 @@ numbers live in [`../STATUS.md`](../STATUS.md).
   [`../../results/20260926-mtp-n3-depth/`](../../results/20260926-mtp-n3-depth/),
   [`../../results/20260926-ubatch256-262k/`](../../results/20260926-ubatch256-262k/).
 - **Long-context retrieval: 68/68 exact matches pooled across configurations, not one run/profile**:
-  the exact adopted flags (`262k-q8q51-mtp`, MTP n=3, `-ub 256`) have 8/8 at 240K; the other 60
+  the adopted KV/MTP flags (`262k-q8q51-mtp`, MTP n=3, `-ub 256`) first had 8/8 at 240K (40/40 at
+  190K/240K since 2026-10-03, below); the other 60
   matches are across earlier configurations and depths, including a partial 190K sample. See
   "Quality (RULER-style)" below. This is a small retrieval check, not a general coding-quality
   result.
-- **Full retrieval sample on the adopted flags (2026-10-03): 40/40 exact** at 190K and 240K
+- **Full retrieval sample on the adopted KV/MTP flags (2026-10-03; b11160, temperature 0, thinking
+  off, no n-gram map): 40/40 exact** at 190K and 240K
   (5 documents x 4 questions each), 0 loops or truncations; decode 31.2-34.8 / 27.6-29.5 tok/s,
   cold prefill 429-434 / 379 tok/s, peak process VRAM 22,643 MiB. Retrieval only, not coding
   quality —

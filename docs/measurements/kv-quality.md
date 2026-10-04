@@ -15,9 +15,9 @@
   without MTP. On RDNA3, IQ quantizations generate faster than K quantizations at the same
   file size class.
 - Limitation: KLD was measured at 32K of context. A RULER-style retrieval check now extends to
-  240K, but its 68/68 total is pooled across configurations and includes a partial 190K sample;
-  only 8/8 at 240K used the exact adopted `262k-q8q51-mtp` server flags. Retrieval accuracy is not
-  a broad coding-quality evaluation — see [`depth.md`](depth.md).
+  240K: 68/68 pooled across configurations, plus 40/40 at 190K/240K on the adopted KV/MTP flags
+  (b11160, temperature 0, thinking off, without the n-gram map). Retrieval accuracy is not a broad
+  coding-quality evaluation, and 60-180K is not yet covered — see [`depth.md`](depth.md).
 
 ## KV cache quantization: KLD vs. f16
 

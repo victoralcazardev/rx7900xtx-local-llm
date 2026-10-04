@@ -48,8 +48,9 @@ llama-server -m <models_root>/Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp/Qwen3.8-27B-GSQ-RCO-
 - **n-gram map on MTP**: copy at 240K 43.9 vs. 27.0 tok/s (+62%), agent/editing at empty context
   +55% / +36%, other tasks -0-2%, temperature-0 output identical —
   [results](../results/20261003-ngram-mtp-stacking/README.md).
-- **Quality**: 68/68 pooled across configurations from 32K-240K (0 loops); only 8/8 at 240K used
-  the exact adopted flags —
+- **Quality**: 68/68 pooled across configurations from 32K-240K (0 loops), plus 40/40 at 190K and
+  240K on the adopted KV/MTP flags (b11160, temperature 0, thinking off, no n-gram map). Retrieval
+  only; the 60-180K depths where agent sessions actually run are not yet measured —
   [depth.md](measurements/depth.md#quality-ruler-style-200k-q8q8-mtp).
 - **Power**: 272 W costs ~6% prefill vs. 303 W and runs the hotspot 7-8°C cooler (303 W hit 106°C
   in a deep prefill) — [thermals-power.md](measurements/thermals-power.md).
