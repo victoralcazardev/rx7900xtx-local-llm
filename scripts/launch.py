@@ -10,7 +10,8 @@ only one profile that one is used; with several, they are listed and the script 
 with code 2. --backend overrides the one declared in models.toml (useful for pipeline
 tests, e.g. --backend cuda).
 
-Every launch writes the server log to _tmp/logs/<alias>-<profile>-<timestamp>.log.
+Every launch writes the server log to _tmp/logs/<alias>-<profile>-<timestamp>.log and, on
+Linux, a GPU thermal/VRAM CSV next to it (<log>.gpu.csv, scripts/gpu_watch.py).
 Foreground (the default) also echoes it to the console, Ctrl+C to stop;
 --background detaches the server and only writes the file.
 """
@@ -41,6 +42,16 @@ def _without_suspend(cmd: list[str]) -> list[str]:
     return ["systemd-inhibit", "--what=sleep:idle", "--who=llama-server",
             "--why=Model loaded on the GPU: suspending may hang the machine",
             "--mode=block"] + cmd
+
+
+def _start_gpu_watch(server_pid: int, log_path: pathlib.Path, port: int) -> None:
+    """Passive sensor logger (read-only) that stops when the server process exits."""
+    if IS_WINDOWS:
+        return
+    out = open(log_path.with_name(log_path.name + ".gpu.csv"), "w")
+    subprocess.Popen([sys.executable, str(pathlib.Path(__file__).with_name("gpu_watch.py")),
+                      "--pid", str(server_pid), "--port", str(port)],
+                     stdout=out, stdin=subprocess.DEVNULL, start_new_session=True)
 
 
 def main() -> int:
@@ -118,7 +129,8 @@ def main() -> int:
 
     if args.background:
         with open(log_path, "w") as log:
-            subprocess.Popen(cmd, cwd=str(exe.parent), stdout=log, stderr=log)
+            proc = subprocess.Popen(cmd, cwd=str(exe.parent), stdout=log, stderr=log)
+        _start_gpu_watch(proc.pid, log_path, m.default_port)
         print(f"launched in background, log: {log_path}")
         return 0
 
@@ -126,6 +138,7 @@ def main() -> int:
     with open(log_path, "wb") as log:
         proc = subprocess.Popen(cmd, cwd=str(exe.parent),
                                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        _start_gpu_watch(proc.pid, log_path, m.default_port)
         _tee(proc.stdout, sys.stdout.buffer, log)
         return proc.wait()
 

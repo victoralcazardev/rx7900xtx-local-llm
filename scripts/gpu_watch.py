@@ -6,14 +6,16 @@ Timestamps are UTC ISO so rows align with the server log start time.
 Rows crossing the safety gate (junction >104 C, mem >105 C, VRAM free <300 MiB)
 get flag=HOT/VRAM and a line on stderr; nothing is stopped automatically.
 
-Usage:
-    python3 scripts/gpu_watch.py [--interval 5] [--count N] [--port 8080] > _tmp/logs/gpu-watch.csv
+Started automatically by scripts/launch.py (log: <server log>.gpu.csv, stops with the server).
+Manual usage:
+    python3 scripts/gpu_watch.py [--interval 5] [--count N] [--port 8080] [--pid PID] > _tmp/logs/gpu-watch.csv
 """
 from __future__ import annotations
 
 import argparse
 import datetime
 import json
+import os
 import pathlib
 import sys
 import time
@@ -75,11 +77,12 @@ def main() -> None:
     ap.add_argument("--interval", type=float, default=5.0)
     ap.add_argument("--count", type=int, default=0, help="stop after N samples (0 = forever)")
     ap.add_argument("--port", type=int, default=8080)
+    ap.add_argument("--pid", type=int, help="stop when this process exits")
     args = ap.parse_args()
     dev = find_card()
     print(",".join(FIELDS), flush=True)
     n = 0
-    while not args.count or n < args.count:
+    while (not args.count or n < args.count) and (not args.pid or os.path.exists(f"/proc/{args.pid}")):
         row = sample(dev, args.port)
         print(",".join("" if row[k] is None else str(row[k]) for k in FIELDS), flush=True)
         if row["flag"]:
