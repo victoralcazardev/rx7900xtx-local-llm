@@ -1,0 +1,737 @@
+[
+ {
+  "i": 0,
+  "step": "a1",
+  "req": "A",
+  "wall_s": 14.66,
+  "timings": {
+   "cache_n": 0,
+   "prompt_n": 11490,
+   "prompt_ms": 13995.859,
+   "prompt_per_token_ms": 1.2180904264577894,
+   "prompt_per_second": 820.957113100382,
+   "predicted_n": 48,
+   "predicted_ms": 649.421,
+   "predicted_per_token_ms": 13.817468085106384,
+   "predicted_per_second": 72.37215920027224,
+   "draft_n": 39,
+   "draft_n_accepted": 34
+  },
+  "usage": {
+   "completion_tokens": 48,
+   "prompt_tokens": 11490,
+   "total_tokens": 11538,
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   }
+  },
+  "first_src": "content",
+  "first_token": "The",
+  "top5": [
+   [
+    "The",
+    -0.00014043840928934515
+   ],
+   [
+    "User",
+    -10.24006175994873
+   ],
+   [
+    "We",
+    -10.341330528259277
+   ],
+   [
+    "Single",
+    -10.972325325012207
+   ],
+   [
+    "Let",
+    -11.252848625183105
+   ]
+  ],
+  "reasoning": "The user asks which engine build a new owner should start with, and the single most important reason.\n\nFrom the documents:\n- The current engine is llama.cpp b11371 `hip-kvmix` (own ROC",
+  "content": "",
+  "finish": "length",
+  "swap_mib": 4854,
+  "swap0_mib": 4857,
+  "server_vmswap_mib": 0,
+  "log": [
+   "0.08.033.346 I srv  get_availabl: updating prompt cache",
+   "0.08.033.355 I srv          load:  - looking for better prompt, base f_keep = -1.000, f_sim = 0.000",
+   "0.08.033.358 I srv        update:  - cache state: 0 prompts, 0.000 MiB (limits: 12288.000 MiB, 262144 tokens, 12884901888 est)",
+   "0.08.033.359 I srv  get_availabl: prompt cache update took 0.01 ms",
+   "0.08.293.884 I slot create_check: id  0 | task 0 | created context checkpoint 1 of 4 (pos_min = 16, pos_max = 16, n_tokens = 17, size = 149.626 MiB)",
+   "0.18.534.793 I slot create_check: id  0 | task 0 | created context checkpoint 2 of 4 (pos_min = 8755, pos_max = 8755, n_tokens = 8756, size = 149.626 MiB)",
+   "0.21.640.173 I slot create_check: id  0 | task 0 | created context checkpoint 3 of 4 (pos_min = 11229, pos_max = 11229, n_tokens = 11230, size = 149.626 MiB)",
+   "0.21.987.424 I slot create_check: id  0 | task 0 | created context checkpoint 4 of 4 (pos_min = 11485, pos_max = 11485, n_tokens = 11486, size = 149.626 MiB)"
+  ]
+ },
+ {
+  "i": 1,
+  "step": "a1",
+  "req": "A_prime",
+  "wall_s": 1.09,
+  "timings": {
+   "cache_n": 11230,
+   "prompt_n": 260,
+   "prompt_ms": 451.662,
+   "prompt_per_token_ms": 1.7371615384615384,
+   "prompt_per_second": 575.6517041504487,
+   "predicted_n": 48,
+   "predicted_ms": 629.373,
+   "predicted_per_token_ms": 13.390914893617023,
+   "predicted_per_second": 74.67749649254098,
+   "draft_n": 39,
+   "draft_n_accepted": 34
+  },
+  "usage": {
+   "completion_tokens": 48,
+   "prompt_tokens": 11490,
+   "total_tokens": 11538,
+   "prompt_tokens_details": {
+    "cached_tokens": 11230
+   }
+  },
+  "first_src": "content",
+  "first_token": "The",
+  "top5": [
+   [
+    "The",
+    -0.0001317349378950894
+   ],
+   [
+    "User",
+    -10.273433685302734
+   ],
+   [
+    "We",
+    -10.324321746826172
+   ],
+   [
+    "Single",
+    -10.942323684692383
+   ],
+   [
+    "Let",
+    -11.503641128540039
+   ]
+  ],
+  "reasoning": "The user asks which engine build a new owner should start with, and the single most important reason.\n\nFrom the documents:\n- The current engine is llama.cpp b11371 `hip-kvmix` (own ROC",
+  "content": "",
+  "finish": "length",
+  "swap_mib": 4854,
+  "swap0_mib": 4857,
+  "server_vmswap_mib": 0,
+  "log": [
+   "0.23.696.849 I slot get_availabl: id  0 | task -1 | selected slot by LCP similarity, f_sim_best = 0.995 (> 0.100 thold), f_keep = 0.991",
+   "0.23.710.824 I slot   operator(): id  0 | task 32 | restored context checkpoint (pos_min = 11229, pos_max = 11229, n_tokens = 11230, n_past = 11230, size = 149.626 MiB)",
+   "0.23.710.826 I slot   operator(): id  0 | task 32 | erased invalidated context checkpoint (pos_min = 11485, pos_max = 11485, n_tokens = 11486, n_swa = 0, pos_next = 11230, size = 149.626 MiB)",
+   "0.23.749.701 I slot create_check: id  0 | task 32 | created context checkpoint 3 of 4 (pos_min = 11229, pos_max = 11229, n_tokens = 11230, size = 149.626 MiB)",
+   "0.24.107.527 I slot create_check: id  0 | task 32 | created context checkpoint 4 of 4 (pos_min = 11485, pos_max = 11485, n_tokens = 11486, size = 149.626 MiB)"
+  ]
+ },
+ {
+  "i": 2,
+  "step": "b1",
+  "req": "A",
+  "wall_s": 1.07,
+  "timings": {
+   "cache_n": 11230,
+   "prompt_n": 260,
+   "prompt_ms": 431.818,
+   "prompt_per_token_ms": 1.6608384615384615,
+   "prompt_per_second": 602.1055166760071,
+   "predicted_n": 48,
+   "predicted_ms": 627.817,
+   "predicted_per_token_ms": 13.357808510638298,
+   "predicted_per_second": 74.86257938220851,
+   "draft_n": 39,
+   "draft_n_accepted": 34
+  },
+  "usage": {
+   "completion_tokens": 48,
+   "prompt_tokens": 11490,
+   "total_tokens": 11538,
+   "prompt_tokens_details": {
+    "cached_tokens": 11230
+   }
+  },
+  "first_src": "content",
+  "first_token": "The",
+  "top5": [
+   [
+    "The",
+    -0.00014043840928934515
+   ],
+   [
+    "User",
+    -10.24006175994873
+   ],
+   [
+    "We",
+    -10.341330528259277
+   ],
+   [
+    "Single",
+    -10.972325325012207
+   ],
+   [
+    "Let",
+    -11.252848625183105
+   ]
+  ],
+  "reasoning": "The user asks which engine build a new owner should start with, and the single most important reason.\n\nFrom the documents:\n- The current engine is llama.cpp b11371 `hip-kvmix` (own ROC",
+  "content": "",
+  "finish": "length",
+  "swap_mib": 4854,
+  "swap0_mib": 4857,
+  "server_vmswap_mib": 0,
+  "log": [
+   "0.25.796.890 I slot get_availabl: id  0 | task -1 | selected slot by LCP similarity, f_sim_best = 0.995 (> 0.100 thold), f_keep = 0.991",
+   "0.25.810.674 I slot   operator(): id  0 | task 49 | restored context checkpoint (pos_min = 11229, pos_max = 11229, n_tokens = 11230, n_past = 11230, size = 149.626 MiB)",
+   "0.25.810.676 I slot   operator(): id  0 | task 49 | erased invalidated context checkpoint (pos_min = 11485, pos_max = 11485, n_tokens = 11486, n_swa = 0, pos_next = 11230, size = 149.626 MiB)",
+   "0.25.848.379 I slot create_check: id  0 | task 49 | created context checkpoint 3 of 4 (pos_min = 11229, pos_max = 11229, n_tokens = 11230, size = 149.626 MiB)",
+   "0.26.187.785 I slot create_check: id  0 | task 49 | created context checkpoint 4 of 4 (pos_min = 11485, pos_max = 11485, n_tokens = 11486, size = 149.626 MiB)"
+  ]
+ },
+ {
+  "i": 3,
+  "step": "b1",
+  "req": "B",
+  "wall_s": 12.56,
+  "timings": {
+   "cache_n": 0,
+   "prompt_n": 9504,
+   "prompt_ms": 11447.378,
+   "prompt_per_token_ms": 1.2044800084175085,
+   "prompt_per_second": 830.2337880342554,
+   "predicted_n": 48,
+   "predicted_ms": 711.735,
+   "predicted_per_token_ms": 15.143297872340426,
+   "predicted_per_second": 66.0358138914062,
+   "draft_n": 42,
+   "draft_n_accepted": 32
+  },
+  "usage": {
+   "completion_tokens": 48,
+   "prompt_tokens": 9504,
+   "total_tokens": 9552,
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   }
+  },
+  "first_src": "content",
+  "first_token": "The",
+  "top5": [
+   [
+    "The",
+    -1.2040211004205048e-05
+   ],
+   [
+    "User",
+    -12.2327241897583
+   ],
+   [
+    "Thinking",
+    -12.375687599182129
+   ],
+   [
+    "Looking",
+    -13.41739559173584
+   ],
+   [
+    "\u7528\u6237",
+    -13.934306144714355
+   ]
+  ],
+  "reasoning": "The user asks for the oldest decision in the log. Looking at the dates, the earliest entries are all dated 2026-09-24. There are multiple decisions on that date. The question asks for \"the",
+  "content": "",
+  "finish": "length",
+  "swap_mib": 4933,
+  "swap0_mib": 4857,
+  "server_vmswap_mib": 0,
+  "log": [
+   "0.27.873.462 I srv  get_availabl: updating prompt cache",
+   "0.28.264.169 I srv          load:  - looking for better prompt, base f_keep = 0.001, f_sim = 0.001",
+   "0.28.264.172 I srv          load:    - prompt with length   11537, lcp =       8, f_keep = 0.001, f_sim = 0.001",
+   "0.28.264.176 I srv        update:  - cache state: 1 prompts, 1120.457 MiB (limits: 12288.000 MiB, 262144 tokens, 262144 est)",
+   "0.28.264.178 I srv  get_availabl: prompt cache update took 390.71 ms",
+   "0.28.264.306 I slot   operator(): id  0 | task 66 | forcing full prompt re-processing due to lack of cache data (likely due to SWA or hybrid/recurrent memory, see https://github.com/ggml-org/llama.cpp/pull/13194#issuecomment-2868343055)",
+   "0.28.264.307 I slot   operator(): id  0 | task 66 | erased invalidated context checkpoint (pos_min = 16, pos_max = 16, n_tokens = 17, n_swa = 0, pos_next = 0, size = 149.626 MiB)",
+   "0.28.267.608 I slot   operator(): id  0 | task 66 | erased invalidated context checkpoint (pos_min = 8755, pos_max = 8755, n_tokens = 8756, n_swa = 0, pos_next = 0, size = 149.626 MiB)",
+   "0.28.271.888 I slot   operator(): id  0 | task 66 | erased invalidated context checkpoint (pos_min = 11229, pos_max = 11229, n_tokens = 11230, n_swa = 0, pos_next = 0, size = 149.626 MiB)",
+   "0.28.277.012 I slot   operator(): id  0 | task 66 | erased invalidated context checkpoint (pos_min = 11485, pos_max = 11485, n_tokens = 11486, n_swa = 0, pos_next = 0, size = 149.626 MiB)",
+   "0.28.369.841 I slot create_check: id  0 | task 66 | created context checkpoint 1 of 4 (pos_min = 10, pos_max = 10, n_tokens = 11, size = 149.626 MiB)",
+   "0.39.327.171 I slot create_check: id  0 | task 66 | created context checkpoint 2 of 4 (pos_min = 9243, pos_max = 9243, n_tokens = 9244, size = 149.626 MiB)",
+   "0.39.670.376 I slot create_check: id  0 | task 66 | created context checkpoint 3 of 4 (pos_min = 9499, pos_max = 9499, n_tokens = 9500, size = 149.626 MiB)"
+  ]
+ },
+ {
+  "i": 4,
+  "step": "b1",
+  "req": "A_prime",
+  "wall_s": 1.65,
+  "timings": {
+   "cache_n": 11230,
+   "prompt_n": 260,
+   "prompt_ms": 472.621,
+   "prompt_per_token_ms": 1.8177730769230769,
+   "prompt_per_second": 550.1236720331937,
+   "predicted_n": 48,
+   "predicted_ms": 638.843,
+   "predicted_per_token_ms": 13.592404255319147,
+   "predicted_per_second": 73.57050167255491,
+   "draft_n": 39,
+   "draft_n_accepted": 34
+  },
+  "usage": {
+   "completion_tokens": 48,
+   "prompt_tokens": 11490,
+   "total_tokens": 11538,
+   "prompt_tokens_details": {
+    "cached_tokens": 11230
+   }
+  },
+  "first_src": "content",
+  "first_token": "The",
+  "top5": [
+   [
+    "The",
+    -0.0001317349378950894
+   ],
+   [
+    "User",
+    -10.273433685302734
+   ],
+   [
+    "We",
+    -10.324321746826172
+   ],
+   [
+    "Single",
+    -10.942323684692383
+   ],
+   [
+    "Let",
+    -11.503641128540039
+   ]
+  ],
+  "reasoning": "The user asks which engine build a new owner should start with, and the single most important reason.\n\nFrom the documents:\n- The current engine is llama.cpp b11371 `hip-kvmix` (own ROC",
+  "content": "",
+  "finish": "length",
+  "swap_mib": 4989,
+  "swap0_mib": 4857,
+  "server_vmswap_mib": 0,
+  "log": [
+   "0.41.444.436 I srv  get_availabl: updating prompt cache",
+   "0.41.887.611 I srv          load:  - looking for better prompt, base f_keep = 0.001, f_sim = 0.001",
+   "0.41.887.620 I srv          load:    - prompt with length   11537, lcp =   11434, f_keep = 0.991, f_sim = 0.995",
+   "0.41.887.621 I srv          load:    - prompt with length    9551, lcp =       8, f_keep = 0.001, f_sim = 0.001",
+   "0.41.887.622 I srv          load:  - found better prompt with f_keep = 0.991, f_sim = 0.995",
+   "0.41.972.194 I srv        update:  - cache state: 1 prompts, 906.738 MiB (limits: 12288.000 MiB, 262144 tokens, 262144 est)",
+   "0.41.972.198 I srv  get_availabl: prompt cache update took 527.76 ms",
+   "0.42.011.780 I slot   operator(): id  0 | task 97 | restored context checkpoint (pos_min = 11229, pos_max = 11229, n_tokens = 11230, n_past = 11230, size = 149.626 MiB)",
+   "0.42.011.783 I slot   operator(): id  0 | task 97 | erased invalidated context checkpoint (pos_min = 11485, pos_max = 11485, n_tokens = 11486, n_swa = 0, pos_next = 11230, size = 149.626 MiB)",
+   "0.42.061.260 I slot create_check: id  0 | task 97 | created context checkpoint 3 of 4 (pos_min = 11229, pos_max = 11229, n_tokens = 11230, size = 149.626 MiB)",
+   "0.42.403.029 I slot create_check: id  0 | task 97 | created context checkpoint 4 of 4 (pos_min = 11485, pos_max = 11485, n_tokens = 11486, size = 149.626 MiB)"
+  ]
+ },
+ {
+  "i": 5,
+  "step": "a2",
+  "req": "A",
+  "wall_s": 1.1,
+  "timings": {
+   "cache_n": 11230,
+   "prompt_n": 260,
+   "prompt_ms": 445.103,
+   "prompt_per_token_ms": 1.7119346153846153,
+   "prompt_per_second": 584.1344587657238,
+   "predicted_n": 48,
+   "predicted_ms": 639.086,
+   "predicted_per_token_ms": 13.597574468085107,
+   "predicted_per_second": 73.54252792268959,
+   "draft_n": 39,
+   "draft_n_accepted": 34
+  },
+  "usage": {
+   "completion_tokens": 48,
+   "prompt_tokens": 11490,
+   "total_tokens": 11538,
+   "prompt_tokens_details": {
+    "cached_tokens": 11230
+   }
+  },
+  "first_src": "content",
+  "first_token": "The",
+  "top5": [
+   [
+    "The",
+    -0.00014043840928934515
+   ],
+   [
+    "User",
+    -10.24006175994873
+   ],
+   [
+    "We",
+    -10.341330528259277
+   ],
+   [
+    "Single",
+    -10.972325325012207
+   ],
+   [
+    "Let",
+    -11.252848625183105
+   ]
+  ],
+  "reasoning": "The user asks which engine build a new owner should start with, and the single most important reason.\n\nFrom the documents:\n- The current engine is llama.cpp b11371 `hip-kvmix` (own ROC",
+  "content": "",
+  "finish": "length",
+  "swap_mib": 4984,
+  "swap0_mib": 4857,
+  "server_vmswap_mib": 0,
+  "log": [
+   "0.44.101.820 I slot get_availabl: id  0 | task -1 | selected slot by LCP similarity, f_sim_best = 0.995 (> 0.100 thold), f_keep = 0.991",
+   "0.44.115.087 I slot   operator(): id  0 | task 114 | restored context checkpoint (pos_min = 11229, pos_max = 11229, n_tokens = 11230, n_past = 11230, size = 149.626 MiB)",
+   "0.44.115.089 I slot   operator(): id  0 | task 114 | erased invalidated context checkpoint (pos_min = 11485, pos_max = 11485, n_tokens = 11486, n_swa = 0, pos_next = 11230, size = 149.626 MiB)",
+   "0.44.151.469 I slot create_check: id  0 | task 114 | created context checkpoint 3 of 4 (pos_min = 11229, pos_max = 11229, n_tokens = 11230, size = 149.626 MiB)",
+   "0.44.505.786 I slot create_check: id  0 | task 114 | created context checkpoint 4 of 4 (pos_min = 11485, pos_max = 11485, n_tokens = 11486, size = 149.626 MiB)"
+  ]
+ },
+ {
+  "i": 6,
+  "step": "a2",
+  "req": "A_prime",
+  "wall_s": 1.08,
+  "timings": {
+   "cache_n": 11230,
+   "prompt_n": 260,
+   "prompt_ms": 435.303,
+   "prompt_per_token_ms": 1.6742423076923076,
+   "prompt_per_second": 597.2851094524964,
+   "predicted_n": 48,
+   "predicted_ms": 635.834,
+   "predicted_per_token_ms": 13.528382978723403,
+   "predicted_per_second": 73.91866430546338,
+   "draft_n": 39,
+   "draft_n_accepted": 34
+  },
+  "usage": {
+   "completion_tokens": 48,
+   "prompt_tokens": 11490,
+   "total_tokens": 11538,
+   "prompt_tokens_details": {
+    "cached_tokens": 11230
+   }
+  },
+  "first_src": "content",
+  "first_token": "The",
+  "top5": [
+   [
+    "The",
+    -0.0001317349378950894
+   ],
+   [
+    "User",
+    -10.273433685302734
+   ],
+   [
+    "We",
+    -10.324321746826172
+   ],
+   [
+    "Single",
+    -10.942323684692383
+   ],
+   [
+    "Let",
+    -11.503641128540039
+   ]
+  ],
+  "reasoning": "The user asks which engine build a new owner should start with, and the single most important reason.\n\nFrom the documents:\n- The current engine is llama.cpp b11371 `hip-kvmix` (own ROC",
+  "content": "",
+  "finish": "length",
+  "swap_mib": 4984,
+  "swap0_mib": 4857,
+  "server_vmswap_mib": 0,
+  "log": [
+   "0.46.203.215 I slot get_availabl: id  0 | task -1 | selected slot by LCP similarity, f_sim_best = 0.995 (> 0.100 thold), f_keep = 0.991",
+   "0.46.217.255 I slot   operator(): id  0 | task 131 | restored context checkpoint (pos_min = 11229, pos_max = 11229, n_tokens = 11230, n_past = 11230, size = 149.626 MiB)",
+   "0.46.217.258 I slot   operator(): id  0 | task 131 | erased invalidated context checkpoint (pos_min = 11485, pos_max = 11485, n_tokens = 11486, n_swa = 0, pos_next = 11230, size = 149.626 MiB)",
+   "0.46.254.963 I slot create_check: id  0 | task 131 | created context checkpoint 3 of 4 (pos_min = 11229, pos_max = 11229, n_tokens = 11230, size = 149.626 MiB)",
+   "0.46.597.284 I slot create_check: id  0 | task 131 | created context checkpoint 4 of 4 (pos_min = 11485, pos_max = 11485, n_tokens = 11486, size = 149.626 MiB)"
+  ]
+ },
+ {
+  "i": 7,
+  "step": "b2",
+  "req": "A",
+  "wall_s": 1.09,
+  "timings": {
+   "cache_n": 11230,
+   "prompt_n": 260,
+   "prompt_ms": 434.283,
+   "prompt_per_token_ms": 1.6703192307692307,
+   "prompt_per_second": 598.6879523260178,
+   "predicted_n": 48,
+   "predicted_ms": 638.12,
+   "predicted_per_token_ms": 13.577021276595746,
+   "predicted_per_second": 73.65385820848743,
+   "draft_n": 39,
+   "draft_n_accepted": 34
+  },
+  "usage": {
+   "completion_tokens": 48,
+   "prompt_tokens": 11490,
+   "total_tokens": 11538,
+   "prompt_tokens_details": {
+    "cached_tokens": 11230
+   }
+  },
+  "first_src": "content",
+  "first_token": "The",
+  "top5": [
+   [
+    "The",
+    -0.00014043840928934515
+   ],
+   [
+    "User",
+    -10.24006175994873
+   ],
+   [
+    "We",
+    -10.341330528259277
+   ],
+   [
+    "Single",
+    -10.972325325012207
+   ],
+   [
+    "Let",
+    -11.252848625183105
+   ]
+  ],
+  "reasoning": "The user asks which engine build a new owner should start with, and the single most important reason.\n\nFrom the documents:\n- The current engine is llama.cpp b11371 `hip-kvmix` (own ROC",
+  "content": "",
+  "finish": "length",
+  "swap_mib": 4984,
+  "swap0_mib": 4857,
+  "server_vmswap_mib": 0,
+  "log": [
+   "0.48.292.341 I slot get_availabl: id  0 | task -1 | selected slot by LCP similarity, f_sim_best = 0.995 (> 0.100 thold), f_keep = 0.991",
+   "0.48.305.659 I slot   operator(): id  0 | task 149 | restored context checkpoint (pos_min = 11229, pos_max = 11229, n_tokens = 11230, n_past = 11230, size = 149.626 MiB)",
+   "0.48.305.661 I slot   operator(): id  0 | task 149 | erased invalidated context checkpoint (pos_min = 11485, pos_max = 11485, n_tokens = 11486, n_swa = 0, pos_next = 11230, size = 149.626 MiB)",
+   "0.48.342.696 I slot create_check: id  0 | task 149 | created context checkpoint 3 of 4 (pos_min = 11229, pos_max = 11229, n_tokens = 11230, size = 149.626 MiB)",
+   "0.48.685.279 I slot create_check: id  0 | task 149 | created context checkpoint 4 of 4 (pos_min = 11485, pos_max = 11485, n_tokens = 11486, size = 149.626 MiB)"
+  ]
+ },
+ {
+  "i": 8,
+  "step": "b2",
+  "req": "B",
+  "wall_s": 1.35,
+  "timings": {
+   "cache_n": 9500,
+   "prompt_n": 4,
+   "prompt_ms": 143.071,
+   "prompt_per_token_ms": 35.76775,
+   "prompt_per_second": 27.958146654458275,
+   "predicted_n": 48,
+   "predicted_ms": 695.341,
+   "predicted_per_token_ms": 14.794489361702128,
+   "predicted_per_second": 67.59273507530837,
+   "draft_n": 42,
+   "draft_n_accepted": 32
+  },
+  "usage": {
+   "completion_tokens": 48,
+   "prompt_tokens": 9504,
+   "total_tokens": 9552,
+   "prompt_tokens_details": {
+    "cached_tokens": 9500
+   }
+  },
+  "first_src": "content",
+  "first_token": "The",
+  "top5": [
+   [
+    "The",
+    -1.2040211004205048e-05
+   ],
+   [
+    "User",
+    -12.2327241897583
+   ],
+   [
+    "Thinking",
+    -12.375687599182129
+   ],
+   [
+    "Looking",
+    -13.41739559173584
+   ],
+   [
+    "\u7528\u6237",
+    -13.934306144714355
+   ]
+  ],
+  "reasoning": "The user asks for the oldest decision in the log. Looking at the dates, the earliest entries are all dated 2026-09-24. There are multiple decisions on that date. The question asks for \"the",
+  "content": "",
+  "finish": "length",
+  "swap_mib": 5025,
+  "swap0_mib": 4857,
+  "server_vmswap_mib": 0,
+  "log": [
+   "0.50.382.896 I srv  get_availabl: updating prompt cache",
+   "0.50.795.069 I srv          load:  - looking for better prompt, base f_keep = 0.001, f_sim = 0.001",
+   "0.50.795.078 I srv          load:    - prompt with length    9551, lcp =    9504, f_keep = 0.995, f_sim = 1.000",
+   "0.50.795.089 I srv          load:    - prompt with length   11537, lcp =       8, f_keep = 0.001, f_sim = 0.001",
+   "0.50.795.092 I srv          load:  - found better prompt with f_keep = 0.995, f_sim = 1.000",
+   "0.50.883.232 I srv        update:  - cache state: 1 prompts, 1120.457 MiB (limits: 12288.000 MiB, 262144 tokens, 262144 est)",
+   "0.50.883.237 I srv  get_availabl: prompt cache update took 500.34 ms",
+   "0.50.942.312 I slot   operator(): id  0 | task 166 | restored context checkpoint (pos_min = 9499, pos_max = 9499, n_tokens = 9500, n_past = 9500, size = 149.626 MiB)",
+   "0.50.984.318 I slot create_check: id  0 | task 166 | created context checkpoint 3 of 4 (pos_min = 9499, pos_max = 9499, n_tokens = 9500, size = 149.626 MiB)"
+  ]
+ },
+ {
+  "i": 9,
+  "step": "b2",
+  "req": "A_prime",
+  "wall_s": 1.48,
+  "timings": {
+   "cache_n": 11230,
+   "prompt_n": 260,
+   "prompt_ms": 451.542,
+   "prompt_per_token_ms": 1.7367,
+   "prompt_per_second": 575.8046870501527,
+   "predicted_n": 48,
+   "predicted_ms": 632.871,
+   "predicted_per_token_ms": 13.465340425531915,
+   "predicted_per_second": 74.26473957567973,
+   "draft_n": 39,
+   "draft_n_accepted": 34
+  },
+  "usage": {
+   "completion_tokens": 48,
+   "prompt_tokens": 11490,
+   "total_tokens": 11538,
+   "prompt_tokens_details": {
+    "cached_tokens": 11230
+   }
+  },
+  "first_src": "content",
+  "first_token": "The",
+  "top5": [
+   [
+    "The",
+    -0.0001317349378950894
+   ],
+   [
+    "User",
+    -10.273433685302734
+   ],
+   [
+    "We",
+    -10.324321746826172
+   ],
+   [
+    "Single",
+    -10.942323684692383
+   ],
+   [
+    "Let",
+    -11.503641128540039
+   ]
+  ],
+  "reasoning": "The user asks which engine build a new owner should start with, and the single most important reason.\n\nFrom the documents:\n- The current engine is llama.cpp b11371 `hip-kvmix` (own ROC",
+  "content": "",
+  "finish": "length",
+  "swap_mib": 5073,
+  "swap0_mib": 4857,
+  "server_vmswap_mib": 0,
+  "log": [
+   "0.52.745.662 I srv  get_availabl: updating prompt cache",
+   "0.53.059.240 I srv          load:  - looking for better prompt, base f_keep = 0.001, f_sim = 0.001",
+   "0.53.059.249 I srv          load:    - prompt with length   11537, lcp =   11434, f_keep = 0.991, f_sim = 0.995",
+   "0.53.059.252 I srv          load:    - prompt with length    9551, lcp =       8, f_keep = 0.001, f_sim = 0.001",
+   "0.53.059.252 I srv          load:  - found better prompt with f_keep = 0.991, f_sim = 0.995",
+   "0.53.132.254 I srv        update:  - cache state: 1 prompts, 906.738 MiB (limits: 12288.000 MiB, 262144 tokens, 262144 est)",
+   "0.53.132.259 I srv  get_availabl: prompt cache update took 386.60 ms",
+   "0.53.151.360 I slot   operator(): id  0 | task 184 | restored context checkpoint (pos_min = 11229, pos_max = 11229, n_tokens = 11230, n_past = 11230, size = 149.626 MiB)",
+   "0.53.151.362 I slot   operator(): id  0 | task 184 | erased invalidated context checkpoint (pos_min = 11485, pos_max = 11485, n_tokens = 11486, n_swa = 0, pos_next = 11230, size = 149.626 MiB)",
+   "0.53.199.301 I slot create_check: id  0 | task 184 | created context checkpoint 3 of 4 (pos_min = 11229, pos_max = 11229, n_tokens = 11230, size = 149.626 MiB)",
+   "0.53.542.451 I slot create_check: id  0 | task 184 | created context checkpoint 4 of 4 (pos_min = 11485, pos_max = 11485, n_tokens = 11486, size = 149.626 MiB)"
+  ]
+ },
+ {
+  "i": 10,
+  "step": "cold",
+  "req": "A_prime_cold",
+  "wall_s": 14.74,
+  "timings": {
+   "cache_n": 0,
+   "prompt_n": 11490,
+   "prompt_ms": 14080.037,
+   "prompt_per_token_ms": 1.2254166231505657,
+   "prompt_per_second": 816.0489919167115,
+   "predicted_n": 48,
+   "predicted_ms": 648.279,
+   "predicted_per_token_ms": 13.793170212765958,
+   "predicted_per_second": 72.49964907084758,
+   "draft_n": 39,
+   "draft_n_accepted": 34
+  },
+  "usage": {
+   "completion_tokens": 48,
+   "prompt_tokens": 11490,
+   "total_tokens": 11538,
+   "prompt_tokens_details": {
+    "cached_tokens": 0
+   }
+  },
+  "first_src": "content",
+  "first_token": "The",
+  "top5": [
+   [
+    "The",
+    -0.000154745634063147
+   ],
+   [
+    "We",
+    -10.031293869018555
+   ],
+   [
+    "User",
+    -10.246633529663086
+   ],
+   [
+    "Let",
+    -10.90559196472168
+   ],
+   [
+    "Single",
+    -10.925296783447266
+   ]
+  ],
+  "reasoning": "The user asks which engine build a new owner should start with, and the single most important reason.\n\nFrom the documents:\n- The current engine is llama.cpp b11371 `hip-kvmix` (own ROC",
+  "content": "",
+  "finish": "length",
+  "swap_mib": 5072,
+  "swap0_mib": 4857,
+  "server_vmswap_mib": 0,
+  "log": [
+   "0.55.235.386 I slot get_availabl: id  0 | task -1 | selected slot by LCP similarity, f_sim_best = 1.000 (> 0.100 thold), f_keep = 0.996",
+   "0.55.235.446 I slot   operator(): id  0 | task 201 | erased invalidated context checkpoint (pos_min = 16, pos_max = 16, n_tokens = 17, n_swa = 0, pos_next = 0, size = 149.626 MiB)",
+   "0.55.242.429 I slot   operator(): id  0 | task 201 | erased invalidated context checkpoint (pos_min = 8755, pos_max = 8755, n_tokens = 8756, n_swa = 0, pos_next = 0, size = 149.626 MiB)",
+   "0.55.252.525 I slot   operator(): id  0 | task 201 | erased invalidated context checkpoint (pos_min = 11229, pos_max = 11229, n_tokens = 11230, n_swa = 0, pos_next = 0, size = 149.626 MiB)",
+   "0.55.259.194 I slot   operator(): id  0 | task 201 | erased invalidated context checkpoint (pos_min = 11485, pos_max = 11485, n_tokens = 11486, n_swa = 0, pos_next = 0, size = 149.626 MiB)",
+   "0.55.401.630 I slot create_check: id  0 | task 201 | created context checkpoint 1 of 4 (pos_min = 16, pos_max = 16, n_tokens = 17, size = 149.626 MiB)",
+   "1.05.772.942 I slot create_check: id  0 | task 201 | created context checkpoint 2 of 4 (pos_min = 8755, pos_max = 8755, n_tokens = 8756, size = 149.626 MiB)",
+   "1.08.921.882 I slot create_check: id  0 | task 201 | created context checkpoint 3 of 4 (pos_min = 11229, pos_max = 11229, n_tokens = 11230, size = 149.626 MiB)",
+   "1.09.273.119 I slot create_check: id  0 | task 201 | created context checkpoint 4 of 4 (pos_min = 11485, pos_max = 11485, n_tokens = 11486, size = 149.626 MiB)"
+  ]
+ }
+]

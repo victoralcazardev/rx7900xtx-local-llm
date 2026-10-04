@@ -199,6 +199,22 @@ Log and session-file correlation, no GPU run.
 - Effect unmeasured until the next real session. Success criteria: no in-flight wait > 60 s, no
   full miss outside a compaction, and no compaction summary request on the local server.
 
+### Remaining miss classes after the compaction change (2026-10-04, single session)
+
+Server log and session-file correlation from one real session; no GPU run.
+
+- **The only full miss outside a compaction came from the harness side**: a user-installed
+  bootstrap extension injected an ephemeral ~1K-token (1,036) user message right after the
+  compaction summary, but only until the first `agent_end`. The next request rendered without it,
+  so the prompt diverged right after the summary (logged `f_keep` 0.152, ~16.7K reusable tokens out
+  of 110,200) and 110,176 tokens were re-processed (200.7 s). Disabling the extension removes this
+  miss class.
+- **Post-compaction first requests reused 0 tokens** although ~13.9K tokens of system prompt and
+  tool schemas are shared with the previous epoch: with `--ctx-checkpoints 4`, the oldest
+  checkpoint, the one covering that shared prefix, is the first evicted as the session grows
+  (`tools/server/server-context.cpp:2469-2477` at b11371). Keeping it would save an estimated
+  ≤~16 s per compaction; not tested.
+
 ### Multi-turn prefix reuse with reasoning (2026-10-03)
 
 When the client sends `reasoning_content` back, turns 2-4 process only 18-20 new tokens on b11160

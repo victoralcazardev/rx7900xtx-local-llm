@@ -1,0 +1,24 @@
+| # | step | req | cache_n b/p | prompt_n b/p | draft acc b | draft acc p | restores b/p | max top5 dlogprob vs base | vs own cold | text equal |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 0 | a1 | A | 0/0 | 11490/11490 | 34/39 | 34/39 | 0/0 | 0.00e+00 |  | True |
+| 1 | a1 | A_prime | 11230/11230 | 260/260 | 34/39 | 34/39 | 1/1 | 0.00e+00 | inf | True |
+| 2 | b1 | A | 11230/11230 | 260/260 | 34/39 | 34/39 | 1/1 | 0.00e+00 |  | True |
+| 3 | b1 | B | 0/0 | 9504/9504 | 32/42 | 32/42 | 0/0 | 0.00e+00 |  | True |
+| 4 | b1 | A_prime | 11230/11230 | 260/260 | 34/39 | 34/39 | 1/1 | 0.00e+00 | inf | True |
+| 5 | a2 | A | 11230/11230 | 260/260 | 34/39 | 34/39 | 1/1 | 0.00e+00 |  | True |
+| 6 | a2 | A_prime | 11230/11230 | 260/260 | 34/39 | 34/39 | 1/1 | 0.00e+00 | inf | True |
+| 7 | b2 | A | 11230/11230 | 260/260 | 34/39 | 34/39 | 1/1 | 0.00e+00 |  | True |
+| 8 | b2 | B | 9500/9500 | 4/4 | 32/42 | 32/42 | 1/1 | 0.00e+00 |  | True |
+| 9 | b2 | A_prime | 11230/11230 | 260/260 | 34/39 | 34/39 | 1/1 | 0.00e+00 | inf | True |
+| 10 | cold | A_prime_cold | 0/0 | 11490/11490 | 34/39 | 34/39 | 0/0 | 0.00e+00 | 0.00e+00 | True |
+
+worst first-token top-5 |dlogprob| baseline vs patch: 0.00e+00
+baseline checkpoint sizes (MiB): ['149.669', '149.693', '184.030', '185.947', '186.953', '193.750', '194.756']
+baseline total acceptance 370/435 = 0.851
+baseline cold vs baseline cold max dlogprob: 0.00e+00
+baseline MTP ctx_dft warnings: 0
+patch checkpoint sizes (MiB): ['149.626']
+patch total acceptance 370/435 = 0.851
+patch cold vs baseline cold max dlogprob: 0.00e+00
+patch MTP ctx_dft warnings: 0
+first token / top5 (baseline A_prime a1): The [['The', -0.0001317349378950894], ['User', -10.273433685302734], ['We', -10.324321746826172], ['Single', -10.942323684692383], ['Let', -11.503641128540039]]

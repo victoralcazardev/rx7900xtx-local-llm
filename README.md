@@ -18,7 +18,7 @@ guide.
 | Speed at 240K fill | 18.6-26.9 tok/s MTP-only (copy 43.9 with n-gram), prefill 380 tok/s |
 | Speed, empty context | 68.9 tok/s (37.2 without MTP) |
 | VRAM | 22,630 MiB peak process VRAM at 240K fill |
-| Quality | 68/68 pooled across configurations (32K-240K); 8/8 on exact adopted flags at 240K |
+| Quality | Retrieval only: 68/68 pooled (32K-240K); 40/40 at 190K/240K; real-history recall holds at 80K/176K |
 | Power | 272 W cap (this card's driver minimum; stock 303 W) |
 
 Launch command, flag rationale and open questions: [`docs/STATUS.md`](docs/STATUS.md). Evidence:

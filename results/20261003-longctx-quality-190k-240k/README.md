@@ -7,8 +7,9 @@ run, 190K had 1 of 5 documents (on an earlier profile) and 240K had 2 of 5 on th
 ## Setup and command
 
 Engine b11160 `hip-kvmix`, model `Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp`, `-c 262144`, KV `q8_0`/`q5_1`,
-MTP n=3, `-ub 256`, 272 W. `bench/longctx_quality.py` (Spanish multi-key retrieval; raw token prompts,
-no chat template, no thinking), temperature 0, max 200 output tokens, `cache_prompt`:
+MTP n=3 (`--spec-type draft-mtp` only, no n-gram map), `-ub 256`, 272 W. `bench/longctx_quality.py`
+(Spanish multi-key retrieval; chat template applied via `/apply-template` with thinking disabled,
+then tokenized), temperature 0, max 200 output tokens, `cache_prompt`:
 
 ```bash
 cd bench && systemd-inhibit --what=sleep:idle --mode=block env IA_BENCH_INHIBITED=1 \
@@ -28,7 +29,8 @@ VRAM 22,643 MiB.
 
 ## Conclusion
 
-40/40 exact at 190K-240K on the adopted flags: the open "broader retrieval sample" question is
+40/40 exact at 190K-240K on the adopted KV/MTP flags (not the production sampling, reasoning or
+n-gram settings): the open "broader retrieval sample" question is
 answered. This is a retrieval check, not evidence of coding quality.
 
 **Raw data**: `summary-compact.jsonl` (per question: depth, document, expected/parsed answer,
