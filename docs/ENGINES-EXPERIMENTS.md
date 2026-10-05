@@ -565,6 +565,17 @@ b11146, older than this repository's b11160 baseline; its official ROCm binary a
 `q8_0`/`q5_1` FlashAttention kernel required by the current profile. The upstream items below are
 monitoring candidates, not evidence to upgrade.
 
+**Check 2026-10-05 (pinned engine now b11371; upstream at b11430 and
+[v0.6.0](https://github.com/ggml-org/llama.cpp/releases/tag/v0.6.0)): stay on b11371.** The
+59 commits in b11371..b11430 carry nothing that targets HIP decode at depth.
+[#29435](https://github.com/ggml-org/llama.cpp/pull/29435) (whole-tile FA scheduling) is a
+prefill change justified on NVIDIA Ada and newer;
+[#28498](https://github.com/ggml-org/llama.cpp/pull/28498) fixes restoring a rotated KV cache into
+an unrotated one (edge case); the Vulkan FA changes do not touch the adopted backend. #26038,
+#27282, #28433, #26432, #28867 and #29509 are all still open. Watch upstream MTP work: v0.6.0 adds
+MTP speculative decoding for Qwen4Exp ([#29761](https://github.com/ggml-org/llama.cpp/pull/29761),
+[#29751](https://github.com/ggml-org/llama.cpp/pull/29751)); re-diff from b11430 at the next check.
+
 | Upstream item | State and relevance | Limit |
 |---|---|---|
 | [#27530](https://github.com/ggml-org/llama.cpp/pull/27530) | Merged; cleanup after failed K/V and recurrent/hybrid state restoration. A robustness candidate. | No measured Qwen throughput or quality gain established here. |
