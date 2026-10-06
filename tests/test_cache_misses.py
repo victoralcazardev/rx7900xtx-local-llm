@@ -44,6 +44,36 @@ class TestParse(unittest.TestCase):
         self.assertEqual(compaction["lcp_est"], 16000)
         self.assertEqual(compaction["new_est"], 40000)
 
+    def test_lru_selection_has_no_similarity_but_is_counted(self):
+        log = [
+            "1.00.000.000 I slot      release: id  0 | task 1 | stop processing: n_tokens = 90000, truncated = 0",
+            "1.01.000.000 I slot get_availabl: id  0 | task -1 | selected slot by LRU, t_last = 123",
+            "1.02.000.000 I slot print_timing: id  0 | task 2 | prompt eval time =  90000.00 ms / 95000 tokens (x)",
+        ]
+        [e] = cache_misses.parse(log)
+        self.assertEqual((e["cls"], e["old_tokens"], e["f_keep"], e["prefill_tokens"]), ("lru", 90000, None, 95000))
+
+    def test_slots_tracked_separately(self):
+        log = [
+            "1 I slot      release: id  0 | task 1 | stop processing: n_tokens = 100000, truncated = 0",
+            "2 I slot      release: id  1 | task 2 | stop processing: n_tokens = 1000, truncated = 0",
+            "3 I slot get_availabl: id  0 | task -1 | selected slot by LCP similarity, f_sim_best = 0.990 (> 0.100 thold), f_keep = 0.980",
+            "4 I slot get_availabl: id  1 | task -1 | selected slot by LCP similarity, f_sim_best = 0.990 (> 0.100 thold), f_keep = 1.000",
+            "5 I slot print_timing: id  1 | task 4 | prompt eval time =    10.00 ms /    10 tokens (x)",
+            "6 I slot print_timing: id  0 | task 3 | prompt eval time =  2000.00 ms /  2000 tokens (x)",
+        ]
+        events = cache_misses.parse(log)
+        self.assertEqual([(e["slot"], e["old_tokens"], e["cls"], e["prefill_tokens"]) for e in events],
+                         [(1, 1000, "full", 10), (0, 100000, "partial", 2000)])
+
+    def test_request_released_without_prefill_line_is_dropped(self):
+        log = [
+            "1 I slot get_availabl: id  0 | task -1 | selected slot by LCP similarity, f_sim_best = 0.500 (> 0.100 thold), f_keep = 0.400",
+            "2 I slot      release: id  0 | task 1 | stop processing: n_tokens = 5000, truncated = 0",
+            "3 I slot print_timing: id  0 | task 2 | prompt eval time =  100.00 ms /  100 tokens (x)",
+        ]
+        self.assertEqual(cache_misses.parse(log), [])
+
 
 if __name__ == "__main__":
     unittest.main()
