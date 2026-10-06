@@ -7,6 +7,9 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- `scripts/cache_misses.py` classifies prompt-cache reuse per request from a server log: full, partial, compaction, miss, LRU, unknown ([`docs/measurements/agent-traffic.md`](docs/measurements/agent-traffic.md#first-session-after-the-compaction-change-2026-10-03-evening-single-session)).
+- Classified the first session after the compaction change (2026-10-03): bootstrap-extension misses and one inferred local compaction-summary fallback ([`docs/measurements/agent-traffic.md`](docs/measurements/agent-traffic.md#first-session-after-the-compaction-change-2026-10-03-evening-single-session)).
+- Measured a `-DGGML_LTO=ON` build of b11454: all deltas within ±0.6%, `libggml-hip.so` byte-identical; not adopted ([`results/20261006-t12-lto-b11454/`](results/20261006-t12-lto-b11454/README.md)).
 - Measured a local port of llama.cpp PR #29827 (512 MiB FlashAttention convert cap) on b11454: -0.39 GiB VRAM, code tg -2.9%, non-deterministic greedy output; not adopted ([`results/20261006-pr29827-port-b11454/`](results/20261006-pr29827-port-b11454/README.md)).
 - Measured DFlash2 `--spec-draft-n-max 7` (third-party tip) against MTP at 240K on b11454: essay -36%, copy -53%, code +5.9%; not adopted. `bench/spec_depth_bench.py` gains a `dfl7` variant ([`results/20261006-t28-dflash2-n7-240k/`](results/20261006-t28-dflash2-n7-240k/README.md)).
 - Strata v0.1.40 / xyzzing gfx1100 fork review: the ">100 tok/s" decode claim is not in any primary source, and nothing transfers directly to llama.cpp ([`docs/models/strata-flash-next.md`](docs/models/strata-flash-next.md#review-2026-10-06-v0140-and-the-xyzzing-gfx1100-fork)).

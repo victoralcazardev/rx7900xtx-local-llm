@@ -196,7 +196,7 @@ Log and session-file correlation, no GPU run.
   `[soft, handoff, shake]` (`soft` = "Summarize in place with a compaction model"; the model's
   `compactionModel` is the first candidate); `asyncEnabled` back at its default. Trade-off: the
   session history is sent to the cloud compaction model.
-- Effect unmeasured until the next real session. Success criteria: no in-flight wait > 60 s, no
+- Effect measured on the first session after the change ([below](#first-session-after-the-compaction-change-2026-10-03-evening-single-session)). Success criteria: no in-flight wait > 60 s, no
   full miss outside a compaction, and no compaction summary request on the local server.
 
 ### Remaining miss classes after the compaction change (2026-10-04, single session)
@@ -214,6 +214,48 @@ Server log and session-file correlation from one real session; no GPU run.
   checkpoint, the one covering that shared prefix, is the first evicted as the session grows
   (`tools/server/server-context.cpp:2469-2477` at b11371). Keeping it would save an estimated
   ≤~16 s per compaction; not tested.
+
+### First session after the compaction change (2026-10-03 evening, single session)
+
+Log and session-file correlation, no GPU run. Method: `python3 scripts/cache_misses.py <log>` plus
+the harness session file. Server log started 2026-10-03 21:09 local; one slot, one session on the
+local provider (344 assistant messages).
+
+| Class | Requests | Prefill tokens | Prefill s |
+|---|---|---|---|
+| Full reuse | 325 | 243,235 | 841 |
+| Partial | 12 | 27,996 | 83 |
+| Compaction | 2 | 78,718 | 108 |
+| Miss | 2 | 159,130 | 282 |
+| LRU-selected (includes the startup request) | 8 | 408,818 | 830 |
+
+- **Two of three compactions met the criteria**: the ones with a cloud summary (21:02Z and 00:05Z
+  UTC) show no local summary traffic.
+- **The three full re-prefills outside a compaction are the bootstrap-extension class** described
+  [above](#remaining-miss-classes-after-the-compaction-change-2026-10-04-single-session): two logged
+  as `miss` (`f_keep` 0.173 and 0.481) and one LRU-selected (193,953 tokens, 453.7 s). In each, the
+  first prefill pause after the compaction summary sits exactly 1,036 tokens earlier than in the
+  previous request. The oldest surviving context checkpoint was above the common prefix each time,
+  so nothing could be restored. The extension was disabled on 2026-10-04.
+- **One compaction summary ran on the local server (inferred)**: the 22:15Z UTC compaction is
+  preceded by two LRU-selected requests with no matching entry in the session file, 140,101 tokens
+  in / 5,442 out (435.6 s, evicting a 9,690-MiB host prompt-cache entry) and 14,272 in / 512 out.
+  Request bodies are not logged, so this is an inference: the model's `compactionModel` pointed to a
+  cloud model since before the session started, and that compaction's short summary is empty. Cause
+  of the fallback unverified. This fails the "no compaction summary request on the local server"
+  criterion once in three compactions.
+- **Reasoning is retained (T21)**: in both real logs, 96% of LCP-selected requests have `f_keep`
+  1.000 (325/341 on 2026-10-03, 676/707 on 2026-10-04). Every token of the previous request,
+  generated reasoning included, is a prefix of the next prompt, so the harness sends reasoning back
+  and the server reuses it. Partial reuse (`f_keep` 0.95-0.999; 12 and 24 requests) loses ~87-3,755
+  tail tokens and costs 83 s and 162 s of prefill (5-7% of prefill seconds); cause not identified.
+- **Post-compaction first requests re-prefill from 0 in both logs** although they share ~13.9K
+  tokens (system prompt + tools) with the previous epoch: the input for the checkpoint-coverage test.
+- **Requests selected by LRU (LCP similarity under 0.1) log no `f_sim_best`/`f_keep`**, so a
+  similarity-only scan misses them; `scripts/cache_misses.py` counts them.
+- **Prefix-diff tooling**: b11454 still reads `LLAMA_SERVER_SLOTS_DEBUG` and
+  `LLAMA_SERVER_SLOTS_N_DIFF` at startup (`tools/server/server-context.cpp:1011-1012,1459-1472` at
+  b11454).
 
 ### Multi-turn prefix reuse with reasoning (2026-10-03)
 

@@ -80,8 +80,9 @@ Sampling is the Qwen3.8-27B card's own; `--min-p 0.0` is set explicitly because 
 ## Open questions
 
 - **Full cache misses in long sessions**: cause found (harness speculative compaction on the single
-  local slot); a harness compaction change is in place, effect unmeasured —
-  [agent-traffic.md](measurements/agent-traffic.md#root-cause-speculative-compaction-on-the-local-slot-2026-10-03).
+  local slot) and a harness compaction change is in place; the 2026-10-03/04 logs are classified,
+  with one local compaction-summary fallback found —
+  [agent-traffic.md](measurements/agent-traffic.md#first-session-after-the-compaction-change-2026-10-03-evening-single-session).
 - **Compaction threshold, compaction method order and presence penalty** A/B only after a fixed
   coding-task suite with executable tests and pass/fail criteria exists; checkpoint count is
   conditional on a logged mid-context divergence; 60% (~157K) is the comparison arm —
