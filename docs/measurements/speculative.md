@@ -234,6 +234,11 @@ GTT stayed at 8 MiB and 0 evicted for all three; hotspot peaked at 103°C.
 - **DFlash2 does not beat MTP at 190K**: slower on essay and copy, ties on code, +300 MiB. The
   @ItsmeAjayKV (RTX 3090) claim from the empty-context section above does not reproduce here.
   **Discarded.** DFlash2 n=3 was not measured (deprioritized).
+- **DFlash2 n=7 at 240K on b11454 (2026-10-06, T28)**: the third-party "`--spec-draft-n-max 7`"
+  tip, ggml-org `dflash-Qwen3.8-27B-Q4_0` draft (same drafter), no p-min, adopted KV/`-ub 256`.
+  vs. MTP n3-map: essay 16.67 vs. 25.94 (-36%), copy 21.57 vs. 45.94 (-53%), code 20.48 vs. 19.33
+  (+5.9%); fits 262K at 22,617 MiB. Not adopted —
+  [`results/20261006-t28-dflash2-n7-240k/`](../../results/20261006-t28-dflash2-n7-240k/README.md).
 - **"Native q8" fork** ([stew675/llama-cpp-rdna-boosts](https://github.com/stew675/llama-cpp-rdna-boosts),
   `GREEDY-PURITY.md` §14 and `V4-NATIVE-Q8-KV-PLAN.md`; same TILE-converts-to-f16 finding as above,
   independently documented): reads q8_0 KV directly in TILE/MMA instead of converting to f16. It

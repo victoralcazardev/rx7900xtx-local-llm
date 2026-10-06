@@ -1,0 +1,3 @@
+# llama-perplexity -m <Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp.gguf> -f wiki.test.raw -c 4096 --chunks 16 -ngl 99 -fa on -ctk q8_0 -ctv q5_1 -ub 256
+b11371-pr29509: Final estimate: PPL = 6.2132 +/- 0.08276
+b11454-pr29509: Final estimate: PPL = 6.2132 +/- 0.08276

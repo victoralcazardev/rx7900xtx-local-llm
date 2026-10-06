@@ -25,7 +25,9 @@ VARIANTS = {'none': [], 'n1': ['--spec-type', 'draft-mtp', '--spec-draft-n-max',
             'dfl5': ['-md', os.environ.get('BENCH_DFLASH_MODEL', ''), '-ngld', 'all',
                      '--spec-type', 'draft-dflash', '--spec-draft-n-max', '5', '--spec-draft-p-min', '0.4'],
             'dfl3': ['-md', os.environ.get('BENCH_DFLASH_MODEL', ''), '-ngld', 'all',
-                     '--spec-type', 'draft-dflash', '--spec-draft-n-max', '3']}
+                     '--spec-type', 'draft-dflash', '--spec-draft-n-max', '3'],
+            'dfl7': ['-md', os.environ.get('BENCH_DFLASH_MODEL', ''), '-ngld', 'all',
+                     '--spec-type', 'draft-dflash', '--spec-draft-n-max', '7']}
 # DFlash uses the GGUF without an MTP head (saves ~317 MiB of weights that would go unused).
 MODEL_NO_MTP = b.Path(os.environ.get('BENCH_MODEL_NO_MTP', ''))
 TASKS = {

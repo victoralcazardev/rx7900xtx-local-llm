@@ -7,6 +7,8 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- Measured a local port of llama.cpp PR #29827 (512 MiB FlashAttention convert cap) on b11454: -0.39 GiB VRAM, code tg -2.9%, non-deterministic greedy output; not adopted ([`results/20261006-pr29827-port-b11454/`](results/20261006-pr29827-port-b11454/README.md)).
+- Measured DFlash2 `--spec-draft-n-max 7` (third-party tip) against MTP at 240K on b11454: essay -36%, copy -53%, code +5.9%; not adopted. `bench/spec_depth_bench.py` gains a `dfl7` variant ([`results/20261006-t28-dflash2-n7-240k/`](results/20261006-t28-dflash2-n7-240k/README.md)).
 - `scripts/launch.py` starts a passive GPU thermal/VRAM logger (`scripts/gpu_watch.py`) and writes `<log>.gpu.csv` next to the server log on Linux ([`docs/sop/launch-model.md`](docs/sop/launch-model.md)).
 - llama.cpp PR #29509 on b11371: bit-identical checkpoint restores and constant 149.6 MiB checkpoints; in local trial use ([`results/20261004-pr29509-checkpoint-restore/`](results/20261004-pr29509-checkpoint-restore/README.md)).
 - Recall on real agent history at 80K and 176K with production sampling: no position-dependent loss ([`results/20261004-real-history-recall-80k-176k/`](results/20261004-real-history-recall-80k-176k/README.md)).
@@ -35,6 +37,7 @@ All notable changes to this project are documented here. Format follows
 
 ### Changed
 
+- `hip-kvmix` engine moves to llama.cpp b11454 (v0.6.0-dev) + PR #29509: +0.7..+3.2% tg at 240K, same VRAM and PPL; published as the `engine-b11454-rocm10-gfx1100-kvmix` release ([`results/20261006-b11454-engine-update/`](results/20261006-b11454-engine-update/README.md)).
 - Scoped long-context retrieval claims to the 40/40 run's settings (b11160, temperature 0, thinking off, no n-gram map) ([`docs/measurements/depth.md`](docs/measurements/depth.md)).
 - Removed answered items from the measurement docs' Open questions (answers kept in History), dropped the duplicate 0.66 MTP acceptance copies, and trimmed the README to its 1,000-word budget ([`docs/measurements/agent-traffic.md`](docs/measurements/agent-traffic.md)).
 - Profile adopts `--spec-type draft-mtp,ngram-map-k4v` and `--cache-ram 12288`; `hip-kvmix` engine moves to b11371 ([`docs/STATUS.md`](docs/STATUS.md)).

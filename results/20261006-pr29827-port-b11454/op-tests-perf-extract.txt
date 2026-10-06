@@ -1,0 +1,16 @@
+== test-default.log
+  4009/4009 tests passed
+== test-cap1MiB.log
+  4009/4009 tests passed
+== perf-512MiB-r1.log
+FLASH_ATTN_EXT(hsk=256,hsv=256,nh=4,nr23=[6,1],kv=131072,nb=4,type_K=q8_0,type_V=q5_1): 400 runs - 2505.70 us/run - 12.88 GFLOP/run -  5.14 TFLOPS
+FLASH_ATTN_EXT(hsk=256,hsv=256,nh=4,nr23=[6,1],kv=240128,nb=4,type_K=q8_0,type_V=q5_1): 220 runs - 4615.40 us/run - 23.61 GFLOP/run -  5.11 TFLOPS
+== perf-512MiB-r2.log
+FLASH_ATTN_EXT(hsk=256,hsv=256,nh=4,nr23=[6,1],kv=131072,nb=4,type_K=q8_0,type_V=q5_1): 400 runs - 2529.60 us/run - 12.88 GFLOP/run -  5.09 TFLOPS
+FLASH_ATTN_EXT(hsk=256,hsv=256,nh=4,nr23=[6,1],kv=240128,nb=4,type_K=q8_0,type_V=q5_1): 215 runs - 4658.36 us/run - 23.61 GFLOP/run -  5.07 TFLOPS
+== perf-unchunked-r1.log
+FLASH_ATTN_EXT(hsk=256,hsv=256,nh=4,nr23=[6,1],kv=131072,nb=4,type_K=q8_0,type_V=q5_1): 400 runs - 2516.20 us/run - 12.88 GFLOP/run -  5.12 TFLOPS
+FLASH_ATTN_EXT(hsk=256,hsv=256,nh=4,nr23=[6,1],kv=240128,nb=4,type_K=q8_0,type_V=q5_1): 225 runs - 4505.51 us/run - 23.61 GFLOP/run -  5.24 TFLOPS
+== perf-unchunked-r2.log
+FLASH_ATTN_EXT(hsk=256,hsv=256,nh=4,nr23=[6,1],kv=131072,nb=4,type_K=q8_0,type_V=q5_1): 400 runs - 2540.35 us/run - 12.88 GFLOP/run -  5.07 TFLOPS
+FLASH_ATTN_EXT(hsk=256,hsv=256,nh=4,nr23=[6,1],kv=240128,nb=4,type_K=q8_0,type_V=q5_1): 225 runs - 4534.88 us/run - 23.61 GFLOP/run -  5.21 TFLOPS
