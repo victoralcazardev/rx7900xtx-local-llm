@@ -66,7 +66,10 @@ python3 scripts/check-sync.py
   Spanish, "El usuario me pide...", b11454 in English, "We need answer in Spanish..."); code
   diverges at character 573. Both outputs are coherent. Read as a near-tie flip from upstream
   numeric changes, not a degradation: the parity check below is identical.
-- Parity: wikitext-2 PPL 6.2132 +/- 0.08276 on both engines (identical to 4 decimals).
+- Parity: wikitext-2 PPL 6.2132 +/- 0.08276 on both engines (identical to 4 decimals). Scope: this
+  run uses `-c 4096` without speculation, so it shows the kernels agree at short context; it does
+  not by itself prove equal quality at 240K with MTP, where only the coherence of the outputs above
+  was checked.
 - Smoke on b11454, 262K profile: OK, 71.8 tok/s, coherent content. `check-sync.py`: OK.
 
 ## Decision

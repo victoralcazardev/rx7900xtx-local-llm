@@ -44,7 +44,7 @@ BENCH_DFLASH_MODEL=<draft.gguf> BENCH_MODEL_NO_MTP=<base-without-mtp.gguf> \
 |---|---|---|---|---|
 | essay | 25.94 | 16.67 | -36% | 25% |
 | copy | 45.94 | 21.57 | -53% | 37% |
-| code | 19.33 | 20.48 | +6.0% | 34% |
+| code | 19.33 | 20.48 | +5.9% | 34% |
 
 - Peak process VRAM 22,617 MiB; fits 262K (`n_ctx_slot` 262144).
 - Cold prefill (essay warm-up): 400.6 tok/s.

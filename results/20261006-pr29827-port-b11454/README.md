@@ -49,7 +49,8 @@ End to end, 240K depth, median tg tok/s over 3 warm reps:
 
 - Peak process VRAM (`drm-memory-vram`): 22,641 -> 22,240 MiB (-401 MiB, 0.39 GiB).
 - Determinism: with the port, the copy task alternates between two output hashes (`ff04a5f8` /
-  `d7e88c3c`) for identical input at temperature 0; reps 2 and 3 diverge at character 1776, on a
+  `d7e88c3c`) for identical input at temperature 0: in `summary.jsonl`, rep 1 (warm-up) and rep 3
+  give `d7e88c3c`, reps 2 and 4 give `ff04a5f8`; reps 2 and 3 first differ at character 1776, on a
   whitespace token. Plain b11371 and b11454 produce one hash per task across all reps.
 
 ## Decision
