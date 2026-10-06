@@ -17,7 +17,9 @@ hash — the difference lives in the shared library, not the file hashed here.
 |---|---|---|---|
 | `llama-b11160-bin-ubuntu-rocm-10.0-x64` | **Current** (`hip` in `local.toml`) | b11160 / `70c4e1582`, official CI | `8c98a329346088d0cdd03195ae5864e29c9a8b11fc293397a723f8730e9492dc` |
 | `llama-b11160-bin-ubuntu-vulkan-x64` | Reference (2-3.5x slower on generation here; still 1.2-1.6x slower with the memory clock pinned, see `docs/measurements/engines.md`) | b11160 / `70c4e1582`, official CI | `ddb272c01521fc81c14ae430a944cd52d8db9c7d237e1b90f77d0b2f33a2c012` |
-| `llama-b11371-linux-rocm10-gfx1100-kvmix` | **Current** (`hip-kvmix` in `local.toml`, since 2026-10-03) | b11371 / `99b9548`, own build (same recipe as below) | `410a809bcd04ffaa46100dd68b29eb5d6d0fb12b84d25bc3c543ce18c7968ac6` (launcher; `libllama-server-impl.so` `98ee4acd09bb15ff97994790148c0593fb7a63ac617dec3d517b9d2a73a38557`) |
+| `llama-b11454-pr29509-linux-rocm10-gfx1100-kvmix` | **Current** (`hip-kvmix` in `local.toml`, since 2026-10-06) | b11454 / `462524043` + PR #29509, own build (same recipe as below) | `410a809bcd04ffaa46100dd68b29eb5d6d0fb12b84d25bc3c543ce18c7968ac6` (launcher; `libllama-server-impl.so` `1cf9a51f5cf92a302f306e74752bbc456a54228e43e2262fd1a9f5a5e7d8d575`) |
+| `llama-b11371-pr29509-linux-rocm10-gfx1100-kvmix` | Previous `hip-kvmix` (rollback; local trial engine 2026-10-04 to 2026-10-06, see `docs/ENGINES-EXPERIMENTS.md`) | b11371 / `99b9548` + PR #29509, own build | `410a809bcd04ffaa46100dd68b29eb5d6d0fb12b84d25bc3c543ce18c7968ac6` (launcher; `libllama-server-impl.so` `f494e4021a8814bc77cacb2333ba44b40a1ce34a63c2eb0c229d20ae7a153ae7`) |
+| `llama-b11371-linux-rocm10-gfx1100-kvmix` | Superseded `hip-kvmix` (adopted 2026-10-03; replaced by the PR #29509 trial build on 2026-10-04; still the published release asset) | b11371 / `99b9548`, own build (same recipe as below) | `410a809bcd04ffaa46100dd68b29eb5d6d0fb12b84d25bc3c543ce18c7968ac6` (launcher; `libllama-server-impl.so` `98ee4acd09bb15ff97994790148c0593fb7a63ac617dec3d517b9d2a73a38557`) |
 | `llama-b11160-linux-rocm10-gfx1100-kvmix` | Previous `hip-kvmix` (rollback; still the published release asset) | b11160 / `70c4e1582`, own build | `3d8565952bcd74cd4e0d3be3a56221619c25da6176d3716972b75b1cc0a34128` |
 | `llama-b11160-linux-rocm10-gfx1100-kvmix-vec4` | Discarded (+20% ms/step at depth vs. `kvmix`, see `docs/measurements/speculative.md`) | b11160 / `70c4e1582` + 1-line patch | `3d8565952bcd74cd4e0d3be3a56221619c25da6176d3716972b75b1cc0a34128` (same front-end; patch is in `libggml-hip.so`) |
 | `llama-b11160-linux-rocm-gfx1100-kvmix` | Discarded (~9% slower than the ROCm-10-toolchain build, see `docs/measurements/engines.md`) | b11160 / `70c4e1582`, own build, older ROCm 7.2.4 system toolchain | `7c27f7fd7c0398075b2837a531c98cc6c57766ff107d671c1c7b06c18d6cd1b2` |
@@ -32,7 +34,26 @@ build recipe — downloaded as-is. Runtime dependency: the ROCm binary uses the 
 ROCm runtime libraries (ROCm 7.2.4 packages on this Arch-based system) unless a newer runtime is
 provided on the library path.
 
-### `llama-b11371-linux-rocm10-gfx1100-kvmix` (current `hip-kvmix` engine, 2026-10-03)
+### `llama-b11454-pr29509-linux-rocm10-gfx1100-kvmix` (current `hip-kvmix` engine, 2026-10-06)
+
+llama.cpp b11454 (commit `462524043`, `LLAMA_VERSION` 0.6) plus
+[PR #29509](https://github.com/ggml-org/llama.cpp/pull/29509) head
+`b3c27359975ea4fb0f400785de3fc2729a35708a` (server: do not store the draft KV in context
+checkpoints; still open upstream, the diff applies cleanly). Same recipe and toolchain as the
+b11160 build below (ROCm 10.0.0 TheRock venv, `gfx1100`, same `GGML_CUDA_FA_QUANTS`); runtime:
+system ROCm 7.2.4. `--version`: `0.6.0-dev (build 154, commit 462524043)`. `--help` is identical
+to b11371: no default changed for the `models.toml` flags. SHA256: `libggml-hip.so`
+`7d1c9debd3899244ff803a0bd039c49e9df21112f98d9a00d5c9d59f6f6555c6`, `libllama-server-impl.so`
+`1cf9a51f5cf92a302f306e74752bbc456a54228e43e2262fd1a9f5a5e7d8d575` (the launcher hash equals
+b11371's). At 240K on the adopted profile: tg +0.7..+3.2%, prefill and VRAM within noise, same
+wikitext-2 PPL
+([`results/20261006-b11454-engine-update/`](../results/20261006-b11454-engine-update/README.md)).
+**No GitHub release asset** was published for this build; the b11371 asset below remains the
+published one. Rollback: `llama-b11371-pr29509-linux-rocm10-gfx1100-kvmix` (b11371 + the same
+patch, local trial engine since 2026-10-04, see
+[`ENGINES-EXPERIMENTS.md`](ENGINES-EXPERIMENTS.md#llamacpp-pr-29509-local-trial-2026-10-04)).
+
+### `llama-b11371-linux-rocm10-gfx1100-kvmix` (`hip-kvmix` engine adopted 2026-10-03, superseded)
 
 llama.cpp b11371 (commit `99b9548`), built with the exact recipe of the b11160 build below (cmake
 options unchanged; `GGML_CUDA_FA_QUANTS` is still honored). `--version`: `0.5.0-dev (build 71,

@@ -19,7 +19,7 @@ default when no alias is given.
 - Model: Qwen3.8-27B GSQ-RCO `IQ3_S-mtp` (native MTP head baked in), 12.1 GB, PPL 6.734 ± 0.084;
   `mmproj-Qwen3.8-27B-BF16.gguf` present but vision disabled. Other quants:
   [`models/qwen38-27b-quants.md`](models/qwen38-27b-quants.md).
-- Engine: llama.cpp b11371 `hip-kvmix` (own ROCm build with FlashAttention kernels for K `q8_0` +
+- Engine: llama.cpp b11454 + PR #29509 `hip-kvmix` (own ROCm build with FlashAttention kernels for K `q8_0` +
   V `q5_1`); ROCm/HIP beats Vulkan 2-3.5x on generation here, Vulkan is reference-only.
   [`ENGINES.md`](ENGINES.md).
 - Power: 272 W permanent cap (driver minimum; stock 303 W) — [`sop/power-cap.md`](sop/power-cap.md).

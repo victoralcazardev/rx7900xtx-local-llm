@@ -1,0 +1,71 @@
+# 2026-10-06: llama.cpp b11454 (+ PR #29509) vs. b11371 (+ PR #29509) on the adopted profile
+
+Question: is llama.cpp b11454 (`462524043`), carrying the same
+[PR #29509](https://github.com/ggml-org/llama.cpp/pull/29509) patch as the engine in use, clearly
+worse than b11371 (`99b9548`) + PR #29509 at 240K depth? Adoption rule (2026-10-06): adopt the
+newest upstream build unless it is clearly worse.
+
+## Setup
+
+- Engines (same `kvmix` recipe and toolchain, [`docs/ENGINES.md`](../../docs/ENGINES.md)):
+  - `llama-b11371-pr29509-linux-rocm10-gfx1100-kvmix`: b11371 (`99b9548`) + PR #29509 (engine in use
+    since 2026-10-04).
+  - `llama-b11454-pr29509-linux-rocm10-gfx1100-kvmix`: b11454 (`462524043`, `--version`
+    `0.6.0-dev (build 154, commit 462524043)`) + PR #29509 head
+    `b3c27359975ea4fb0f400785de3fc2729a35708a` (still open upstream; the diff applies cleanly).
+- `llama-server --help` is identical on both builds: no default changed, `models.toml` flags
+  unchanged.
+- Model `Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp`, adopted profile flags (KV `q8_0`/`q5_1`, MTP n=3 +
+  `ngram-map-k4v`, `-ub 256`), temperature 0, 272 W cap, `systemd-inhibit`, one arm at a time.
+
+## Upstream range b11371 -> b11454
+
+83 commits. None of the watchlist PRs is in range (#28102, #29393, #28391, #26038, #27282, #28433,
+#27140). Relevant to this setup:
+[#29435](https://github.com/ggml-org/llama.cpp/pull/29435) (CUDA whole-tile FA scheduling in
+`fattn-common.cuh`/`fattn-mma-f16.cuh`; its new path targets NVIDIA DGX Spark only),
+[#30020](https://github.com/ggml-org/llama.cpp/pull/30020) (re-reserve the scheduler when the nextn
+extraction flags change), [#29633](https://github.com/ggml-org/llama.cpp/pull/29633) (MMVF for thin
+f16/bf16 `mul_mat` at small batch).
+
+## Commands
+
+```bash
+# 240K fill, 3 reps after a cold-prefill warm-up, once per engine
+python3 bench/spec_depth_bench.py --run --depth 240000 --variants n3-map --reps 3 --extra "-ub 256"
+# parity, wikitext-2, both engines
+llama-perplexity -m <model> -f wiki.test.raw -c 4096 --chunks 16 -ngl 99 -fa on -ctk q8_0 -ctv q5_1 -ub 256
+# new engine, 262K profile
+python3 scripts/smoke.py qwen38-iq3s-mtp
+python3 scripts/check-sync.py
+```
+
+## Results
+
+240K depth, median tg tok/s over 3 warm reps:
+
+| Task | b11371 + #29509 | b11454 + #29509 | Delta | Output hash |
+|---|---|---|---|---|
+| essay | 25.14 | 25.94 | +3.2% | differs |
+| copy | 45.60 | 45.94 | +0.7% | identical |
+| code | 19.12 | 19.33 | +1.1% | differs |
+
+- Cold prefill (239,983 tokens, essay warm-up): 393.3 vs. 391.4 tok/s (-0.5%).
+- Peak process VRAM (`drm-memory-vram`): 22,632 vs. 22,641 MiB.
+- Greedy output: essay diverges at the first generated token (b11371 starts its reasoning in
+  Spanish, "El usuario me pide...", b11454 in English, "We need answer in Spanish..."); code
+  diverges at character 573. Both outputs are coherent. Read as a near-tie flip from upstream
+  numeric changes, not a degradation: the parity check below is identical.
+- Parity: wikitext-2 PPL 6.2132 +/- 0.08276 on both engines (identical to 4 decimals).
+- Smoke on b11454, 262K profile: OK, 71.8 tok/s, coherent content. `check-sync.py`: OK.
+
+## Decision
+
+Adopt `llama-b11454-pr29509-linux-rocm10-gfx1100-kvmix` as the `hip-kvmix` engine: not worse on any
+measured axis (speed +0.7..+3.2%, prefill and VRAM within noise, same PPL). Rollback =
+`llama-b11371-pr29509-linux-rocm10-gfx1100-kvmix`. No GitHub release asset was published for b11454;
+the b11371 release asset remains the published one.
+
+**Raw data**: `depth240k-b11371-pr29509-summary.jsonl`, `depth240k-b11454-pr29509-summary.jsonl`
+(server paths replaced with placeholders), `ppl-wikitext2.txt` ("Final estimate" lines). SSE streams,
+`--help` dumps and server logs stay local (`_tmp/`, git-ignored).
