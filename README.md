@@ -15,9 +15,9 @@ guide.
 |---|---|
 | Profile | `qwen38-iq3s-mtp` / `262k-q8q51-mtp` (IQ3_S-mtp, KV `q8_0`/`q5_1`, MTP n=3 + `ngram-map-k4v`) |
 | Context | 262,144 tokens (native, no YaRN) |
-| Speed at 240K fill | 18.6-26.9 tok/s MTP-only (copy 43.9 with n-gram), prefill 380 tok/s |
+| Speed at 240K fill | 19.3-25.9 tok/s, copy 45.9 (n-gram), prefill 391 tok/s |
 | Speed, empty context | 68.9 tok/s (37.2 without MTP) |
-| VRAM | 22,630 MiB peak process VRAM at 240K fill |
+| VRAM | 22,641 MiB peak process VRAM at 240K fill |
 | Quality | Retrieval only: 68/68 pooled (32K-240K); 40/40 at 190K/240K; real-history recall holds at 80K/176K |
 | Power | 272 W cap (this card's driver minimum; stock 303 W) |
 

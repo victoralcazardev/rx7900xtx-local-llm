@@ -38,6 +38,7 @@ All notable changes to this project are documented here. Format follows
 
 ### Changed
 
+- Headline 240K numbers now come from the adopted profile on b11454 (essay/copy/code 25.9 / 45.9 / 19.3 tok/s, prefill 391, 22,641 MiB); the MTP-only b11160 figures stay as context ([`docs/STATUS.md`](docs/STATUS.md#headline-numbers)).
 - `hip-kvmix` engine moves to llama.cpp b11454 (v0.6.0-dev) + PR #29509: +0.7..+3.2% tg at 240K, same VRAM and PPL; published as the `engine-b11454-rocm10-gfx1100-kvmix` release ([`results/20261006-b11454-engine-update/`](results/20261006-b11454-engine-update/README.md)).
 - Scoped long-context retrieval claims to the 40/40 run's settings (b11160, temperature 0, thinking off, no n-gram map) ([`docs/measurements/depth.md`](docs/measurements/depth.md)).
 - Removed answered items from the measurement docs' Open questions (answers kept in History), dropped the duplicate 0.66 MTP acceptance copies, and trimmed the README to its 1,000-word budget ([`docs/measurements/agent-traffic.md`](docs/measurements/agent-traffic.md)).

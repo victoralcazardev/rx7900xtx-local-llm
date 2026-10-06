@@ -38,9 +38,10 @@ llama-server -m <models_root>/Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp/Qwen3.8-27B-GSQ-RCO-
 
 ## Headline numbers
 
-- **240K fill, essay/copy/code (MTP only)**: 24.4 / 26.9 / 18.6 tok/s (mean 23.3), prefill 380 tok/s, peak
-  process VRAM 22,630 MiB, 0 evicted —
-  [speculative.md](measurements/speculative.md), [memory.md](measurements/memory.md).
+- **240K fill, adopted profile (b11454, temperature 0), essay/copy/code**: 25.9 / 45.9 / 19.3 tok/s,
+  prefill 391 tok/s, peak process VRAM 22,641 MiB —
+  [results](../results/20261006-b11454-engine-update/README.md). MTP only (b11160): 24.4 / 26.9 /
+  18.6 — [speculative.md](measurements/speculative.md), [memory.md](measurements/memory.md).
 - **Empty context**: 68.9 tok/s (37.2 without MTP, +85%), community `probe.py`, 3 passes —
   [speculative.md](measurements/speculative.md#community-probe-ab-at-262k-empty-context-2026-09-27).
 - **Without MTP at 240K fill**: 11.2 tok/s, so MTP n=3 is +109% at depth —
