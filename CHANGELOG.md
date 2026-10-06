@@ -9,6 +9,7 @@ All notable changes to this project are documented here. Format follows
 
 - Measured a local port of llama.cpp PR #29827 (512 MiB FlashAttention convert cap) on b11454: -0.39 GiB VRAM, code tg -2.9%, non-deterministic greedy output; not adopted ([`results/20261006-pr29827-port-b11454/`](results/20261006-pr29827-port-b11454/README.md)).
 - Measured DFlash2 `--spec-draft-n-max 7` (third-party tip) against MTP at 240K on b11454: essay -36%, copy -53%, code +5.9%; not adopted. `bench/spec_depth_bench.py` gains a `dfl7` variant ([`results/20261006-t28-dflash2-n7-240k/`](results/20261006-t28-dflash2-n7-240k/README.md)).
+- Strata v0.1.40 / xyzzing gfx1100 fork review: the ">100 tok/s" decode claim is not in any primary source, and nothing transfers directly to llama.cpp ([`docs/models/strata-flash-next.md`](docs/models/strata-flash-next.md#review-2026-10-06-v0140-and-the-xyzzing-gfx1100-fork)).
 - `scripts/launch.py` starts a passive GPU thermal/VRAM logger (`scripts/gpu_watch.py`) and writes `<log>.gpu.csv` next to the server log on Linux ([`docs/sop/launch-model.md`](docs/sop/launch-model.md)).
 - llama.cpp PR #29509 on b11371: bit-identical checkpoint restores and constant 149.6 MiB checkpoints; in local trial use ([`results/20261004-pr29509-checkpoint-restore/`](results/20261004-pr29509-checkpoint-restore/README.md)).
 - Recall on real agent history at 80K and 176K with production sampling: no position-dependent loss ([`results/20261004-real-history-recall-80k-176k/`](results/20261004-real-history-recall-80k-176k/README.md)).
