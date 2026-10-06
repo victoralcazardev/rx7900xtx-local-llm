@@ -282,3 +282,9 @@ All claims below are the authors' own and are unverified here.
   from disk). The author's "8GB+ AMD GPU", "1,250 tok/s prompt" and "k8v4 +10%" claims are checked
   against upstream's own docs in
   [`docs/models/strata-flash-next.md`](models/strata-flash-next.md).
+- **Update 2026-10-06 (upstream v0.1.40, xyzzing/Strata v0.1.39-rocm.1)**: a community post for
+  the [xyzzing gfx1100 fork](https://github.com/xyzzing/Strata) claims decode above 100 tok/s on
+  an RX 7900 XTX. Status: hypothesis, not found in any primary source (best: 88.4 tok/s, warm,
+  repeated short request, 96 GB RAM). Its "+22.8% prefill" is source-checked but replaces a
+  fallback llama.cpp does not have. Details in
+  [`docs/models/strata-flash-next.md`](models/strata-flash-next.md#review-2026-10-06-v0140-and-the-xyzzing-gfx1100-fork).

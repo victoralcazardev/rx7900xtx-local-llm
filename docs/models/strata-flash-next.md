@@ -1,4 +1,4 @@
-# Qwen3.8-Flash-Next via Strata: evaluation note (2026-09-29)
+# Qwen3.8-Flash-Next via Strata: evaluation note (2026-09-29, reviewed again 2026-10-06)
 
 **Status: not adopted, not measured on this hardware.** A desk review of upstream claims against
 upstream's own docs and code, to decide whether an on-hardware trial is worth it. Nothing in
@@ -101,8 +101,9 @@ None of this transfers to `qwen38-iq3s-mtp` / `262k-q8q51-mtp`:
 - The K 8-bit / V 4-bit idea is already applied here as KV `q8_0/q5_1`. Going to V 4-bit
   (`q8_0/q4_1`) doubles KLD over q8/q8 with peaks up to 0.63, and only frees VRAM — see
   [`measurements/kv-quality.md`](../measurements/kv-quality.md).
-- The hipBLASLt table is calibrated for Strata's own dense shapes; its effect on llama.cpp is
-  untested.
+- The hipBLASLt table cannot be applied to llama.cpp: it is Strata's own file format
+  (`STRATA_HIPBLASLT_TUNING_V1`, read by `src/prefill/gemm.cu`), not a hipBLASLt override. See
+  the 2026-10-06 review below.
 
 ## Decision criterion for an on-hardware trial
 
@@ -133,3 +134,53 @@ IQ1_M (shard 1 29.6 GB, ~12 GB of experts in RAM) fits with margin and matches t
 workload. The pack needs ~90-100 GB on an NVMe drive (not the rotational HDD). Priority: the
 KVMem agent run (T6) first; the Coder trial is plan B if T6 fails, with the bar set at more than
 45 tok/s at 128K+ fill plus a `bench/longctx_quality.py` pass.
+
+## Review 2026-10-06: v0.1.40 and the xyzzing gfx1100 fork
+
+Desk review again, nothing measured here. Triggered by a community post for
+[xyzzing/Strata v0.1.39-rocm.1](https://github.com/xyzzing/Strata/releases/tag/v0.1.39-rocm.1)
+("+22.8% prefill WMMA arm, hipBLASLt table ... decode rates of above 100 t/s").
+
+**The fork.** [xyzzing/Strata](https://github.com/xyzzing/Strata) is a GitHub fork of
+Niko1221/Strata (MIT) that keeps a gfx1100 HIP line after upstream moved its HIP lead to RDNA4
+(gfx1201). Its [`GFX1100.md`](https://github.com/xyzzing/Strata/blob/main/GFX1100.md) states the
+work is produced by an AI engineering agent (GLM-5.3) under xyzzing's direction; the test machine
+is an RX 7900 XTX, Ryzen 9 7900X, 96 GB RAM, ROCm 7.1.1 / 10.2 nightly, no power cap stated. The
+release binary is "compile-validated in CI ... nothing here executed a model". Upstream merges
+contributions by hand: fork PRs #755 and #786 were closed unmerged on 2026-10-06, and their
+content shipped in upstream
+[v0.1.40](https://github.com/Niko1221/Strata/releases/tag/v0.1.40) (gfx1100 hipBLASLt table for
+100500; RDNA3 WMMA prompt attention behind `STRATA_HIP_WMMA=1`). A trial here would use upstream
+v0.1.40, not the fork.
+
+| Claim | Upstream evidence | Status |
+|---|---|---|
+| Decode above 100 tok/s on an RX 7900 XTX | Not found in the fork's docs, its releases or upstream docs. Highest primary figure: 88.4 tok/s ([PR #745](https://github.com/Niko1221/Strata/pull/745): warm, same ~61-token request repeated, 200 greedy tokens, 65K context, int8 KV, MTP, 96 GB RAM). Steady decode in `GFX1100.md`: 56.8-64.2 tok/s from 1K to 128K (greedy, 256 tokens, IQ3_S). The "~100 tok/s" in the v0.1.20-rocm.4 notes is prompt reading at ~500-token prompts | Not found; best primary figure 88.4 tok/s under narrow conditions |
+| +22.8% prefill from the WMMA arm | [PR #786](https://github.com/Niko1221/Strata/pull/786): 128K, 5/5 pairs, 1,513.8 to 1,863.2 tok/s. Replaces an FP32 prompt-attention fallback without matrix cores; attention share of prefill drops from ~27% to ~10% | Verified (source read), 128K only |
+| +82% prefill from the hipBLASLt table | Baseline was a ROCm nightly falling back to plain hipBLAS (926 tok/s); against the table-less ROCm 7.1.1 baseline (1,403 tok/s) the gain is ~+20% | Confounded baseline |
+
+**Fit on this machine: unchanged.** The fork's numbers come from 96 GB RAM. Upstream's
+`docs/AMD_HIP_PERFORMANCE.md` describes an 8 GiB RAM headroom guard for `--resident-cpu-experts`
+on AMD, stricter than the 4 GiB above; with 31.25 GiB usable and ~10 GiB of desktop use this
+makes the resident Coder IQ1_M plan tighter (reading, not tested). `GFX1100.md` also reports MTP
+acceptance collapsing from 0.803 to 0.056 at 512K depth. The trial criterion and plan B above
+stand.
+
+**What transfers to the dense 27B on llama.cpp b11371: nothing directly.**
+
+- hipBLASLt table: not loadable by llama.cpp (Strata's own format). In b11371,
+  `ggml_cuda_should_use_mmq` (`ggml/src/ggml-cuda/mmq.cu`) sends every IQ type and Q4_K to MMQ on
+  RDNA3 at any batch size; only Q2_K, IQ2_XS/IQ2_S and Q6_K use dequantize plus hipBLAS above 128
+  tokens. In `Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp` that is ~0.75 GiB (Q2_K 0.22, Q6_K 0.32, IQ2_XS
+  0.21), about 6% of weight bytes. `ROCBLAS_USE_HIPBLASLT=1` was already noise at empty context
+  ([engines.md](../measurements/engines.md)).
+- WMMA prompt attention: llama.cpp already selects its MMA (WMMA) FlashAttention kernel for large
+  batches on RDNA3 (`ggml/src/ggml-cuda/fattn.cu`). Strata's gain came from replacing a fallback
+  llama.cpp does not have.
+- k8v4 with Hadamard rotation: llama.cpp already rotates quantized K/V; V at 4 bit already lost on
+  KLD ([TRIED.md](../TRIED.md)).
+- `--spec-min-p 0.70`: the llama.cpp equivalent `--spec-draft-p-min` already lost
+  ([TRIED.md](../TRIED.md)). `--spec 3` matches the adopted MTP n=3.
+- The transferable lesson is the method: PR #786 found the gain by measuring the attention share
+  of prefill time at depth. The same split has not been measured for this profile at 240K, where
+  prefill runs at 380 tok/s.
