@@ -17,6 +17,15 @@ newest upstream build unless it is clearly worse.
   unchanged.
 - Model `Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp`, adopted profile flags (KV `q8_0`/`q5_1`, MTP n=3 +
   `ngram-map-k4v`, `-ub 256`), temperature 0, 272 W cap, `systemd-inhibit`, one arm at a time.
+- Measured binary: the b11454 arm ran `llama-server` from the build tree (`build-rocm10/bin`, source
+  tree = b11454 + the PR #29509 diff), before it was copied into the engine folder. `llama-server`,
+  `libggml-hip.so`, `libllama-server-impl.so`, `libllama.so.0.6.0` and `libggml-base.so.0.26.0` have
+  the same SHA256 in both places, so the run measured the adopted engine's bytes.
+- Thermal start: `cooldown_s` differs (b11371 ~0.05 s, b11454 ~30.2 s) because `cool_down()`
+  (`bench/depth_bench.py`) waits until the GPU edge is <= 55 C before each case; b11454 ran right
+  after b11371 and had to wait, b11371 started from idle. Both arms started at or below the same
+  threshold (b11371 cooler, which if anything favors it), and decode is measured after a ~10 min
+  prefill at the 272 W cap.
 
 ## Upstream range b11371 -> b11454
 
@@ -51,7 +60,8 @@ python3 scripts/check-sync.py
 | code | 19.12 | 19.33 | +1.1% | differs |
 
 - Cold prefill (239,983 tokens, essay warm-up): 393.3 vs. 391.4 tok/s (-0.5%).
-- Peak process VRAM (`drm-memory-vram`): 22,632 vs. 22,641 MiB.
+- Peak process VRAM (`drm-memory-vram`, max over each arm's telemetry samples): 23,731,634,176 vs.
+  23,740,391,424 bytes (22,632 vs. 22,641 MiB).
 - Greedy output: essay diverges at the first generated token (b11371 starts its reasoning in
   Spanish, "El usuario me pide...", b11454 in English, "We need answer in Spanish..."); code
   diverges at character 573. Both outputs are coherent. Read as a near-tie flip from upstream
