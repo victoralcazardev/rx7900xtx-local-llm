@@ -1,0 +1,4 @@
+ggml_cuda_init: found 1 ROCm devices (Total VRAM: 24560 MiB):
+  Device 0: AMD Radeon RX 7900 XTX, gfx1100 (0x1100), VMM: no, Wave Size: 32, VRAM: 24560 MiB
+load_backend: loaded ROCm backend from ~/src/llama.cpp-b11454/build-rocm10-lto/bin/libggml-hip.so
+load_backend: loaded CPU backend from ~/src/llama.cpp-b11454/build-rocm10-lto/bin/libggml-cpu-haswell.so

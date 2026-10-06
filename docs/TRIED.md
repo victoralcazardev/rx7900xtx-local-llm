@@ -1,9 +1,9 @@
 # Tried and not adopted
 
-Everything measured on this card (RX 7900 XTX, RDNA3, gfx1100) that was compared against the
-adopted profile and either lost or was set aside. Dates and reasoning per decision are in
+Everything measured on this card (RX 7900 XTX, RDNA3, gfx1100) that lost to the adopted profile
+or was set aside. Dates and reasoning per decision are in
 [`DECISIONS.md`](DECISIONS.md); the current recommendation is in [`STATUS.md`](STATUS.md). Each
-row: what was tried, the key numbers, where the evidence is.
+row: item, key numbers, evidence.
 
 ## Flags and server settings
 
@@ -34,9 +34,10 @@ row: what was tried, the key numbers, where the evidence is.
 | exllamav3-rocm (+ patched TabbyAPI) | Read-only audit found no code or license blocker; deprioritized: 15.3 GB EXL3 model leaves less VRAM headroom, author's numbers not comparable. | [ENGINES.md](ENGINES.md), [SOURCES.md](SOURCES.md) |
 | vLLM (ROCm) and HyperQwen (CUDA) | Not run. HyperQwen's kernels are CUDA only. Mainline vLLM supports no 4-bit format on AMD; the one 7900 XTX number is 29.1 tok/s (27B INT4, 2K, no MTP) vs. 68.9 here; 262K on 24 GB needs unmerged KV code. | [SOURCES.md](SOURCES.md#vllm-on-rocm-and-hyperqwen-2026-10-03) |
 | `GGML_CUDA_GRAPH_OPT=1` (b11160, MTP n=3) | -1.5% at empty context, -3.6..-3.9% at 240K, identical tokens. Rejected 2026-10-03. | [results/20261003-graph-opt-mtp/](../results/20261003-graph-opt-mtp/README.md) |
+| `-DGGML_LTO=ON` build (b11454) | All within ±0.6%; HIP library byte-identical. | [results](../results/20261006-t12-lto-b11454/README.md) |
 | rdna-boosts GQA-6 FA band on gfx1100 | Dropped without building: the fork's author measured it on a 7900 XTX (fork commit `b5278a5`): plain decode -12%, MTP n3 +8.6% / n7 +11.1% at ~42K, decode/verify not bit-identical; it also needs K and V of one type, so it never engages with `q8_0`/`q5_1`. | [ENGINES-EXPERIMENTS.md](ENGINES-EXPERIMENTS.md#status-after-the-2026-10-03-test-session-annotations-to-this-review) |
 | vLLM ROCm forks/plugins (Paiton, vllm-radiance) and ROCmFPX | Not run. Paiton and vllm-radiance are qualified on RDNA4 (gfx1201) only, with FP8/FP4 paths (Paiton's runtime is closed); ROCmFPX lists gfx1100 as "results vary", no published numbers. | [SOURCES.md](SOURCES.md#vllm-rocm-forks-and-low-bit-llamacpp-forks-2026-10-03) |
-| Unmeasured speed candidates (2026-09-26, each <5% or blocked by VRAM/context) | llama.cpp PR #29393 outside a regular engine update; fork adaptive MTP (`draft-mtp-adaptive`; upstream PR #27210's author advises against it below draft depth 7); building ik_llama.cpp; `-DGGML_LTO=ON` (third-party claim, [ENGINES-EXPERIMENTS.md](ENGINES-EXPERIMENTS.md#candidates-from-third-party-repositories-2026-10-02-not-run)). | [depth.md](measurements/depth.md#why-decode-slows-with-depth-attention-bandwidth-2026-09-26-round-4) |
+| Unmeasured speed candidates (2026-09-26, each <5% or blocked by VRAM/context) | llama.cpp PR #29393 outside a regular engine update; fork adaptive MTP (`draft-mtp-adaptive`; upstream PR #27210's author advises against it below draft depth 7); building ik_llama.cpp. | [depth.md](measurements/depth.md#why-decode-slows-with-depth-attention-bandwidth-2026-09-26-round-4) |
 | KVMem (kvmem-llama.cpp) | Candidate: budget 28,672, block 32: 45.5 tok/s at 244K vs. 20.8 (2.2x), 8/8 at 240K. Budget 49,152 crashes. Not adopted; agent run (T6) outstanding. | [measurements/kvmem.md](measurements/kvmem.md), [results/20260930-kvmem-trial-round2/](../results/20260930-kvmem-trial-round2/) |
 
 ## Models, quantization and speculative alternatives

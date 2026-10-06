@@ -33,6 +33,7 @@ Radeon RX 7900 XTX (24 GB, RDNA3, gfx1100)** with `llama-server` (ROCm/HIP; Vulk
 
 - Launch: `python3 scripts/launch.py [alias] [--profile P] [--dry-run] [--background]`. Every
   launch logs to `_tmp/logs/`; read the newest log before analyzing a session.
+- Cache reuse per request: `python3 scripts/cache_misses.py _tmp/logs/<log>`.
 - Manifest check: `python3 scripts/check-sync.py`. Smoke test: `python3 scripts/smoke.py <alias>`.
 - GGUF metadata: `python3 scripts/gguf_info.py <path-or-folder>`.
 - Done means both pass: `python3 scripts/check-repo.py` and
