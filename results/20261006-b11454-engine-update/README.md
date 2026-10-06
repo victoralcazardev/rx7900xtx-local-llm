@@ -77,7 +77,7 @@ python3 scripts/check-sync.py
 Adopt `llama-b11454-pr29509-linux-rocm10-gfx1100-kvmix` as the `hip-kvmix` engine: not worse on any
 measured axis (speed +0.7..+3.2%, prefill and VRAM within noise, same PPL). Rollback =
 `llama-b11371-pr29509-linux-rocm10-gfx1100-kvmix`. Published afterwards as the GitHub release
-`engine-b11454-rocm10-gfx1100-kvmix` (`llama-b11454-pr29509-rocm10-gfx1100-kvmix-linux-x64.tar.gz`, sha256 `60dafa459f753406...`).
+`engine-b11454-rocm10-gfx1100-kvmix` (`llama-b11454-pr29509-rocm10-gfx1100-kvmix-linux-x64.tar.gz`, sha256 `60dafa459f7534069c3e15fc85f4bc6fd29537558603f61b86f7ecfaa3adbb46`).
 
 **Raw data**: `depth240k-b11371-pr29509-summary.jsonl`, `depth240k-b11454-pr29509-summary.jsonl`
 (server paths replaced with placeholders), `ppl-wikitext2.txt` ("Final estimate" lines). SSE streams,
