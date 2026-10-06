@@ -32,7 +32,7 @@ Launch command, flag rationale and open questions: [`docs/STATUS.md`](docs/STATU
 | CPU / RAM | Ryzen 7 5700X (8C/16T), 32 GiB (31.25 GiB usable) plus zram swap |
 | Board / storage | Gigabyte B450 AORUS PRO, NVMe (Kingston A2000 500 GB) |
 | OS / drivers | CachyOS (Arch-based), kernel 7.2.7, Mesa 26.2.3, ROCm runtime 7.2.4 |
-| Engine | llama.cpp b11454 (`462524043`) + PR #29509 `hip-kvmix`, ROCm 10.0.0 compiler (TheRock wheels) |
+| Engine | llama.cpp b11454 (`462524043`) + PR #29509 `hip-kvmix`, ROCm 10.0.0 compiler |
 
 CPU and RAM barely matter (every layer runs on the GPU); GPU and driver notes:
 [`docs/hardware/gpu-7900xtx.md`](docs/hardware/gpu-7900xtx.md).
@@ -43,9 +43,9 @@ Requires **Python 3.11+**; `scripts/` use only the standard library.
 
 1. **Engine (required).** Official llama.cpp binaries lack the FlashAttention kernels for K `q8_0`
    + V `q5_1`. Download the prebuilt `hip-kvmix` build from the
-   [`engine-b11371-rocm10-gfx1100-kvmix`](https://github.com/victoralcazardev/rx7900xtx-local-llm/releases/tag/engine-b11371-rocm10-gfx1100-kvmix)
-   release (`llama-b11371-rocm10-gfx1100-kvmix-linux-x64.tar.gz`, sha256
-   `159d2be7538f0932ae41c787a2e14bf849a796b6597eb0d0e1416393b92a137b`; the ROCm runtime is not
+   [`engine-b11454-rocm10-gfx1100-kvmix`](https://github.com/victoralcazardev/rx7900xtx-local-llm/releases/tag/engine-b11454-rocm10-gfx1100-kvmix)
+   release (`llama-b11454-pr29509-rocm10-gfx1100-kvmix-linux-x64.tar.gz`, sha256
+   `60dafa459f7534069c3e15fc85f4bc6fd29537558603f61b86f7ecfaa3adbb46`; the ROCm runtime is not
    bundled), or build it (ROCm only, never Vulkan+HIP in one build): [`docs/ENGINES.md`](docs/ENGINES.md).
 2. **Model.** Download `Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp.gguf` (12.1 GB) from
    [`ISTA-DASLab/Qwen3.8-27B-GSQ-RCO-GGUF`](https://huggingface.co/ISTA-DASLab/Qwen3.8-27B-GSQ-RCO-GGUF)
