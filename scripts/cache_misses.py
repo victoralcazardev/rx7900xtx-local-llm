@@ -12,6 +12,7 @@ This script pairs each with the previous `stop processing: n_tokens` and the req
                 rewrite of earlier history; read the request around that line to see why
     lru         the slot was picked by LRU because LCP similarity was under the threshold
                 (0.1): no f_sim_best/f_keep is logged; a large prefill here is a miss too
+    unknown     similarity logged but the slot's previous size is not (log starts mid-session)
 Estimated LCP = f_keep x old tokens; estimated new prompt = LCP / f_sim_best. Both use the
 three decimals that the log prints, so they are approximate.
 
@@ -26,7 +27,7 @@ RE_SLOT = re.compile(r"\bid +(\d+) \|")
 RE_RELEASE = re.compile(r"stop processing: n_tokens = (\d+)")
 RE_SELECT = re.compile(r"f_sim_best = ([\d.]+) .*f_keep = ([\d.]+)")
 RE_PREFILL = re.compile(r"prompt eval time = +([\d.]+) ms / +(\d+) tokens")
-CLASSES = ("full", "partial", "compaction", "miss", "lru")
+CLASSES = ("full", "partial", "compaction", "miss", "lru", "unknown")
 
 
 def classify(f_keep, new, old):
@@ -48,9 +49,11 @@ def parse(lines):
             old[slot] = int(m[1])
             pending.pop(slot, None)
         elif "selected slot by" in line:
-            e = {"line": n, "slot": slot, "old_tokens": old.get(slot, 0), "f_sim": None, "f_keep": None,
+            e = {"line": n, "slot": slot, "old_tokens": old.get(slot), "f_sim": None, "f_keep": None,
                  "lcp_est": None, "new_est": None, "cls": "lru"}
-            if m := RE_SELECT.search(line):
+            if (m := RE_SELECT.search(line)) and e["old_tokens"] is None:
+                e.update(f_sim=float(m[1]), f_keep=float(m[2]), cls="unknown")
+            elif m:
                 f_sim, f_keep = float(m[1]), float(m[2])
                 lcp = round(f_keep * e["old_tokens"])
                 new = round(lcp / f_sim) if f_sim else 0
@@ -68,6 +71,10 @@ def fmt(x):
     return "-" if x is None else f"{x:.3f}"
 
 
+def dash(x):
+    return "-" if x is None else x
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("log")
@@ -78,8 +85,8 @@ def main():
     print(f"{'line':>7} {'slot':>4} {'class':<10} {'old':>8} {'f_sim':>6} {'f_keep':>6} {'lcp~':>8} {'new~':>8} {'prefill':>8} {'s':>6}")
     for e in events:
         if a.all or e["cls"] != "full":
-            print(f"{e['line']:>7} {e['slot']:>4} {e['cls']:<10} {e['old_tokens']:>8} {fmt(e['f_sim']):>6} "
-                  f"{fmt(e['f_keep']):>6} {e['lcp_est'] or '-':>8} {e['new_est'] or '-':>8} "
+            print(f"{e['line']:>7} {e['slot']:>4} {e['cls']:<10} {dash(e['old_tokens']):>8} {fmt(e['f_sim']):>6} "
+                  f"{fmt(e['f_keep']):>6} {dash(e['lcp_est']):>8} {dash(e['new_est']):>8} "
                   f"{e['prefill_tokens']:>8} {e['prefill_s']:>6.1f}")
     print("\nclass       requests  prefill_tokens  prefill_s")
     for c in CLASSES:

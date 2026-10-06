@@ -75,5 +75,14 @@ class TestParse(unittest.TestCase):
         self.assertEqual(cache_misses.parse(log), [])
 
 
+    def test_selection_without_known_slot_size_is_unknown(self):
+        log = [
+            "1 I slot get_availabl: id  0 | task -1 | selected slot by LCP similarity, f_sim_best = 0.500 (> 0.100 thold), f_keep = 0.400",
+            "2 I slot print_timing: id  0 | task 1 | prompt eval time =  100.00 ms /  100 tokens (x)",
+        ]
+        [e] = cache_misses.parse(log)
+        self.assertEqual((e["cls"], e["old_tokens"], e["lcp_est"]), ("unknown", None, None))
+
+
 if __name__ == "__main__":
     unittest.main()
