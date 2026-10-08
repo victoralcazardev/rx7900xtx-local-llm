@@ -587,6 +587,17 @@ MTP speculative decoding for Qwen4Exp ([#29761](https://github.com/ggml-org/llam
 | [halo-box/strix-llama.cpp#56](https://github.com/halo-box/strix-llama.cpp/pull/56) | RDNA3 IQ2/IQ3 MMVQ scale change ([`SOURCES.md`](SOURCES.md)). Moved from STATUS 2026-10-02. | Not in upstream |
 | [BuffedMod IQ3_S quant](https://huggingface.co/tooltd/Qwen3.8-27B-GSQ-RCO-BuffedMod-GGUF) | Same quant with an upcast `output.weight` ([`SOURCES.md`](SOURCES.md)). Moved from STATUS 2026-10-02. | Model, not engine; untested here |
 
+**Check 2026-10-08 (pinned b11454; upstream b11501): stay on b11454.** None of the 47 commits in
+b11454..b11501 is HIP-specific, but 10 `ggml/src/ggml-cuda/` files change and all of them compile into the
+HIP build. Candidate for the next pin: `24e41838e` (four GDN state columns per warp,
+[#30087](https://github.com/ggml-org/llama.cpp/pull/30087)). It edits the shared `gated_delta_net.cu`
+kernel that Qwen3.8 uses, with no HIP guard (on gfx1100's wave32 each column gets 8 lanes). The PR measures
+on an RTX 4090 only: pp512 +5.5%, pp4096 +5.3%, tg128 +0.1%, unchanged PPL. The gain is prefill; at 240K the
+decode step is FlashAttention-bound, so little is expected here (hypothesis). Test it as an A/B on gfx1100
+(prefill at 4K and 240K, decode at 240K) before any pin change. #29509 is still open; its title ("server:
+don't store the draft KV in context checkpoints") is consistent with `STATUS.md`, where `hip-kvmix` is the
+local build label ([`ENGINES.md`](ENGINES.md)), not the PR's name.
+
 These items are watchlist candidates only; this document does not assert whether any is included in
 the current b11160 binary. Reassess only after a compatible build is available and benchmarked on
 the adopted Qwen profile.
