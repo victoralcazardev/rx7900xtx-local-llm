@@ -7,6 +7,7 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- Reviewed glm53-flash-offload (GLM-5.3-Flash with a VRAM/RAM/NVMe expert cache): CUDA only and sized for 55+ GiB RAM; not applicable ([`docs/SOURCES.md`](docs/SOURCES.md#ideas-for-future-moe-models-not-pursued-2026-09-29)).
 - Strata v0.1.41 / Flash-Next RAM budget re-check: the resident copy is sized from `MemAvailable`, so on 31.25 GiB only the Coder IQ1_M fits at long context; llama.cpp b11501 check keeps the b11454 pin ([`docs/models/strata-flash-next.md`](docs/models/strata-flash-next.md#review-2026-10-08-releases-amd-notes-and-ram-budget)).
 - `scripts/cache_misses.py` classifies prompt-cache reuse per request from a server log: full, partial, compaction, miss, LRU, unknown ([`docs/measurements/agent-traffic.md`](docs/measurements/agent-traffic.md#first-session-after-the-compaction-change-2026-10-03-evening-single-session)).
 - Classified the first session after the compaction change (2026-10-03): bootstrap-extension misses and one inferred local compaction-summary fallback ([`docs/measurements/agent-traffic.md`](docs/measurements/agent-traffic.md#first-session-after-the-compaction-change-2026-10-03-evening-single-session)).

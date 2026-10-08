@@ -298,3 +298,15 @@ All claims below are the authors' own and are unverified here.
   engine sizes the copy from `MemAvailable` minus 4 GiB), hypothesis for this machine, where the computed
   budget only fits Q2_0 at 32K and the Coder at any depth.
   Details in [`docs/models/strata-flash-next.md`](models/strata-flash-next.md#review-2026-10-08-releases-amd-notes-and-ram-budget).
+- **[sybil-solutions/glm53-flash-offload](https://github.com/sybil-solutions/glm53-flash-offload)
+  (checked 2026-10-08, README only)**: GLM-5.3-Flash EXL3 3.05 bpw (125 GB; 42 MoE layers x 288
+  experts, 8 active, 9.4 MB per expert) on one 24 GB RTX 3090, built on exllamav3 + an SGLang
+  base image (Docker, NVIDIA container toolkit; no ROCm path). Three-tier expert cache: ~1,300
+  hottest experts in VRAM (12.4 GB), a pinned RAM tier sized by `--memory`, all experts on NVMe
+  (117 GB, O_DIRECT), plus a 22-thread AVX2 CPU lane computing RAM experts in place. Claimed
+  decode (1 user): all-RAM `fast` (~218 GiB RAM) 28.2 tok/s; `nvme` 55 GiB 17.3; `nvme` 16 GiB
+  12.9; `nvme-exact` 8.3; prefill only at 8K/32K, no maximum context stated. Test rig: EPYC 7443P,
+  8-channel DDR4, 4x Samsung 9100 PRO (PCIe 5.0) in RAID0. Status: source-checked (README), speed
+  numbers claimed by the author. Not applicable here: CUDA only; 31 GiB RAM allows only the 16 GiB
+  mode, and our single PCIe 4.0 NVMe (KIOXIA Exceria Plus G3) would likely cut it to a few tok/s
+  (estimate, unmeasured). Useful as a reference for decode vs. RAM-tier size in an expert cache.
