@@ -7,6 +7,7 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- Strata v0.1.41 / Flash-Next RAM budget re-check: the resident copy is sized from `MemAvailable`, so on 31.25 GiB only the Coder IQ1_M fits at long context; llama.cpp b11501 check keeps the b11454 pin ([`docs/models/strata-flash-next.md`](docs/models/strata-flash-next.md#review-2026-10-08-releases-amd-notes-and-ram-budget)).
 - `scripts/cache_misses.py` classifies prompt-cache reuse per request from a server log: full, partial, compaction, miss, LRU, unknown ([`docs/measurements/agent-traffic.md`](docs/measurements/agent-traffic.md#first-session-after-the-compaction-change-2026-10-03-evening-single-session)).
 - Classified the first session after the compaction change (2026-10-03): bootstrap-extension misses and one inferred local compaction-summary fallback ([`docs/measurements/agent-traffic.md`](docs/measurements/agent-traffic.md#first-session-after-the-compaction-change-2026-10-03-evening-single-session)).
 - Measured a `-DGGML_LTO=ON` build of b11454: all deltas within ±0.6%, `libggml-hip.so` byte-identical; not adopted ([`results/20261006-t12-lto-b11454/`](results/20261006-t12-lto-b11454/README.md)).

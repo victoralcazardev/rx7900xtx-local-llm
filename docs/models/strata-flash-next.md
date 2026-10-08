@@ -1,4 +1,4 @@
-# Qwen3.8-Flash-Next via Strata: evaluation note (2026-09-29, reviewed again 2026-10-06)
+# Qwen3.8-Flash-Next via Strata: evaluation note (2026-09-29, reviewed again 2026-10-06 and 2026-10-08)
 
 **Status: not adopted, not measured on this hardware.** A desk review of upstream claims against
 upstream's own docs and code, to decide whether an on-hardware trial is worth it. Nothing in
@@ -29,8 +29,9 @@ consumer GPU plus system RAM:
   KV cache, and an expert cache filled with the most-used experts.
 - **RAM**: every expert, pinned; the CPU computes experts missing from VRAM in parallel with the
   GPU.
-- **Disk**: shard 2 of the GGUF, a 28.8 GB n-gram/PLE lookup table, "read a few rows per token
-  through the OS cache" (Strata `docs/DETAILS.md`). An NVMe SSD is strongly recommended upstream.
+- **Disk**: shard 2 of the GGUF, a 28.8 GB n-gram/PLE lookup table, "a few rows per token, read
+  unbuffered past the OS cache (`--ple-io direct`, the default ...)" (Strata `docs/DETAILS.md`, v0.1.41).
+  An NVMe SSD is strongly recommended upstream.
 
 It does **not** run in this repository's `llama-server` binaries. The GGUF alone is not enough:
 Strata's setup also builds a native pack (`tools/iq_pack.py`), an MTP runtime and uses a
@@ -60,7 +61,7 @@ second. Enable KV Cache - k8v4 for +10% boost in performance with no quality los
   GPU holds all Coder experts (RTX 5090, 32 GB). With a smaller GPU "most experts come from the
   SSD and it is much slower".
 - On a 24 GB card, non-expert weights and the KV cache also use VRAM, so part of the experts
-  comes from the page cache or disk; that page cache is shared with the 28.8 GB n-gram table.
+  comes from the page cache or disk (the n-gram table bypasses the page cache, see above).
   **Not measured** by upstream for this combination.
 - **Disk**: needs roughly 30 GB (shard 1) + 29 GB (shard 2) + 23 GB (`experts.bin`) + ~6 GB
   (MTP layer) on an **NVMe SSD**. A rotational HDD is ruled out: the access pattern is random
@@ -107,8 +108,8 @@ None of this transfers to `qwen38-iq3s-mtp` / `262k-q8q51-mtp`:
 
 ## Decision criterion for an on-hardware trial
 
-The current 27B profile already does **68.9 tok/s at empty context** and **23.3 tok/s at 240K
-fill** (see [`STATUS.md`](../STATUS.md)). Upstream's best AMD figure for Flash-Next (55-59 tok/s,
+The current 27B profile already does **68.9 tok/s at empty context** and **25.9 / 45.9 / 19.3 tok/s
+(essay/copy/code) at 240K fill** (b11454; see [`STATUS.md`](../STATUS.md)). Upstream's best AMD figure for Flash-Next (55-59 tok/s,
 4-9K prompts, 64 GiB RAM) is below the 27B's empty-context speed. A trial is only worth
 integrating if, on this hardware, the Coder IQ1_M in low-RAM mode on NVMe:
 
@@ -184,3 +185,91 @@ stand.
 - The transferable lesson is the method: PR #786 found the gain by measuring the attention share
   of prefill time at depth. The same split has not been measured for this profile at 240K, where
   prefill runs at 380 tok/s.
+
+## Review 2026-10-08: releases, AMD notes, and RAM budget
+
+Desk review of upstream releases plus a local `/proc/meminfo` read. Nothing run on this machine.
+
+**Upstream releases (Niko1221/Strata).** v0.1.40.1 (2026-10-06) narrows the tool-call rescue from
+thinking; Python only. v0.1.40.2 adds Intel Arc and multi-GPU gains; its default answers are
+byte-identical to v0.1.40. v0.1.40.3 fixes Intel and Windows AMD. v0.1.40.4 fixes Pascal decode.
+v0.1.41 (2026-10-08, latest) targets multi-GPU, NVIDIA short prompts and Windows with low RAM. Its
+release tables show no gfx1100 decode change; the one Radeon row is an R9700 with decode "equal".
+Two defaults change in v0.1.41: `--batch` on a layer split runs one group per GPU, and short prompt
+chunks on one NVIDIA GPU use the CPU for some experts, which changes the last bits of the output.
+
+**AMD notes (`docs/AMD_HIP.md`, v0.1.41).** With `--resident-experts`, the start log prints how many
+of the prompt path's lendable slots keep their experts in RAM (`N of M`). Uncovered experts are read
+from the pack during the prompt. Reporter on an RX 7900 XTX (gfx1100, v0.1.40.2, 50 GB RAM), 74K
+prompt: 2,583 tok/s with 6201 of 6201 covered; 1,810 tok/s with 5093 of 6202. The "925 to 2,503
+tok/s" chain (`--resident-experts` is the 1,092 to 2,503 step) is the reporter's and is not re-measured
+upstream. Status: hypothesis here.
+
+**Fork (xyzzing/Strata).** Latest release is still v0.1.39-rocm.1 (2026-10-06); main has commits up
+to 2026-10-07. `compare` against upstream v0.1.40 finds no common ancestor, so the fork is not rebased
+and upstream fixes have to be ported by hand.
+
+**RAM budget (corrected later on 2026-10-08).** Strata sizes the resident set from `MemAvailable` at
+engine start minus `STRATA_RESIDENT_HEADROOM_GIB` (default 4 GiB; setup's tip is 6 GiB on PCs with 48 GB
+of RAM or less): upstream `docs/AMD_HIP.md` (v0.1.41) and `setup.py` (`bench_tips`). A first draft of this
+section used `MemTotal - AnonPages - Shmem` (16.0 GiB budget), which overstates it: `MemAvailable` also
+excludes kernel memory and reserves. Measured 2026-10-08, desktop open, no `llama-server` running:
+
+- `MemAvailable` 19,879,752 kB (18.96 GiB); `AnonPages` + `Shmem` 9.63 GiB, a 2.66 GiB gap to
+  `MemTotal - MemAvailable`.
+- Budget for experts in RAM: **14.96 GiB** at 4 GiB headroom, **12.96 GiB** at 6 GiB. It moves with
+  whatever else runs (QtWebEngine alone was 3.2 GiB RSS at one check), so read it right before a start.
+
+**RAM needed (upstream setup heuristic; computed, not measured).** The RAM copy holds the experts the GPU
+cache does not. `setup.py` estimates the GPU share as VRAM - 5 GB (dense weights, buffers, 32K of KV) minus
+the KV beyond 32K (13 layers x 1,056 B per token at int8; in the low-RAM mode the KV stays in VRAM). The
+base is the pack's expert arena (`MODELS` in `setup.py`), not shard 1, which also holds non-expert weights;
+the first draft's 18.2 GiB subtracted the GPU share from shard 1.
+
+| Quant | Expert arena (setup, GB) | RAM need at 32K | at 128K | at 262K |
+|---|---:|---:|---:|---:|
+| Q2_0 | 34.0 | 14.0 GiB | 15.2 GiB | 16.9 GiB |
+| IQ2_XS | 35.5 | 15.4 GiB | 16.6 GiB | 18.3 GiB |
+| IQ3_XXS | 42.9 | 22.3 GiB | 23.5 GiB | 25.2 GiB |
+| Coder IQ1_M | 23.4 | 4.1 GiB | 5.4 GiB | 7.0 GiB |
+
+The table assumes Strata gets the whole 24 GB card. The desktop held 1.54 GiB of VRAM at the check and
+upstream recommends `--vram-reserve-mib 3072` on a Linux desktop, which moves roughly 1.5-3 GB more into
+RAM (hypothesis). Setup's own check (`ram >= rest + 10`) picks the resident variant for Q2_0 and IQ2_XS even
+at 262K; the engine then falls back to the mapped mode at start when the budget is short, so only the start
+log settles it.
+
+Reading against the budget: Q2_0 fits at 32K only with 4 GiB headroom and not at 128K or deeper with the
+desktop open; IQ2_XS is worse; IQ3_XXS never fits; the Coder fits at every depth with at least 5.9 GiB of
+margin. This replaces the 2026-09-30 figure of "~12 GB of experts in RAM" for the Coder (taken from shard 1)
+and its IQ2_XS exclusion reasoning (the conclusion for IQ2_XS stands).
+
+**Host limits not covered by upstream's data.**
+
+- **CPU**: Ryzen 7 5700X (Zen 3, AVX2, no AVX-512; AM4, so DDR4). Every upstream gfx1100 figure comes from
+  Zen 4 AVX-512 hosts with 50-96 GB of RAM (Ryzen 9 7900X, 7950X3D). The CPU computes the experts missing
+  from VRAM, so decode here can stay below upstream's 59-65 tok/s even when the model fits (hypothesis).
+- **Pageable copy**: on ROCm setup writes `STRATA_RESIDENT_PIN=0` (`setup.py`), so the copy is ordinary
+  anonymous memory. This machine has a 31.3 GiB zram swap at swappiness 150 (measured): under pressure the
+  kernel can move resident experts to zram, which the `resident RAM: ... blob reads from the file` line does
+  not count. `docs/AMD_HIP.md` also reports GPU queue stalls while the kernel reclaims host pages pinned
+  through KFD userptr (one-machine reports, cause not confirmed).
+- **PLE**: the n-gram table is read with `--ple-io direct` (the default, unbuffered past the OS cache,
+  `docs/DETAILS.md`). It does not compete for page cache, but it reads the SSD every token by design, so
+  "0 SSD reads" means 0 expert blob reads plus 0 swap-in, not zero disk I/O.
+- **Quality bench**: `bench/longctx_quality.py` launches `llama-server` and uses `/tokenize`, `/completion`
+  and `timings`. Strata's server exposes none of them (`/v1/chat/completions`, `/v1/messages`,
+  `/v1/responses`), so a quality pass on Strata needs an adapter first.
+
+**Trial plan (proposal, not adopted).** The comparison that matters is depth: Strata's decode is nearly flat
+in context, while the 27B runs 25.9 / 45.9 / 19.3 tok/s (essay/copy/code) at 240K
+([`STATUS.md`](../STATUS.md)). Model: the Coder IQ1_M, the only quant whose resident variant fits with
+margin, so the trial measures the resident path and not the mapped fallback. Each step stops the trial on
+failure:
+
+1. Read `MemAvailable` and VRAM use with desktop applications closed (no download).
+2. Strata v0.1.41 with the Coder: the start log shows the resident variant, `N of M` lendable slots with
+   N = M, 0 blob reads per request; `pswpin` in `/proc/vmstat` does not move; no `verify: timed out`.
+3. Decode on real coding requests at 4K, 128K and 240K, temperature 0: more than 60 tok/s at 4K, more than
+   45 tok/s at 128K and deeper, and above the 27B's 19.3 tok/s code row at 240K.
+4. Quality: adapt `bench/longctx_quality.py` to Strata's API and match the 27B's results.

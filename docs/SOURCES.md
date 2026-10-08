@@ -289,3 +289,12 @@ All claims below are the authors' own and are unverified here.
   repeated short request, 96 GB RAM). Its "+22.8% prefill" is source-checked but replaces a
   fallback llama.cpp does not have. Details in
   [`docs/models/strata-flash-next.md`](models/strata-flash-next.md#review-2026-10-06-v0140-and-the-xyzzing-gfx1100-fork).
+- **Update 2026-10-08 (upstream v0.1.40.1 to v0.1.41)**: `docs/AMD_HIP.md` reports a 74K prompt on an
+  RX 7900 XTX (gfx1100, reporter's run): 2,583 tok/s with the lend-coverage line complete (6201 of 6201),
+  1,810 tok/s with it short (5093 of 6202). Status: reporter-measured, hypothesis here; mechanism
+  source-checked. The "925 to 2,503 tok/s" chain is also reporter-measured and not re-measured upstream.
+  "A 32 GB PC with a 24 GB GPU runs Q2_0, IQ2_XS and the Coder resident (~16-18 GB of experts in RAM, the
+  GPU holds ~18 GB)" (`docs/DETAILS.md`): source-checked as setup's own heuristic (VRAM - 5 GB at 32K; the
+  engine sizes the copy from `MemAvailable` minus 4 GiB), hypothesis for this machine, where the computed
+  budget only fits Q2_0 at 32K and the Coder at any depth.
+  Details in [`docs/models/strata-flash-next.md`](models/strata-flash-next.md#review-2026-10-08-releases-amd-notes-and-ram-budget).
