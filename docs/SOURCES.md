@@ -250,6 +250,19 @@ Checked for one gfx1100 at 200K-262K context. No run.
 | BeeLlama: the only release after the tested v0.4.7 is preview-v0.4.8 (2026-10-01), an upstream sync still built with ROCm 7.2 | [Anbeeld/beellama.cpp](https://github.com/Anbeeld/beellama.cpp) | 2026-10-01 | source-checked (release list) | v0.4.7 measured 2026-09-26 ([TRIED.md](TRIED.md)) |
 | KVarN (Huawei, arXiv 2606.03458): at 262,144 tokens kvarn5/kvarn4 KV would take 4,992 MiB vs. 7,424 MiB for our `q8_0`/`q5_1` | [author article](https://anbeeld.com/articles/kvarn-kv-cache-implementation-and-benchmarks) | 2026-10 | source-checked (sizes computed for this model) | KLD measured 2026-09-26 (~2.7x q8/q8); speed screen 2026-10-03: tg64 @128K 10.53 vs. 16.64 tok/s for `hip-kvmix` q8_0/q5_1 (-37%), rejected — [`results/20261003-kvarn-beellama-screen/`](../results/20261003-kvarn-beellama-screen/README.md) |
 
+## awesome-local-ai catalog (2026-10-10)
+
+[SeraphimSerapis/awesome-local-ai](https://github.com/SeraphimSerapis/awesome-local-ai) @ `35affc47b0`
+lists about 30 projects, mostly for Apple Silicon/MLX, DGX Spark/GB10 or CUDA. Read the README only;
+no project was cloned or run.
+
+| Claim | Source | Date | Status | Own test |
+|---|---|---|---|---|
+| Evaluates tool-calling quality against a self-hosted OpenAI-compatible endpoint with deterministic mock-tool scenarios and conversation traces; difficulty tiers are author estimates, localization is German-focused | [SeraphimSerapis/tool-eval-bench](https://github.com/SeraphimSerapis/tool-eval-bench) | 2026-10-10 | source-checked (catalog entry only) | none. Open lead: the repo measures speed and cache reuse but no agent-quality parity; candidate check for quants and `q8_0` vs. `f16` KV |
+| Measures prompt processing and token generation at several context depths through the server API | [eugr/llama-benchy](https://github.com/eugr/llama-benchy) | 2026-10-10 | source-checked (catalog entry only) | none; our protocol uses `llama-bench` ([`sop/measure-backend.md`](sop/measure-backend.md)) |
+| Serving benchmark with prose, code, structured output, cache tests and concurrent requests | [alexellis/rigmark](https://github.com/alexellis/rigmark) | 2026-10-10 | source-checked (catalog entry only) | none; overlaps llama-benchy |
+| DwarfStar / ds4, TensorFold, Splash, mlx-serve, oMLX, boots, Spark/GB10 tools, MCP servers and skills | catalog README | 2026-10-10 | not applicable (ds4 needs its own GGUF files and targets 96+ GB Macs; TensorFold and the MLX servers have no AMD path; boots is host bootstrapping with no license) | none. Strata is tracked in [Ideas for future MoE models](#ideas-for-future-moe-models-not-pursued-2026-09-29) |
+
 ## Not pursued
 
 - `unsloth/Qwen3.8-27B-GGUF` `UD-IQ3_S` (12 GB) as an alternative quant — candidate for a
