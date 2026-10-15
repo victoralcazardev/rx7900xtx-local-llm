@@ -1,0 +1,84 @@
+out 15 17:29:22.883329 host kernel: amdgpu 0000:0c:00.0: VM memory stats for proc (0) task (0) is non-zero when fini
+out 15 17:29:22.883645 host kernel: amdgpu 0000:0c:00.0: VM memory stats for proc (0) task (0) is non-zero when fini
+out 15 17:29:22.907985 host kernel: amdgpu 0000:0c:00.0: VM memory stats for proc Xwayland(2509318) task Xwayland:cs0(2509312) is non-zero when fini
+out 15 17:29:23.089981 host kernel: amdgpu 0000:0c:00.0: VM memory stats for proc vocalinux(2534735) task Thread-5 (_perf(2509697) is non-zero when fini
+out 15 17:29:23.179416 host kernel: amdgpu 0000:0c:00.0: [drm] REG_WAIT timeout 1us * 100 tries - dcn32_program_compbuf_size line:147
+out 15 17:29:23.234983 host kernel: amdgpu 0000:0c:00.0: VM memory stats for proc com.vixalien.st(2518054) task com.vixalien.st(2518054) is non-zero when fini
+out 15 17:29:23.360984 host kernel: amdgpu 0000:0c:00.0: VM memory stats for proc kwin_wayland(2509254) task kwin_wayla:cs0(2509244) is non-zero when fini
+out 15 17:29:24.765436 host kernel: amdgpu 0000:0c:00.0: VM memory stats for proc brave(2521214) task brave:cs0(2521201) is non-zero when fini
+out 15 17:29:26.508145 host kernel: kswapd0 invoked oom-killer: gfp_mask=0xcc0(GFP_KERNEL), order=0, oom_score_adj=0
+out 15 17:29:26.508331 host kernel: CPU: 11 UID: 0 PID: 141 Comm: kswapd0 Not tainted 7.2.9-2-cachyos #1 PREEMPT(full)  73865583327a74ff18b44e6b864a636566f79bf7
+out 15 17:29:26.526352 host kernel:  oom_kill_process+0x18e/0x1f0
+out 15 17:29:26.526438 host kernel:  kswapd+0x10d7/0x1d80
+out 15 17:29:26.526648 host kernel:  ? __pfx_kswapd+0x10/0x10
+out 15 17:29:26.526946 host kernel: Mem-Info:
+out 15 17:29:26.526954 host kernel: active_anon:15455 inactive_anon:9882 isolated_anon:0
+out 15 17:29:26.526966 host kernel: Node 0 active_anon:61820kB inactive_anon:39528kB active_file:54592kB inactive_file:156892kB unevictable:94932kB isolated(anon):0kB isolated(file):0kB mapped:95220kB dirty:424kB writeback:400kB shmem:7076kB shmem_thp:0kB shmem_pmdmapped:0kB anon_thp:0kB kernel_stack:20544kB pagetables:68512kB sec_pagetables:4580kB all_unreclaimable? no Balloon:0kB gpu_active:10939860kB gpu_reclaim:4kB
+out 15 17:29:26.527000 host kernel: Node 0 DMA free:11276kB boost:0kB min:28kB low:40kB high:52kB reserved_highatomic:0KB free_highatomic:0KB active_anon:0kB inactive_anon:0kB active_file:0kB inactive_file:0kB unevictable:0kB writepending:0kB zspages:0kB present:15996kB managed:15372kB mlocked:0kB bounce:0kB free_pcp:0kB local_pcp:0kB free_cma:0kB
+out 15 17:29:26.527031 host kernel: Node 0 DMA32 free:122724kB boost:0kB min:6076kB low:9016kB high:11956kB reserved_highatomic:0KB free_highatomic:0KB active_anon:3400kB inactive_anon:5392kB active_file:1872kB inactive_file:26948kB unevictable:0kB writepending:184kB zspages:710244kB present:3061084kB managed:2995008kB mlocked:0kB bounce:0kB free_pcp:0kB local_pcp:0kB free_cma:0kB
+out 15 17:29:26.527049 host kernel: Node 0 Normal free:61928kB boost:0kB min:61472kB low:91224kB high:120976kB reserved_highatomic:2048KB free_highatomic:304KB active_anon:57372kB inactive_anon:34168kB active_file:52728kB inactive_file:129816kB unevictable:94932kB writepending:500kB zspages:18699908kB present:30395904kB managed:29763708kB mlocked:0kB bounce:0kB free_pcp:496kB local_pcp:0kB free_cma:0kB
+out 15 17:29:26.527115 host kernel: 66 pages in swap cache
+out 15 17:29:26.527122 host kernel: Free swap  = 10541684kB
+out 15 17:29:26.527128 host kernel: Total swap = 32773116kB
+out 15 17:29:26.528186 host kernel: [  pid  ]   uid  tgid total_vm      rss rss_anon rss_file rss_shmem pgtables_bytes swapents oom_score_adj name
+out 15 17:29:26.528356 host kernel: [    898]   976   898     2553      796       65      731         0    61440      120          -900 systemd-oomd
+out 15 17:29:26.529874 host kernel: oom-kill:constraint=CONSTRAINT_NONE,nodemask=(null),cpuset=/,mems_allowed=0,global_oom,task_memcg=/system.slice/system-systemd\x2dcoredump.slice/systemd-coredump@17-32771-2547021_2544598-0.service,task=systemd-coredum,pid=2547033,uid=0
+out 15 17:29:26.529886 host kernel: Out of memory: Killed process 2547033 (systemd-coredum) total-vm:9692kB, anon-rss:716kB, file-rss:4488kB, shmem-rss:0kB, UID:0 pgtables:72kB oom_score_adj:500
+out 15 17:29:26.529897 host kernel: kswapd0 invoked oom-killer: gfp_mask=0xcc0(GFP_KERNEL), order=0, oom_score_adj=0
+out 15 17:29:26.529913 host kernel: CPU: 11 UID: 0 PID: 141 Comm: kswapd0 Not tainted 7.2.9-2-cachyos #1 PREEMPT(full)  73865583327a74ff18b44e6b864a636566f79bf7
+out 15 17:29:26.529991 host kernel:  oom_kill_process+0x18e/0x1f0
+out 15 17:29:26.530015 host kernel:  kswapd+0x10d7/0x1d80
+out 15 17:29:26.530075 host kernel:  ? __pfx_kswapd+0x10/0x10
+out 15 17:29:26.530145 host kernel: Mem-Info:
+out 15 17:29:26.530155 host kernel: active_anon:13120 inactive_anon:10461 isolated_anon:0
+out 15 17:29:26.530173 host kernel: Node 0 active_anon:52480kB inactive_anon:41844kB active_file:60772kB inactive_file:137092kB unevictable:94932kB isolated(anon):0kB isolated(file):0kB mapped:89012kB dirty:856kB writeback:1904kB shmem:5008kB shmem_thp:0kB shmem_pmdmapped:0kB anon_thp:0kB kernel_stack:20608kB pagetables:68580kB sec_pagetables:4580kB all_unreclaimable? no Balloon:0kB gpu_active:10955148kB gpu_reclaim:4kB
+out 15 17:29:26.530186 host kernel: Node 0 DMA free:11276kB boost:0kB min:28kB low:40kB high:52kB reserved_highatomic:0KB free_highatomic:0KB active_anon:0kB inactive_anon:0kB active_file:0kB inactive_file:0kB unevictable:0kB writepending:0kB zspages:0kB present:15996kB managed:15372kB mlocked:0kB bounce:0kB free_pcp:0kB local_pcp:0kB free_cma:0kB
+out 15 17:29:26.530207 host kernel: Node 0 DMA32 free:122464kB boost:0kB min:6076kB low:9016kB high:11956kB reserved_highatomic:0KB free_highatomic:0KB active_anon:3412kB inactive_anon:4172kB active_file:1656kB inactive_file:23560kB unevictable:0kB writepending:184kB zspages:710292kB present:3061084kB managed:2995008kB mlocked:0kB bounce:0kB free_pcp:1300kB local_pcp:0kB free_cma:0kB
+out 15 17:29:26.530231 host kernel: Node 0 Normal free:62592kB boost:0kB min:61472kB low:91224kB high:120976kB reserved_highatomic:2048KB free_highatomic:304KB active_anon:49300kB inactive_anon:37772kB active_file:58628kB inactive_file:113732kB unevictable:94932kB writepending:1676kB zspages:18701376kB present:30395904kB managed:29763708kB mlocked:0kB bounce:0kB free_pcp:2020kB local_pcp:256kB free_cma:0kB
+out 15 17:29:26.530296 host kernel: 65 pages in swap cache
+out 15 17:29:26.530303 host kernel: Free swap  = 10537560kB
+out 15 17:29:26.530310 host kernel: Total swap = 32773116kB
+out 15 17:29:26.531292 host kernel: [  pid  ]   uid  tgid total_vm      rss rss_anon rss_file rss_shmem pgtables_bytes swapents oom_score_adj name
+out 15 17:29:26.531402 host kernel: [    898]   976   898     2553      796       65      731         0    61440      120          -900 systemd-oomd
+out 15 17:29:26.532435 host kernel: oom-kill:constraint=CONSTRAINT_NONE,nodemask=(null),cpuset=/,mems_allowed=0,global_oom,task_memcg=/system.slice/system-systemd\x2dcoredump.slice/systemd-coredump@16-32770-2547022_2562851-0.service,task=systemd-coredum,pid=2547032,uid=0
+out 15 17:29:26.532443 host kernel: Out of memory: Killed process 2547032 (systemd-coredum) total-vm:9692kB, anon-rss:720kB, file-rss:4352kB, shmem-rss:0kB, UID:0 pgtables:64kB oom_score_adj:500
+out 15 17:29:26.532450 host kernel: kswapd0 invoked oom-killer: gfp_mask=0xcc0(GFP_KERNEL), order=0, oom_score_adj=0
+out 15 17:29:26.532457 host kernel: CPU: 11 UID: 0 PID: 141 Comm: kswapd0 Not tainted 7.2.9-2-cachyos #1 PREEMPT(full)  73865583327a74ff18b44e6b864a636566f79bf7
+out 15 17:29:26.537469 host kernel:  oom_kill_process+0x18e/0x1f0
+out 15 17:29:26.537483 host kernel:  kswapd+0x10d7/0x1d80
+out 15 17:29:26.537520 host kernel:  ? __pfx_kswapd+0x10/0x10
+out 15 17:29:26.537567 host kernel: Mem-Info:
+out 15 17:29:26.537574 host kernel: active_anon:10527 inactive_anon:12185 isolated_anon:0
+out 15 17:29:26.537583 host kernel: Node 0 active_anon:42108kB inactive_anon:48740kB active_file:73960kB inactive_file:120184kB unevictable:94932kB isolated(anon):0kB isolated(file):0kB mapped:86852kB dirty:816kB writeback:0kB shmem:4836kB shmem_thp:0kB shmem_pmdmapped:0kB anon_thp:0kB kernel_stack:20608kB pagetables:68580kB sec_pagetables:4580kB all_unreclaimable? no Balloon:0kB gpu_active:10964532kB gpu_reclaim:4kB
+out 15 17:29:26.537594 host kernel: Node 0 DMA free:11276kB boost:0kB min:28kB low:40kB high:52kB reserved_highatomic:0KB free_highatomic:0KB active_anon:0kB inactive_anon:0kB active_file:0kB inactive_file:0kB unevictable:0kB writepending:0kB zspages:0kB present:15996kB managed:15372kB mlocked:0kB bounce:0kB free_pcp:0kB local_pcp:0kB free_cma:0kB
+out 15 17:29:26.537609 host kernel: Node 0 DMA32 free:121960kB boost:0kB min:6076kB low:9016kB high:11956kB reserved_highatomic:0KB free_highatomic:0KB active_anon:2872kB inactive_anon:4348kB active_file:876kB inactive_file:23516kB unevictable:0kB writepending:0kB zspages:710360kB present:3061084kB managed:2995008kB mlocked:0kB bounce:0kB free_pcp:752kB local_pcp:0kB free_cma:0kB
+out 15 17:29:26.537624 host kernel: Node 0 Normal free:62412kB boost:0kB min:61472kB low:91224kB high:120976kB reserved_highatomic:2048KB free_highatomic:304KB active_anon:39700kB inactive_anon:44280kB active_file:72484kB inactive_file:96960kB unevictable:94932kB writepending:0kB zspages:18701892kB present:30395904kB managed:29763708kB mlocked:0kB bounce:0kB free_pcp:1784kB local_pcp:0kB free_cma:0kB
+out 15 17:29:26.537684 host kernel: 54 pages in swap cache
+out 15 17:29:26.537690 host kernel: Free swap  = 10535644kB
+out 15 17:29:26.537697 host kernel: Total swap = 32773116kB
+out 15 17:29:26.538715 host kernel: [  pid  ]   uid  tgid total_vm      rss rss_anon rss_file rss_shmem pgtables_bytes swapents oom_score_adj name
+out 15 17:29:26.538826 host kernel: [    898]   976   898     2553      796       65      731         0    61440      120          -900 systemd-oomd
+out 15 17:29:26.539892 host kernel: oom-kill:constraint=CONSTRAINT_NONE,nodemask=(null),cpuset=/,mems_allowed=0,global_oom,task_memcg=/system.slice/system-systemd\x2dcoredump.slice/systemd-coredump@15-16393-2547023_2562852-0.service,task=systemd-coredum,pid=2547031,uid=0
+out 15 17:29:26.539899 host kernel: Out of memory: Killed process 2547031 (systemd-coredum) total-vm:9692kB, anon-rss:720kB, file-rss:4360kB, shmem-rss:0kB, UID:0 pgtables:56kB oom_score_adj:500
+out 15 17:29:26.539907 host kernel: kswapd0 invoked oom-killer: gfp_mask=0xcc0(GFP_KERNEL), order=0, oom_score_adj=0
+out 15 17:29:26.539913 host kernel: CPU: 11 UID: 0 PID: 141 Comm: kswapd0 Not tainted 7.2.9-2-cachyos #1 PREEMPT(full)  73865583327a74ff18b44e6b864a636566f79bf7
+out 15 17:29:26.539954 host kernel:  oom_kill_process+0x18e/0x1f0
+out 15 17:29:26.539967 host kernel:  kswapd+0x10d7/0x1d80
+out 15 17:29:26.540018 host kernel:  ? __pfx_kswapd+0x10/0x10
+out 15 17:29:26.540062 host kernel: Mem-Info:
+out 15 17:29:26.540068 host kernel: active_anon:10209 inactive_anon:11366 isolated_anon:0
+out 15 17:29:26.540076 host kernel: Node 0 active_anon:40836kB inactive_anon:45464kB active_file:57148kB inactive_file:134948kB unevictable:94932kB isolated(anon):0kB isolated(file):0kB mapped:85760kB dirty:816kB writeback:0kB shmem:4836kB shmem_thp:0kB shmem_pmdmapped:0kB anon_thp:0kB kernel_stack:20608kB pagetables:68580kB sec_pagetables:4580kB all_unreclaimable? no Balloon:0kB gpu_active:10971812kB gpu_reclaim:4kB
+out 15 17:29:26.540086 host kernel: Node 0 DMA free:11276kB boost:0kB min:28kB low:40kB high:52kB reserved_highatomic:0KB free_highatomic:0KB active_anon:0kB inactive_anon:0kB active_file:0kB inactive_file:0kB unevictable:0kB writepending:0kB zspages:0kB present:15996kB managed:15372kB mlocked:0kB bounce:0kB free_pcp:0kB local_pcp:0kB free_cma:0kB
+out 15 17:29:26.540100 host kernel: Node 0 DMA32 free:122880kB boost:0kB min:6076kB low:9016kB high:11956kB reserved_highatomic:0KB free_highatomic:0KB active_anon:2688kB inactive_anon:4164kB active_file:1252kB inactive_file:23616kB unevictable:0kB writepending:0kB zspages:710360kB present:3061084kB managed:2995008kB mlocked:0kB bounce:0kB free_pcp:0kB local_pcp:0kB free_cma:0kB
+out 15 17:29:26.540114 host kernel: Node 0 Normal free:63896kB boost:0kB min:61472kB low:91224kB high:120976kB reserved_highatomic:2048KB free_highatomic:304KB active_anon:38500kB inactive_anon:41004kB active_file:55756kB inactive_file:111392kB unevictable:94932kB writepending:0kB zspages:18701892kB present:30395904kB managed:29763708kB mlocked:0kB bounce:0kB free_pcp:904kB local_pcp:0kB free_cma:0kB
+out 15 17:29:26.540172 host kernel: 54 pages in swap cache
+out 15 17:29:26.540178 host kernel: Free swap  = 10535208kB
+out 15 17:29:26.540185 host kernel: Total swap = 32773116kB
+out 15 17:29:26.541182 host kernel: [  pid  ]   uid  tgid total_vm      rss rss_anon rss_file rss_shmem pgtables_bytes swapents oom_score_adj name
+out 15 17:29:26.541296 host kernel: [    898]   976   898     2553      796       65      731         0    61440      120          -900 systemd-oomd
+out 15 17:29:26.542280 host kernel: oom-kill:constraint=CONSTRAINT_NONE,nodemask=(null),cpuset=/,mems_allowed=0,global_oom,task_memcg=/user.slice/user-1000.slice/user@1000.service/app.slice/app-Alacritty@b89aa0d1b1e2412ebfc82fe7c459f3cd.service,task=strata,pid=2545127,uid=1000
+out 15 17:29:26.542288 host kernel: Out of memory: Killed process 2545127 (strata) total-vm:66178900kB, anon-rss:135192kB, file-rss:3244kB, shmem-rss:0kB, UID:1000 pgtables:22060kB oom_score_adj:200
+out 15 17:29:31.313366 host kernel: oom_reaper: unable to reap pid:2545127 (strata)
+out 15 17:29:32.600039 host kernel: amdgpu 0000:0c:00.0: [drm] *ERROR* Not enough memory for command submission!
+out 15 17:29:32.650018 host kernel: amdgpu 0000:0c:00.0: [drm] *ERROR* Not enough memory for command submission!
+out 15 17:29:32.888006 host kernel: amdgpu 0000:0c:00.0: VM memory stats for proc plasmashell(2509585) task plasmashel:cs0(2509455) is non-zero when fini

@@ -291,8 +291,10 @@ Evidence: [`results/20261015-strata-coder-first-run/`](../../results/20261015-st
 
 ### Next iteration (goal: the longest context that keeps quality)
 
-1. Free RAM first (close browser/Electron apps/idle CLIs; `MemAvailable` ≥ 16 GiB, ideally 20+), then re-run
-   128K int8 with `STRATA_RESIDENT_HEADROOM_GIB=6` and a ~120K prompt; confirm no `stall report`, swap flat.
+1. Free RAM first (close browser/Electron apps/idle CLIs, empty `/tmp`, which is a tmpfs; `MemAvailable` ≥ 16
+   GiB, ideally 20+), then re-run 128K int8 with a ~120K prompt; confirm no `stall report`, swap flat. The
+   2026-10-15 restart OOM'd while idle ([`results/20261015-strata-coder-idle-oom/`](../../results/20261015-strata-coder-idle-oom/README.md)):
+   the headroom sizes the copy from free RAM, so fix it with `--resident-budget-gib N` and log `GPUActive`.
 2. Step context up with RAM free: 200K (`--context 204800`, inside the trained 262K) int8, then 262K int8.
    Pass = no stall, `pswpin` flat, decode > 45 tok/s at 128K+ fill. Record `experts in RAM` and VRAM free.
 3. Only if RAM allows: `--kv-streaming on` (upstream: ~1.8 GiB RAM at 128K, ~3.6 GiB at 262K) keeps the KV off

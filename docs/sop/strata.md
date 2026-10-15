@@ -40,11 +40,14 @@ check the JSON after every setup run.
 A small wrapper (machine-local, not in this repo) does start/stop: `qwen-flash` starts it, `qwen-flash stop`
 stops it. Its logic, so it can be rebuilt:
 
-1. Stop a `llama-server` on `:8080` if one runs (`ia` uses the same port).
-2. Refuse to start below 16 GiB of `MemAvailable` (experts in RAM + headroom + server) and list the biggest
-   processes; `--force` overrides. Below this a long prompt OOM-killed the desktop (see results).
-3. Start `run-coder-iq1_m.sh` detached and poll `http://127.0.0.1:8080/v1/models` until it answers (~35-45 s).
-4. Stop: `SIGTERM` to `serve/server.py`, which also ends the `engine/strata` child; `SIGKILL` after 30 s.
+1. Refuse to start when `/tmp` is a tmpfs holding more than 2 GiB, and list its biggest files (never delete
+   them). tmpfs files live in RAM until deleted; under pressure they go to zram, which is RAM as well, and
+   video barely compresses: 8 GiB of test renders left there fed an idle OOM (see "Before you start").
+2. Stop a `llama-server` on `:8080` if one runs (`ia` uses the same port).
+3. Refuse to start below 16 GiB of `MemAvailable` (experts in RAM + headroom + server) and list the biggest
+   processes; `--force` overrides both checks. Below this a long prompt OOM-killed the desktop (see results).
+4. Start `run-coder-iq1_m.sh` detached and poll `http://127.0.0.1:8080/v1/models` until it answers (~35-45 s).
+5. Stop: `SIGTERM` to `serve/server.py`, which also ends the `engine/strata` child; `SIGKILL` after 30 s.
 
 Update: `cd <clone> && ./update.sh` (git pull + engine rebuild when needed; models untouched), then re-check
 the config JSON.
@@ -61,3 +64,8 @@ engine you started. The response carries `reasoning_content`; reasoning effort (
 The Coder needs ~7.75 GiB of experts copied into RAM at 128K int8, plus the 6 GiB headroom. Close browsers,
 Electron apps and idle agent CLIs first. Check the start log for
 `resident RAM mode: ... GiB of experts in RAM` and, during long prompts, for `stall report` lines.
+
+16 GiB is not enough on its own (2026-10-15, [`results/20261015-strata-coder-idle-oom/`](../../results/20261015-strata-coder-idle-oom/README.md)):
+the copy is sized as `MemAvailable` minus the headroom, so it grows with free RAM (9.05 GiB from 16.3 GiB
+available), and the kernel OOM killer fired with no request sent. Check `/tmp` (`df -h /tmp`) and zram
+(`zramctl`) too: `MemAvailable` does not count what they hold as free.
