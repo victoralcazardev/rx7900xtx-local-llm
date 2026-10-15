@@ -1,6 +1,7 @@
 # Qwen3.8-Flash-Next via Strata: evaluation note (2026-09-29, reviewed again 2026-10-06 and 2026-10-08)
 
-**Status: not adopted, not measured on this hardware.** A desk review of upstream claims against
+**Status (2026-10-15): installed as an optional second engine, not the default; quality not measured.** First
+run and setup below ([first run](#first-run-2026-10-15-v01441-coder-iq1_m)). Before that: a desk review of upstream claims against
 upstream's own docs and code, to decide whether an on-hardware trial is worth it. Nothing in
 `models.toml` changes.
 
@@ -273,3 +274,30 @@ failure:
 3. Decode on real coding requests at 4K, 128K and 240K, temperature 0: more than 60 tok/s at 4K, more than
    45 tok/s at 128K and deeper, and above the 27B's 19.3 tok/s code row at 240K.
 4. Quality: adapt `bench/longctx_quality.py` to Strata's API and match the 27B's results.
+
+## First run 2026-10-15: v0.1.44.1, Coder IQ1_M
+
+Installed on request as a usable alternative to the 27B (procedure: [`../sop/strata.md`](../sop/strata.md)).
+Evidence: [`results/20261015-strata-coder-first-run/`](../../results/20261015-strata-coder-first-run/README.md).
+
+- **128K + KV int8 works**: short coding requests 67-78 tok/s, a ~95K-token prompt read at 844 tok/s and then
+  66.7 tok/s of generation (2026-10-08 plan items 2-3: speed bar at 128K passed; 240K not reachable, see below).
+- **262K + int8 fails** on 31 GiB: short requests drop to 28-41 tok/s and a ~100K prompt stalled 60 s at
+  prefill (3.3 GiB in swap) until the engine restarted.
+- **k8v4 is worse here, not better**: it frees KV VRAM, the GPU caches fewer experts, the RAM copy grows from
+  7.75 to 10.45 GiB, and a deep prompt triggered the kernel OOM killer (desktop killed).
+- RAM, not VRAM, is the limit on this machine: 13-14 GiB were available with the desktop and agent CLIs
+  open. The 2026-10-08 plan's step 1 (measure with applications closed) was skipped and is what bit us.
+
+### Next iteration (goal: the longest context that keeps quality)
+
+1. Free RAM first (close browser/Electron apps/idle CLIs; `MemAvailable` ≥ 16 GiB, ideally 20+), then re-run
+   128K int8 with `STRATA_RESIDENT_HEADROOM_GIB=6` and a ~120K prompt; confirm no `stall report`, swap flat.
+2. Step context up with RAM free: 200K (`--context 204800`, inside the trained 262K) int8, then 262K int8.
+   Pass = no stall, `pswpin` flat, decode > 45 tok/s at 128K+ fill. Record `experts in RAM` and VRAM free.
+3. Only if RAM allows: `--kv-streaming on` (upstream: ~1.8 GiB RAM at 128K, ~3.6 GiB at 262K) keeps the KV off
+   the GPU so more experts fit in VRAM; measure it against step 2.
+4. Quality gate before any wider use: adapt `bench/longctx_quality.py` to Strata's API (it is OpenAI-compatible)
+   and compare with the 27B at the same depths; temperature 0, reasoning off.
+5. Not tried yet: a hipBLASLt tuning table (system ROCm 7.2.4 ships no hipBLASLt; setup's TheRock wheels path
+   would bring one, ~10 GB) for faster prefill; `--adapt-async 1` (upstream: +4-5% decode, arena mode).

@@ -89,8 +89,8 @@ Sampling is the Qwen3.8-27B card's own; `--min-p 0.0` is set explicitly because 
   [agent-traffic.md](measurements/agent-traffic.md#open-ab-tests).
 - **KVMem**: not adopted until a real agent run —
   [ENGINES-EXPERIMENTS.md](ENGINES-EXPERIMENTS.md#kvmem-trial-round-2-and-final-round-2026-09-30-not-adopted).
-- **Qwen3.8-Flash-Next (MoE) via Strata**: not measured —
-  [strata-flash-next.md](models/strata-flash-next.md).
+- **Qwen3.8-Flash-Next Coder via Strata**: optional engine (`local-flash-128k`); 128K int8 works, longer
+  context is RAM-bound and quality is unmeasured — [next iteration](models/strata-flash-next.md#next-iteration-goal-the-longest-context-that-keeps-quality).
 - **Nemotron 3.5 Bolt 74B-A9B (IQ2 GGUF)**: needs a llama.cpp newer than b11454; fit at 262K
   estimated, not measured — [SOURCES.md](SOURCES.md#ideas-for-future-moe-models-not-pursued-2026-09-29).
 

@@ -141,7 +141,7 @@ results/              # curated result folders, see results/INDEX.md
 | [`docs/measurements/`](docs/measurements/) | Benchmark results by topic (engines, kv-quality, memory, coexistence, depth, speculative, thermals-power, concurrency, agent-traffic) |
 | [`docs/ENGINES.md`](docs/ENGINES.md), [`docs/ENGINES-EXPERIMENTS.md`](docs/ENGINES-EXPERIMENTS.md), [`docs/hardware/`](docs/hardware/), [`docs/models/`](docs/models/) | Engine builds, engine trials and watchlist, GPU/driver specs, model and quant provenance |
 | [`docs/BENCHMARK-FORMAT.md`](docs/BENCHMARK-FORMAT.md) | How every number was produced |
-| [`docs/sop/`](docs/sop/) | Procedures: install, launch, add a model, update the engine, measure, power cap, token ledger, publish sync |
+| [`docs/sop/`](docs/sop/) | Procedures: install, launch, add a model, update the engine, measure, power cap, token ledger, publish sync, Strata (optional engine) |
 | [`docs/STYLE.md`](docs/STYLE.md) | Language, units, naming, evidence rules |
 | `scripts/check-repo.py`, `tests/` | Hygiene check and `python3 -m unittest discover -s tests -v` |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md), `.github/` | How to contribute, CI, issue and PR templates |

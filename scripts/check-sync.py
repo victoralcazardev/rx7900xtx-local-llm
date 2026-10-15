@@ -7,7 +7,8 @@ Two independent checks:
      only a WARNING (not installed yet) -- it does not fail the check.
   2. If your local machine config has a `[harness]` table with `targets`, each
      config file is checked for EXACTLY the local provider (local-262k) with
-     the right port and contextWindow, and no other provider pointing at
+     the right port and contextWindow, optionally local-flash-128k (Strata,
+     same port, docs/sop/strata.md), and no other provider pointing at
      127.0.0.1 (an orphan from an earlier setup). This check is off by
      default -- see local.example.toml.
 
@@ -27,6 +28,10 @@ from manifest import LOCAL_262K_CONTEXT, ManifestError, backend_for, load, local
 
 EXPECTED_ENTRIES = {
     "local-262k": LOCAL_262K_CONTEXT,
+}
+# Allowed but not required: the Strata Flash-Next Coder setup (docs/sop/strata.md) on the same port.
+OPTIONAL_ENTRIES = {
+    "local-flash-128k": 131072,
 }
 EXPECTED_PORT = 8080
 
@@ -112,10 +117,11 @@ def validate_harness(name: str, entries, expected_port: int = EXPECTED_PORT) -> 
     local = [e for e in entries if _is_local(e[3])]
     seen = {e[1] for e in local}
 
-    for expected_id, expected_ctx in EXPECTED_ENTRIES.items():
+    for expected_id, expected_ctx in {**EXPECTED_ENTRIES, **OPTIONAL_ENTRIES}.items():
         matches = [e for e in local if e[1] == expected_id]
         if not matches:
-            problems.append(f"{name}: missing local provider '{expected_id}'.")
+            if expected_id in EXPECTED_ENTRIES:
+                problems.append(f"{name}: missing local provider '{expected_id}'.")
             continue
         if len(matches) > 1:
             problems.append(f"{name}: expected exactly one '{expected_id}' entry, found {len(matches)}.")
@@ -135,7 +141,7 @@ def validate_harness(name: str, entries, expected_port: int = EXPECTED_PORT) -> 
                     "-> 400 exceed_context if it doesn't match -c."
                 )
 
-    orphans = seen - set(EXPECTED_ENTRIES)
+    orphans = seen - set(EXPECTED_ENTRIES) - set(OPTIONAL_ENTRIES)
     for o in orphans:
         problems.append(
             f"{name}: orphaned local provider '{o}' is still wired up "

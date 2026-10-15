@@ -105,6 +105,22 @@ class TestValidateHarness(unittest.TestCase):
         problems = check_sync.validate_harness("t", entries)
         self.assertTrue(any("expected exactly one" in problem for problem in problems))
 
+    def test_optional_strata_entry_is_accepted(self):
+        entries = self._entries(
+            ("p1", "local-262k", 262144, "http://127.0.0.1:8080/v1"),
+            ("p2", "local-flash-128k", 131072, "http://127.0.0.1:8080/v1"),
+        )
+        self.assertEqual(check_sync.validate_harness("t", entries), [])
+
+    def test_optional_strata_entry_wrong_context_reported(self):
+        entries = self._entries(
+            ("p1", "local-262k", 262144, "http://127.0.0.1:8080/v1"),
+            ("p2", "local-flash-128k", 262144, "http://127.0.0.1:8080/v1"),
+        )
+        problems = check_sync.validate_harness("t", entries)
+        self.assertEqual(len(problems), 1)
+        self.assertIn("contextWindow=262144, expected 131072", problems[0])
+
     def test_configured_port_is_used_by_main(self):
         import contextlib
         import io
