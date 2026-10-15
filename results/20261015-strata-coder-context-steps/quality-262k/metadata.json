@@ -1,0 +1,39 @@
+{
+  "created": "2026-10-15T18:12:27+0100",
+  "server": "http://127.0.0.1:8080",
+  "models": {
+    "object": "list",
+    "data": [
+      {
+        "id": "qwen3.8-flash-next-coder-iq1_m",
+        "object": "model",
+        "status": {
+          "value": "loaded"
+        },
+        "meta": {
+          "n_ctx": 262144
+        },
+        "architecture": {
+          "input_modalities": [
+            "text"
+          ],
+          "output_modalities": [
+            "text"
+          ]
+        }
+      }
+    ]
+  },
+  "depths": [
+    128000,
+    190000,
+    240000
+  ],
+  "docs_per_depth": 5,
+  "questions_per_doc": 4,
+  "seed_base": 262024,
+  "temperature": 0,
+  "max_tokens": 200,
+  "thinking": false,
+  "template_wrapper_tokens": 52
+}

@@ -1,0 +1,16 @@
+Out of memory: Killed process 2572973 (slack) total-vm:1520606176kB, anon-rss:404kB, file-rss:4132kB, shmem-rss:52kB, UID:1000 pgtables:2624
+Out of memory: Killed process 2563878 (QtWebEngineProc) total-vm:1308847884kB, anon-rss:9292kB, file-rss:1424kB, shmem-rss:0kB, UID:1000 pgt
+Out of memory: Killed process 931 (hermes) total-vm:1423692kB, anon-rss:0kB, file-rss:16kB, shmem-rss:0kB, UID:1000 pgtables:876kB oom_score
+Out of memory: Killed process 2563698 (zapzap) total-vm:4714760kB, anon-rss:0kB, file-rss:16kB, shmem-rss:0kB, UID:1000 pgtables:1992kB oom_
+amdgpu 0000:0c:00.0: VM memory stats for proc zapzap(2563717) task python:cs0(2563698) is non-zero when fini
+Out of memory: Killed process 2549234 (vocalinux) total-vm:3035524kB, anon-rss:0kB, file-rss:16kB, shmem-rss:0kB, UID:1000 pgtables:1348kB o
+amdgpu 0000:0c:00.0: VM memory stats for proc vocalinux(2652945) task Thread-20 (_per(2549234) is non-zero when fini
+Out of memory: Killed process 2548687 (kwin_wayland) total-vm:2055860kB, anon-rss:36kB, file-rss:108kB, shmem-rss:0kB, UID:1000 pgtables:137
+amdgpu 0000:0c:00.0: VM memory stats for proc (0) task (0) is non-zero when fini
+amdgpu 0000:0c:00.0: VM memory stats for proc (0) task (0) is non-zero when fini
+amdgpu 0000:0c:00.0: [drm] *ERROR* Not enough memory for command submission!
+amdgpu 0000:0c:00.0: VM memory stats for proc plasmashell(2549028) task plasmashel:cs0(2548895) is non-zero when fini
+amdgpu 0000:0c:00.0: VM memory stats for proc slack(2572935) task slack:cs0(2572907) is non-zero when fini
+amdgpu 0000:0c:00.0: VM memory stats for proc kwin_wayland(2548697) task kwin_wayla:cs0(2548687) is non-zero when fini
+amdgpu 0000:0c:00.0: VM memory stats for proc alacritty(2549500) task alacritty:cs0(2549495) is non-zero when fini
+amdgpu 0000:0c:00.0: VM memory stats for proc Xwayland(2548763) task Xwayland:cs0(2548757) is non-zero when fini

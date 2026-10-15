@@ -295,6 +295,12 @@ Evidence: [`results/20261015-strata-coder-first-run/`](../../results/20261015-st
    GiB, ideally 20+), then re-run 128K int8 with a ~120K prompt; confirm no `stall report`, swap flat. The
    2026-10-15 restart OOM'd while idle ([`results/20261015-strata-coder-idle-oom/`](../../results/20261015-strata-coder-idle-oom/README.md)):
    the headroom sizes the copy from free RAM, so fix it with `--resident-budget-gib N` and log `GPUActive`.
+   **Done 2026-10-15** ([`results/20261015-strata-coder-context-steps/`](../../results/20261015-strata-coder-context-steps/README.md)):
+   128K, 200K and 262K int8 all pass the speed bar (63.4 tok/s at 257K fill, no stall, ≥9.7 GiB free); the
+   first run's 262K stall is superseded (8 GiB of tmpfs files were in RAM). Retrieval (step 4's adapter,
+   `bench/strata_longctx_quality.py`) 20/20 at 128K and 190K, like the 27B; 240K 4/4 when opening Slack
+   crashed the desktop: with ~600 MiB VRAM free the driver pushed 10-15 GiB of GPU memory into RAM.
+   Next: `./setup.sh --vram-reserve-mib 3072`, re-measure speed, finish the 240K row (documents 2-5).
 2. Step context up with RAM free: 200K (`--context 204800`, inside the trained 262K) int8, then 262K int8.
    Pass = no stall, `pswpin` flat, decode > 45 tok/s at 128K+ fill. Record `experts in RAM` and VRAM free.
 3. Only if RAM allows: `--kv-streaming on` (upstream: ~1.8 GiB RAM at 128K, ~3.6 GiB at 262K) keeps the KV off
