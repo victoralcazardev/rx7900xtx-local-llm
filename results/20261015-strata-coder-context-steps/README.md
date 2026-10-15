@@ -79,6 +79,10 @@ ended (`kernel-slack-crash.txt`). The 3 GiB watchdog killed Strata at once, too 
 This is the same failure as the idle OOM's 10.4 GiB of `gpu_active`: a full VRAM plus another GPU
 client pushes GPU memory into RAM faster than anything can react.
 
+With Strata stopped, the same apps need little VRAM: desktop 1,125 MiB, +111 MiB after starting Slack, +169
+MiB more after Brave (1,405 MiB total, read 25 s after each start). So the 604 MiB left free was in principle
+enough for Slack; why the driver still evicted GiBs is `unverified` (startup peak or fragmentation are guesses).
+
 ## Conclusion
 
 On this machine, with RAM freed first, 262K + KV int8 works: the speed bar of more than 45 tok/s at 128K+ fill
