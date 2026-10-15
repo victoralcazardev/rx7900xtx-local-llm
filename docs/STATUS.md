@@ -91,6 +91,8 @@ Sampling is the Qwen3.8-27B card's own; `--min-p 0.0` is set explicitly because 
   [ENGINES-EXPERIMENTS.md](ENGINES-EXPERIMENTS.md#kvmem-trial-round-2-and-final-round-2026-09-30-not-adopted).
 - **Qwen3.8-Flash-Next (MoE) via Strata**: not measured —
   [strata-flash-next.md](models/strata-flash-next.md).
+- **Nemotron 3.5 Bolt 74B-A9B (IQ2 GGUF)**: needs a llama.cpp newer than b11454; fit at 262K
+  estimated, not measured — [SOURCES.md](SOURCES.md#ideas-for-future-moe-models-not-pursued-2026-09-29).
 
 ## Next steps
 

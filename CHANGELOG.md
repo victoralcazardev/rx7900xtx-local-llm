@@ -7,6 +7,7 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- Reviewed Nemotron 3.5 Bolt 74B-A9B 24GB GGUF: b11454 cannot load it (per-layer expert counts, NVFP4 scale tensors); KV at 262K is only ~1.06 GiB q8_0, so text-only likely fits once a newer build loads it ([`docs/SOURCES.md`](docs/SOURCES.md#ideas-for-future-moe-models-not-pursued-2026-09-29)).
 - Reviewed the awesome-local-ai catalog: nothing changes the profile; tool-eval-bench noted as a tool-calling quality lead ([`docs/SOURCES.md`](docs/SOURCES.md#awesome-local-ai-catalog-2026-10-10)).
 - Reviewed glm53-flash-offload (GLM-5.3-Flash with a VRAM/RAM/NVMe expert cache): CUDA only and sized for 55+ GiB RAM; not applicable ([`docs/SOURCES.md`](docs/SOURCES.md#ideas-for-future-moe-models-not-pursued-2026-09-29)).
 - Strata v0.1.41 / Flash-Next RAM budget re-check: the resident copy is sized from `MemAvailable`, so on 31.25 GiB only the Coder IQ1_M fits at long context; llama.cpp b11501 check keeps the b11454 pin ([`docs/models/strata-flash-next.md`](docs/models/strata-flash-next.md#review-2026-10-08-releases-amd-notes-and-ram-budget)).
