@@ -1,0 +1,83 @@
+diff --git a/docs/api.rst b/docs/api.rst
+index d4abb28..1e00f63 100644
+--- a/docs/api.rst
++++ b/docs/api.rst
+@@ -167,6 +167,7 @@ These tools return summarized or aggregated data from an iterable.
+ .. autofunction:: all_unique
+ .. autofunction:: argmin
+ .. autofunction:: argmax
++.. autofunction:: iequals
+ .. function:: minmax(iterable, *[, key, default])
+ .. autofunction:: minmax(arg1, arg2, *args[, key])
+   :noindex:
+diff --git a/more_itertools/more.py b/more_itertools/more.py
+index 6e44539..0082d77 100755
+--- a/more_itertools/more.py
++++ b/more_itertools/more.py
+@@ -101,6 +101,7 @@ __all__ = [
+     'groupby_transform',
+     'ichunked',
+     'idft',
++    'iequals',
+     'ilen',
+     'interleave',
+     'interleave_evenly',
+@@ -4056,6 +4057,38 @@ def is_sorted(iterable, key=None, reverse=False, strict=False):
+     return all(map(lt, a, b)) if strict else not any(map(lt, b, a))
+ 
+ 
++def iequals(*iterables):
++    """Return ``True`` if all *iterables* yield equal elements in the same
++    order and have the same length, and ``False`` otherwise.
++
++    >>> iequals('abc', 'abc', iter('abc'))
++    True
++    >>> iequals('abc', 'abd')
++    False
++    >>> iequals('abc', 'ab')
++    False
++    >>> iequals()
++    True
++    >>> iequals('abc')
++    True
++
++    With zero or one iterable, ``True`` is returned immediately.
++
++    """
++    if len(iterables) <= 1:
++        return True
++
++    # Zip with a fill value that no element can possibly equal, so that
++    # differing lengths are detected even when an iterable yields ``None``
++    # or items that compare equal to anything (e.g. ``mock.ANY``).
++    for row in zip_longest(*iterables, fillvalue=_marker):
++        for i in range(1, len(row)):
++            if row[i - 1] is _marker or row[i] is _marker or row[i - 1] != row[i]:
++                return False
++
++    return True
++
++
+ class AbortThread(BaseException):
+     pass
+ 
+diff --git a/more_itertools/more.pyi b/more_itertools/more.pyi
+index 2f9569f..01d3a5b 100644
+--- a/more_itertools/more.pyi
++++ b/more_itertools/more.pyi
+@@ -75,6 +75,7 @@ __all__ = [
+     'groupby_transform',
+     'ichunked',
+     'idft',
++    'iequals',
+     'ilen',
+     'interleave',
+     'interleave_evenly',
+@@ -770,6 +771,7 @@ def is_sorted(
+     reverse: bool = False,
+     strict: bool = False,
+ ) -> bool: ...
++def iequals(*iterables: Iterable[_T]) -> bool: ...
+ 
+ class AbortThread(BaseException):
+     pass
