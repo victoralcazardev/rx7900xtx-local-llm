@@ -1,0 +1,13 @@
+diff --git a/bottle.py b/bottle.py
+index bb88c12..26d125f 100755
+--- a/bottle.py
++++ b/bottle.py
+@@ -3102,7 +3102,7 @@ def cookie_is_encoded(data):
+ def html_escape(string):
+     """ Escape HTML special characters ``&<>`` and quotes ``'"``. """
+     return string.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')\
+-                 .replace('"', '&quot;').replace("'", '&#039;')
++                 .replace('"', '&quot;')
+ 
+ 
+ def html_quote(string):

@@ -8,12 +8,12 @@
   memory clock pinned at 1249 MHz (2026-09-29), HIP still wins tg +63% at depth 0 and +18% at 64K
   — see "Vulkan re-test with the memory clock pinned" below. This is a Linux/RADV driver behavior,
   not a kernel P-state bug.
-- **Engine in use**: llama.cpp `b11371` `hip-kvmix` (since 2026-10-03; speed-neutral vs. b11160,
-  whose published prebuilt release stays the registry pin; b11371 has no release asset) — an own
-  gfx1100 build ([`../ENGINES.md`](../ENGINES.md)) with the same ROCm 10 toolchain as the
-  official Ubuntu ROCm 10.0 binary. It matches the official binary's speed, and it is **required**
-  for the adopted KV `q8_0`/`q5_1` profile: the official binary doesn't ship kernels for that
-  mix. Building with the older ROCm 7.2.4 (Arch's system package) is about 9% slower.
+- **Engine in use**: llama.cpp `b11718` `hip-kvmix` (since 2026-10-18), an own gfx1100 build
+  ([`../ENGINES.md`](../ENGINES.md)) with the same ROCm 10 toolchain as the official Ubuntu ROCm
+  10.0 binary. At 240K it matches or beats b11454 + PR #29509 per decoding step (see
+  [below](#b11718-vs-b11454--pr-29509-at-240k-2026-10-18)). The own build is **required** for the
+  adopted KV `q8_0`/`q5_1` profile: the official binary doesn't ship kernels for that mix. Building
+  with the older ROCm 7.2.4 (Arch's system package) is about 9% slower.
 - This mirrors what upstream itself documented when closing
   [ggml-org/llama.cpp#20934](https://github.com/ggml-org/llama.cpp/issues/20934): the HIP backend
   is not expected to beat Vulkan on RDNA, because it shares CUDA-oriented kernels and loses
@@ -337,6 +337,17 @@ verified — measure it.
 This is the expected-by-design gap upstream describes for HIP vs. Vulkan on RDNA — our local
 measurement showing ROCm *ahead* is explained by the Vulkan memory-clock throttling above, which is
 a separate, additive effect on top of (or against) this kernel-level gap.
+
+## b11718 vs. b11454 + PR #29509 at 240K (2026-10-18)
+
+Production profile, temperature 0, 3 cached reps per task after a cold warm-up, back to back
+([results](../../results/20261018-engine-b11718-vs-b11454-240k/README.md)). b11718 is faster where
+the greedy text is identical (copy +1.2%), on essay (+2.5%) and in cold prefill (394.8 vs. 387.5
+tok/s, +1.9%). The code task drops 8.2% (17.54 vs. 19.10 tok/s) because b11718 decodes a different
+greedy text on which the MTP draft is accepted less often (0.431 vs. 0.502); that acceptance change
+alone predicts -8.5% tokens per step, so the cost per step is unchanged. The planned 190K pair and
+retrieval run were dropped at the user's request; the engine-update check is now this one 240K pair
+([`../sop/update-engine.md`](../sop/update-engine.md)).
 
 ## Open questions
 

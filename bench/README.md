@@ -14,7 +14,9 @@ guard they enforce differs per script:
   Therefore `depth_bench.py --smoke` is a guarded server smoke (it starts `llama-server`), not a
   server-free check. Run it under the inhibitor:
   `systemd-inhibit --what=sleep:idle --mode=block env IA_BENCH_INHIBITED=1 python3 bench/depth_bench.py --smoke --inhibitor-ok`.
-- `spec_bench.py`, `spec_depth_bench.py` and `probe_ab.py` only check `IA_BENCH_INHIBITED=1`.
+- `spec_bench.py`, `spec_depth_bench.py`, `probe_ab.py` and `coding_suite.py` (`--run`, `--freeze-pack`)
+  only check `IA_BENCH_INHIBITED=1`; `coding_suite.py`'s `--smoke`, `--verify-fixtures`, `--rescore`
+  and `--compare` need no server and no guard.
 - `ladder_bench.py`, `oom_probe.py` and `summarize.py` have no guard at all — wrap them in
   `systemd-inhibit` yourself.
 
@@ -77,6 +79,7 @@ and verify it.
 | `oom_probe.py` | `estres.py` | Minimal OOM probe: fills the context with N characters of real text and asks for a short summary. |
 | `concurrency_bench.py` | (new) | Multi-agent concurrency: one server with `-np N` parallel slots, N simultaneous streaming requests, per-slot tok/s + draft acceptance + aggregate throughput + peak VRAM/GTT. |
 | `probe_ab.py` | (new) | Empty-context spec-off vs. spec-on A/B with the unmodified `probe.py` from [sudoingX/qwen38-mtp](https://github.com/sudoingX/qwen38-mtp) (its community table's instrument, passed via `--probe`): one server per arm on the `262k-q8q51-mtp` flags, three complete probe passes per arm, acceptance from the server log — see [`../results/20260927-probe-ab-262k/`](../results/20260927-probe-ab-262k/). |
+| `coding_suite.py` | (new) | Fixed six-task coding suite: an agent loop over `/v1/chat/completions` with streaming tool calls (read, write, run tests) on injected bugs in pinned public Python repos; per task and seed, `tests` (the repo's tests pass) and `completed` (final message within limits). Attaches to the running engine and reads sampling from `models.toml`. Design and gate rule: [`../docs/ENGINES-EXPERIMENTS.md`](../docs/ENGINES-EXPERIMENTS.md#coding-suite-design-b1a-2026-10-18). |
 
 `longctx_quality.py` preserves completed measurements and `scores.json` when individual queries
 fail, but exits nonzero if any expected query failed or returned an incomplete stream. Each score
@@ -130,6 +133,27 @@ count decision. `--kv-unified`/`--no-kv-unified`/`--kv-unified-per-slot N` and M
 env IA_BENCH_INHIBITED=1 python3 bench/concurrency_bench.py --run --inhibitor-ok \
     --slots 2 --depth 32000 --mtp --spec-draft-n-max 2
 ```
+
+## `coding_suite.py`: fixed coding tasks
+
+Task data is frozen in `coding_suite_tasks/` (`tasks.json`, bug patches, hidden tests, and the
+CS4 file list `CS4/pack.json` written once by `--freeze-pack` against the Qwen3.8-27B). Clones
+are cached in `_tmp/coding-suite/repos/`; every task and seed runs in a fresh `git worktree`.
+Outputs go to `bench/res/coding_suite/<timestamp>-<label>/`: `meta.json` (sampling sent,
+`/v1/models`, `/props`, power cap), per episode `trace.jsonl`, `model.diff`, `score.txt` and
+`result.json`, and `summary.json`; the GPU monitor log sits next to the run folder.
+
+```bash
+python3 bench/coding_suite.py --verify-fixtures     # each bug fails its tests, each reference fix passes
+python3 bench/coding_suite.py --smoke               # full loop with a scripted fake model
+systemd-inhibit --what=sleep:idle --mode=block env IA_BENCH_INHIBITED=1 BENCH_EXPECT_POWER_CAP_W=272 \
+    python3 bench/coding_suite.py --run --label 27b-base
+python3 bench/coding_suite.py --rescore bench/res/coding_suite/<run>   # must reproduce `tests`
+python3 bench/coding_suite.py --compare <base run> <candidate run>     # regression rule
+```
+
+An engine missing from `models.toml` (Strata) takes `--sampling temperature=...,top_p=...` with
+the values from its model card; `--cs4-depth deep` selects the 180K variant for depth A/Bs.
 
 ## Not ported
 

@@ -5,6 +5,90 @@ builds actually in use, with pinned versions and SHA256, are in [`ENGINES.md`](E
 tried-and-not-adopted results are in [`TRIED.md`](TRIED.md). Proposed experiments below are not local
 results unless explicitly marked as run.
 
+## Current plan (2026-10-18)
+
+Replaces the [2026-10-03 queue](#queue-reconciliation-and-priority) as the execution order. Context:
+b11718 `hip-kvmix` is the engine in use and has no inference measurement here, Qwen3.8-27B tuning is
+paused until Qwen4 ([DECISIONS.md](DECISIONS.md)), Strata's coding quality is unmeasured, and no
+executable coding suite exists, which blocks every quality-affecting A/B.
+
+**Rules for every step.** A failed gate stops that step's line, not the plan. Results go to
+`results/YYYYMMDD-topic/` plus one row in `results/INDEX.md` ([STYLE.md](STYLE.md) §8). Before any
+GPU run: 272 W cap active, no GPU-heavy apps, run under `systemd-inhibit` as each bench's `--help`
+shows, `BENCH_EXPECT_POWER_CAP_W=272`; one engine on `:8080` at a time. Engine paths come from
+`local.toml` `[engines]`, never hard-coded. New trial IDs: check the private queue for collisions
+first (T28 was already taken). Publishing a release, pushing, or editing the GitHub About needs the
+user's explicit go each time.
+
+| Step | Action | Depends on | Check | Done when / rollback |
+|---|---|---|---|---|
+| A1 | **Done 2026-10-18, reduced to the 240K pair at the user's request** (no 190K, no retrieval, no PPL): b11718 kept, [results](../results/20261018-engine-b11718-vs-b11454-240k/README.md). Future engine updates use the same single 240K pair ([sop/update-engine.md](sop/update-engine.md)) | user go | Greedy text hash equal across engines or the difference explained; tg per task | b11718 faster per step (copy +1.2% same text, essay +2.5%, prefill +1.9%); code -8.2% explained by a different greedy text with lower MTP acceptance. Rollback stays the b11454 + PR #29509 build |
+| A2 | Next real agent session: `python3 scripts/cache_misses.py` on the newest `_tmp/logs/` log | a real session | Per-request reuse table | No in-flight wait > 60 s and no full miss outside compaction; one dated entry in [agent-traffic.md](measurements/agent-traffic.md) and the STATUS open question closed or kept |
+| B1a | **Done 2026-10-18**: [Coding suite design](#coding-suite-design-b1a-2026-10-18). Design the coding suite in a feature document (`odd/tasks/coding-suite.md`): six tasks from [Adoption and rollback](#adoption-and-rollback), each with a pinned public repo commit, prompt, test command and pass rule; a stdlib-only runner under `bench/` that drives `/v1/chat/completions` with streaming tool calls and a fixed tool set (read, write, run tests) in a throwaway worktree; production sampling with 3 seeds per task; per-task timeout | — | User reviews the document | Every task has a deterministic pass/fail command; no new dependency; the coding harness itself stays out of scope ([SOURCES](SOURCES.md#agent-harness--api-compatibility-context-only)). Check [tool-eval-bench](SOURCES.md#awesome-local-ai-catalog-2026-10-10) first and reuse its scenarios if they fit |
+| B1b | **Done 2026-10-18**: `bench/coding_suite.py` + `bench/coding_suite_tasks/`, 23 unit tests, `--verify-fixtures` 6/6 and `--smoke` 6/6 without a server. Implement the runner and tasks with unit tests for the parser/scoring (no GPU) | B1a | `python3 -m unittest discover -s tests`, `python3 scripts/check-repo.py` | Both pass; the runner's `--smoke` mode works without a server |
+| B1c | Calibrate on the 27B: two full runs, plus one run of a deliberately weaker arm (`q4_0`/`q4_0` KV if the binary's `--help` lists it) | B1b | Pass/fail per task and seed | Same per-task outcome in both runs for at least 5 of 6 tasks; replace any flaky task and rerun. A task at 3/3 in both the normal and the weaker arm is a ceiling task: harden or replace it once. Write `results/<date>-coding-suite-calibration/` |
+| B2 | Baseline the suite on the 27B default profile and on the Strata Coder (`local-flash-262k`, [sop/strata.md](sop/strata.md)), stopping one engine before starting the other | A1 or its "not approved" path; B1c | Pass rate per task per engine | One result folder; README "Models" row for Strata updated; STATUS open question on Strata quality closed |
+| C1 | Qwen4 day one, via [sop/new-model.md](sop/new-model.md): vendor card first, quant that fits 262K with quantized KV, KV KLD vs. `f16`, depth bench, retrieval, suite. If the current engine lacks support, run the engine update first and treat it like A1 | Qwen4 release; B1c | Same measurements as the 27B rows | Adopt only if suite pass rate ≥ the 27B's with no task lost, 262K kept, and 240K tg ≥ 19.3 tok/s (the 27B's slowest 240K task); update `models.toml`, STATUS, README, DECISIONS together; keep the 27B profile for rollback. Record head dim, GQA and MTP verify width for D1 |
+| C2 | Strata [tuning plan](models/strata-flash-next.md#tuning-plan-2026-10-16-not-run) | B2 | Its own per-phase metrics plus the suite | One factor at a time; the suite must not regress |
+| C3 | Nemotron 3.5 Bolt 74B-A9B: load on b11718, 262K fit, depth speed, retrieval, then the suite | A1 path settled; after C1 | Load log, peak VRAM, tg at 240K, exact-match count | README "Models" row becomes "tried" with numbers, or the SOURCES row records why it failed |
+| D1 | [T29](#new-t29-native-quantized-kv-multi-query-verify-kernel-2026-10-18-not-started) verify kernel | A1 path settled; C1 shows the adopted model keeps quantized KV with an attention shape T29 covers, or the user keeps the 27B | T29's op-level and end-to-end gates | Local patch only; the unpatched build stays as rollback |
+| D2 | Workload items one at a time: T25 tool-output bounding, T02 compaction threshold, T24 probabilistic MTP (needs a non-greedy bench), T09 n-gram replay | B1c | The suite plus the item's own metric | Each needs its own result folder and DECISIONS row |
+| Parked | T26, T23, T07, T10-T18, KVMem (T01), TurboQuant KV ([SOURCES](SOURCES.md#tinygrad-qwen38-fork-verify-kernel-references-and-turboquant-kv-2026-10-18)) | new evidence | — | Revisit only with a logged trigger or a measured bottleneck |
+
+Order of work now: B1a, B1b and A1 are done; next B1c, then B2.
+A2 whenever a real session happens. C1 pre-empts everything except a running measurement once
+Qwen4 ships.
+
+## Coding suite design (B1a, 2026-10-18)
+
+**Status:** implemented (B1b: [`bench/coding_suite.py`](../bench/coding_suite.py), usage in
+[`bench/README.md`](../bench/README.md)); not yet run against any model. The gate policy is in
+[DECISIONS.md](DECISIONS.md) (2026-10-18).
+
+Each task is a pinned release of a pure-Python repository whose own tests run on stdlib `unittest` with no install
+step. A stored small mutation injects a bug (CS6 instead asks for a new error message); the model fixes it with three
+tools in a throwaway `git worktree`. Injected bugs are new code, so the fix is not in any training set; replaying real
+upstream fixes was rejected because those fixes are public and older than the models.
+
+| ID | Category | Repo @ commit (tag) | Injected change | Test command | Timeout |
+|---|---|---|---|---|---|
+| CS1 | local bug fix | [hukkin/tomli](https://github.com/hukkin/tomli) @ `a2a578949199336ebc3884eeba4aede87da41ef2` (2.5.0) | `_parser.py`: `\U` escapes read 4 hex digits instead of 8 | `PYTHONPATH=src python3 -m unittest -q` | 1,200 s |
+| CS2 | cross-file change | [more-itertools](https://github.com/more-itertools/more-itertools) @ `4aeb4338ae1407d8da9723e86da99efeb446f719` (v11.2.1) | `iequals` removed from `more.py`, `more.pyi` and `docs/api.rst`; the prompt specifies it | `python3 -m unittest discover -s tests -q` + a hidden structural test (stub, docs, `__all__`) | 1,200 s |
+| CS3 | tool-error recovery | [bottlepy/bottle](https://github.com/bottlepy/bottle) @ `b0a0a1014f7a7e6f6b7c193886a0913f46ee3ee6` (0.13.4) | `parse_range_header` off by one; the 1st `write_file` and the 1st `run_tests` return injected errors | `python3 -m unittest discover -s test -t . -q` | 1,200 s |
+| CS4 | long-context dependency lookup | [Python-Markdown](https://github.com/Python-Markdown/markdown) @ `2258b48e551d0df7b149ea9c33969bea7c7a0a2b` (3.11.1) | `util.code_escape` stops escaping `&`; the symptom is reported for code spans and blocks | `python3 -m unittest discover -s tests -t . -q` | 3,600 s |
+| CS5 | post-compaction continuation | bottle, same commit | `html_escape` stops escaping `'`; the only description is in a fixed compaction summary, then "Continue." | as CS3 | 1,200 s |
+| CS6 | artifact omitted from a bounded tool result | tomli, same commit | none; a hidden test outside the worktree expects a new duplicate-table message, visible only in the full log that the truncated `run_tests` result points to | as CS1, then the hidden test | 1,200 s |
+
+- **Tools**: `read_file`, `write_file`, `run_tests` (the visible command, last 4,000 characters; CS6 shows 3 lines).
+  Limits: 40 assistant turns, `max_tokens` 32768. Harness wiring is out of scope; the runner is its own client of
+  `/v1/chat/completions` with streaming tool calls, attached to the engine already serving `:8080`.
+- **Scoring**: restore the test folder from the pinned commit (edited tests cannot pass), add hidden tests, run the
+  command on the final worktree, always. Two columns: `tests` (exit 0, the quality outcome) and `completed` (final
+  message inside the timeout and turn limit); pass = both. Speed A/Bs compare the columns separately.
+- **Sampling**: the alias's `models.toml` sampling table sent per request (27B: temperature 1.0, top_p 0.95, top_k
+  20, min_p 0.0), seeds 1-3, one fresh worktree per task and seed. The run records any control the server ignores.
+- **Regression rule** (screening, not proof of equivalence): per task against the baseline arm, a `tests` drop of 2 or
+  more of 3 is a regression; a drop of 1 is inconclusive and that task reruns with seeds 4-6 on both arms, where a drop
+  of 2 or more of 6 is a regression. Any regression rejects the arm.
+- **CS4 depth**: real files, `util.py` first so the cause is at the earliest position and farthest from the symptom,
+  then the rest of the package, tests and docs, until the initial request would pass 120,000 tokens (Qwen3.8-27B
+  tokenizer). The file list is then frozen, so every model gets the same bytes and reports its own token count. 128K
+  sits in the middle of real sessions, which compact at ~157-183K and resume at 46K-67K
+  ([agent-traffic.md](measurements/agent-traffic.md)). A frozen **CS4-deep** variant (180,000 tokens) runs only
+  for A/Bs that target depth and is reported outside the standard score. The depth benches already cover 240K.
+
+**Fixture check** (Python 3.14.8, no model): each commit resolved from its release tag in a fresh clone; for all six
+tasks the visible tests exit 0 on the pinned commit, exit 1 with the bug and exit 0 with the reference fix. Baseline
+suites: tomli 18 tests, more-itertools 930, Python-Markdown 1,126, bottle 377 (needs `-t .`), each under 10 s.
+
+**Rejected**: [tool-eval-bench](SOURCES.md#awesome-local-ai-catalog-2026-10-10) (mock tools only, four
+third-party packages); kjd/idna (its suite needs `hypothesis`); a 190K or 240K default depth, and 150K (too close to a
+60% compaction threshold).
+
+**Limits and open items**: 6 tasks × 3 seeds catches large regressions, not small ones; the ceiling risk is checked
+by B1c's weaker arm; the 120,000-token cutoff is measured in B1b; whether Strata honours `seed` is unverified; CS5
+uses a fixed summary, so it tests continuation, not the harness's compaction quality.
+
 ## llama.cpp PR #29509 local trial (2026-10-04)
 
 - **What**: b11371 (`99b9548`) plus [#29509](https://github.com/ggml-org/llama.cpp/pull/29509)
@@ -28,8 +112,11 @@ No model, runtime, harness setting or power limit changes in this review.
 
 ### Queue reconciliation and priority
 
+Superseded by the [current plan (2026-10-18)](#current-plan-2026-10-18); kept as the record of the
+2026-10-03 ordering.
+
 The earlier [quality-first controls](#end-to-end-quality-and-reliability-before-tuning-2026-10-02-proposed-not-run)
-still apply. This table is the current execution order; T IDs map the existing private queue,
+still apply. This table was the execution order on 2026-10-03; T IDs map the existing private queue,
 while the descriptions below are sufficient without access to it.
 
 | Priority | Experiment / existing IDs | Action and prerequisite |
@@ -227,6 +314,46 @@ For scale, using the [recorded busy-time split](#where-the-time-goes), a 10% fas
 alone saves **5.9% of server busy time**; even 2x decode saves 32.4% (1.48x busy-time speedup).
 These are calculated illustrations holding all other work fixed, not measured forecasts or
 task-wall savings. Cache, context and kernel gains overlap; do not add their percentages.
+
+### New T29: native quantized-KV multi-query verify kernel (2026-10-18, not started)
+
+**Why.** T27's attribution already answered "is attention dominant": FA is ~55% of a 240K MTP step
+([results](../results/20261003-fa-attribution-qwen38-shape/README.md)). llama.cpp master still sends
+our 4-token verify with `q8_0`/`q5_1` KV to TILE, which first converts the whole K/V view to f16;
+that path costs 4,574 µs per op at 240K vs. 2,559 µs with f16 KV, and moves only ~10% of nominal
+bandwidth. Widening the VEC gate is not the shortcut (#29935: -19 to -22% at batch 4). Evidence and
+references: [SOURCES.md](SOURCES.md#tinygrad-qwen38-fork-verify-kernel-references-and-turboquant-kv-2026-10-18).
+
+**Design to port, not code to import.** The tinygrad-qwen38 fork's `AMD_ATTN_MQ` path is the
+closest working gfx1100 reference for our exact shape (D 256, GQA up to 8, up to 8 query tokens):
+
+1. One work-group per (KV head, 256-position chunk); all `n_tokens x 6` query rows of that KV head
+   share each 16-position KV tile, so K/V are read once per verify step, natively quantized.
+2. QK with `v_wmma_i32_16x16x16_iu8`: Q quantized to int8 per row (llama.cpp VEC already uses a
+   `q8_1` Q for quantized K), `q8_0` K used as stored, the per-32 K scale applied per pair of WMMA
+   steps. PV with `v_wmma_f32_16x16x16_f16` after dequantizing `q5_1` V into LDS.
+3. Split-K partials (m, l, unnormalized O) per chunk, then one merge kernel (flash decoding).
+   Cross-check the merge against vLLM's Triton unified attention split-K and Vulkan #30190.
+
+Skip the fork's KV format (4-bit codebook + QJL): it changes quality, which this trial must not.
+
+**Steps and gates.**
+
+1. Re-run the T27 `test-backend-ops` perf case on the adopted b11718 `hip-kvmix` build to confirm
+   the dispatch and the 240K numbers did not move.
+2. Write the kernel in `ggml/src/ggml-cuda/` as a new FA path gated to HIP RDNA3, D 256, quantized
+   `q8_0`/`q5_1`, `3 <= ne[1] <= 8`; every other shape unchanged. Keep it a local patch on the
+   pinned build, recorded in [`ENGINES.md`](ENGINES.md).
+3. Op level: `test-backend-ops` FLASH_ATTN_EXT correctness for the new cases (NMSE within the
+   existing TILE tolerance), then µs per op at 32K/131K/196K/240K and nb 3/4. First bar: at or below
+   the f16 TILE time (2,559 µs at 240K, ~+30% decode upper bound); a bandwidth-bound kernel would go
+   further (~0.6 ms per op for ~445 MiB at ~770 GB/s; calculated, not a forecast).
+4. End to end: the T27 gate (≥8% mean decode at 190K and 240K beyond repeat variation, no >2%
+   empty-context regression, memory headroom), plus KLD vs. the current build because int8 Q changes
+   numerics, plus the retrieval/coding gate. Any fault or NaN stops the trial.
+
+Precondition: Qwen3.8-27B tuning is paused until Qwen4 ships ([DECISIONS.md](DECISIONS.md)); the
+kernel is shape-specific (D 256, GQA 6), so recheck Qwen4's attention shape before starting.
 
 ### Adoption and rollback
 

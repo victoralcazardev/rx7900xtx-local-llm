@@ -1,0 +1,13 @@
+diff --git a/markdown/util.py b/markdown/util.py
+index 29ffa24..3c70d1b 100644
+--- a/markdown/util.py
++++ b/markdown/util.py
+@@ -154,8 +154,6 @@ def parseBoolValue(value: str | None, fail_on_errors: bool = True, preserve_none
+ 
+ def code_escape(text: str) -> str:
+     """HTML escape a string of code."""
+-    if "&" in text:
+-        text = text.replace("&", "&amp;")
+     if "<" in text:
+         text = text.replace("<", "&lt;")
+     if ">" in text:

@@ -2,16 +2,16 @@
 
 ## Current conclusion
 
-- **The inference server doesn't crash when VRAM runs out — the desktop can.** When a second GPU
-  process starts and there's no VRAM left, amdgpu/TTM usually places the newcomer's allocations in
-  **GTT (system RAM)** instead of failing. The `llama-server` process keeps its VRAM and keeps
-  working, just somewhat slower because it now shares the GPU. **Whichever process arrives late is
-  the one that degrades.** In the controlled test below that meant a slow second process; in daily
-  use at 262K it has also meant **KWin failing to create a context and quitting, which ends the
-  whole Plasma Wayland session** (incident below). The same card drives the display, so the
-  desktop needs real VRAM headroom, not just GTT fallback.
-- **Mitigations that keep the 262K profile**: disable hardware acceleration in the browser (the
-  first allocation to fail in the incident came from a Flatpak GPU client), and avoid GPU-heavy
+- **When VRAM runs out, either side can lose.** Usually amdgpu/TTM places a newcomer's allocations
+  in **GTT (system RAM)** and the `llama-server` process keeps its VRAM, so the late arrival
+  degrades: a slow second process in the controlled test below, or **KWin failing to create a
+  context and quitting, which ends the whole Plasma Wayland session** (incident below). But on
+  2026-10-18 the driver evicted **10.9 GiB of the server's own 22.1 GiB** mid-prefill with only a
+  browser and light apps open (incident below). The same card drives the display, so long runs
+  need real VRAM headroom, not just GTT fallback.
+- **Mitigations that keep the 262K profile**: close the browser or disable its hardware
+  acceleration for any long GPU run (the first allocation to fail in 2026-09 came from a Flatpak
+  GPU client; in 2026-10 runs completed only after Brave was closed), and avoid GPU-heavy
   applications while the model is loaded. A second, display-only GPU would be the complete fix,
   but it does not fit in this machine's case (2026-10-16), so VRAM headroom has to come from the
   engine's own settings.
@@ -139,9 +139,24 @@ with `q8_0`/`q5_1` stays the chosen quality/context trade-off.
   cheap hosted models cover summaries/titles/classification at negligible cost without another
   server to maintain. Revisit only for an offline or privacy requirement.
 
+## Incident: server VRAM evicted mid-prefill (2026-10-18, 13:56)
+
+- **What**: `bench/spec_depth_bench.py` at 240K, production profile, b11718; desktop with Brave,
+  Slack, a terminal and Plasma open (~0.9-1.4 GiB VRAM in use before the start, 272 W cap active).
+- **Observed**: the shared GPU monitor (`bench/depth_bench.py` `Monitor`) read the server's fdinfo
+  `amd-evicted-vram` jump from 0 to 11,702,161,408 bytes at 247-248 s into the cold prefill;
+  `drm-memory-vram` fell from 22.11 to 11.21 GiB. The monitor aborted the run; no crash.
+- **Fix used**: Brave closed (it held the largest VRAM share, ~815 MiB in its GPU process, by
+  fdinfo; per-process values over-count shared buffers). Total VRAM in use then 931 MiB, and the
+  same 240K runs plus the coding-suite pilot completed. Which allocation triggered the eviction was
+  not captured: Brave as the cause is an inference, not observed.
+- **Data**: `_tmp/plan-run/a1-aborted-1/` (local only, telemetry JSONL).
+
 ## History
 
 - **2026-09-24**: coexistence test (C1-C3) and the suspend-hang incident both recorded the same day.
   `systemd-inhibit` wrapper added to the launcher immediately after the incident.
 - **2026-09-29**: KWin session-loss incident at 262K recorded; the "nobody crashes" conclusion
   corrected to cover the compositor, and display-headroom options evaluated.
+- **2026-10-18**: a 240K run had half of the server's own VRAM evicted with a browser open; the
+  "server keeps its VRAM" conclusion narrowed and browser closure added to the mitigations.
