@@ -26,7 +26,7 @@ user's explicit go each time.
 | A2 | Next real agent session: `python3 scripts/cache_misses.py` on the newest `_tmp/logs/` log | a real session | Per-request reuse table | No in-flight wait > 60 s and no full miss outside compaction; one dated entry in [agent-traffic.md](measurements/agent-traffic.md) and the STATUS open question closed or kept |
 | B1a | **Done 2026-10-18**: [Coding suite design](#coding-suite-design-b1a-2026-10-18). Design the coding suite in a feature document (`odd/tasks/coding-suite.md`): six tasks from [Adoption and rollback](#adoption-and-rollback), each with a pinned public repo commit, prompt, test command and pass rule; a stdlib-only runner under `bench/` that drives `/v1/chat/completions` with streaming tool calls and a fixed tool set (read, write, run tests) in a throwaway worktree; production sampling with 3 seeds per task; per-task timeout | — | User reviews the document | Every task has a deterministic pass/fail command; no new dependency; the coding harness itself stays out of scope ([SOURCES](SOURCES.md#agent-harness--api-compatibility-context-only)). Check [tool-eval-bench](SOURCES.md#awesome-local-ai-catalog-2026-10-10) first and reuse its scenarios if they fit |
 | B1b | **Done 2026-10-18**: `bench/coding_suite.py` + `bench/coding_suite_tasks/`, 23 unit tests, `--verify-fixtures` 6/6 and `--smoke` 6/6 without a server. Implement the runner and tasks with unit tests for the parser/scoring (no GPU) | B1a | `python3 -m unittest discover -s tests`, `python3 scripts/check-repo.py` | Both pass; the runner's `--smoke` mode works without a server |
-| B1c | Calibrate on the 27B: two full runs, plus one run of a deliberately weaker arm (`q4_0`/`q4_0` KV if the binary's `--help` lists it) | B1b | Pass/fail per task and seed | Same per-task outcome in both runs for at least 5 of 6 tasks; replace any flaky task and rerun. A task at 3/3 in both the normal and the weaker arm is a ceiling task: harden or replace it once. Write `results/<date>-coding-suite-calibration/` |
+| B1c | **Cut 2026-10-18** at the user's request ("quiero que sea mucho menos"): one seed-1 run of the six tasks on the 27B, no second run and no weaker arm. It found and fixed the whole-file-write limit (suite v2, `edit_file`). Flakiness and ceiling stay unmeasured | B1b | Pass/fail per task | Seed-1 baseline in `results/<date>-coding-suite-baseline/` |
 | B2 | Baseline the suite on the 27B default profile and on the Strata Coder (`local-flash-262k`, [sop/strata.md](sop/strata.md)), stopping one engine before starting the other | A1 or its "not approved" path; B1c | Pass rate per task per engine | One result folder; README "Models" row for Strata updated; STATUS open question on Strata quality closed |
 | C1 | Qwen4 day one, via [sop/new-model.md](sop/new-model.md): vendor card first, quant that fits 262K with quantized KV, KV KLD vs. `f16`, depth bench, retrieval, suite. If the current engine lacks support, run the engine update first and treat it like A1 | Qwen4 release; B1c | Same measurements as the 27B rows | Adopt only if suite pass rate ≥ the 27B's with no task lost, 262K kept, and 240K tg ≥ 19.3 tok/s (the 27B's slowest 240K task); update `models.toml`, STATUS, README, DECISIONS together; keep the 27B profile for rollback. Record head dim, GQA and MTP verify width for D1 |
 | C2 | Strata [tuning plan](models/strata-flash-next.md#tuning-plan-2026-10-16-not-run) | B2 | Its own per-phase metrics plus the suite | One factor at a time; the suite must not regress |
@@ -59,17 +59,23 @@ upstream fixes was rejected because those fixes are public and older than the mo
 | CS5 | post-compaction continuation | bottle, same commit | `html_escape` stops escaping `'`; the only description is in a fixed compaction summary, then "Continue." | as CS3 | 1,200 s |
 | CS6 | artifact omitted from a bounded tool result | tomli, same commit | none; a hidden test outside the worktree expects a new duplicate-table message, visible only in the full log that the truncated `run_tests` result points to | as CS1, then the hidden test | 1,200 s |
 
-- **Tools**: `read_file`, `write_file`, `run_tests` (the visible command, last 4,000 characters; CS6 shows 3 lines).
+- **Tools**: `read_file`, `write_file`, `edit_file` (one exact, unique replacement), `run_tests` (the visible command,
+  last 4,000 characters; CS6 shows 3 lines). `edit_file` came in suite version 2 (B1c, 2026-10-18): with whole-file
+  writes only, CS2 (`more.py`, ~4,900 lines) and CS3 (`bottle.py`, ~4,500 lines) hit `max_tokens` while rewriting
+  the file (5/5 episodes `length`), a limit failure, not a quality one. CS3's injected write error hits the first
+  write of either kind.
   Limits: 40 assistant turns, `max_tokens` 32768. Harness wiring is out of scope; the runner is its own client of
   `/v1/chat/completions` with streaming tool calls, attached to the engine already serving `:8080`.
 - **Scoring**: restore the test folder from the pinned commit (edited tests cannot pass), add hidden tests, run the
   command on the final worktree, always. Two columns: `tests` (exit 0, the quality outcome) and `completed` (final
   message inside the timeout and turn limit); pass = both. Speed A/Bs compare the columns separately.
 - **Sampling**: the alias's `models.toml` sampling table sent per request (27B: temperature 1.0, top_p 0.95, top_k
-  20, min_p 0.0), seeds 1-3, one fresh worktree per task and seed. The run records any control the server ignores.
-- **Regression rule** (screening, not proof of equivalence): per task against the baseline arm, a `tests` drop of 2 or
-  more of 3 is a regression; a drop of 1 is inconclusive and that task reruns with seeds 4-6 on both arms, where a drop
-  of 2 or more of 6 is a regression. Any regression rejects the arm.
+  20, min_p 0.0), seed 1 by default, one fresh worktree per task and seed. The run records any control the server
+  ignores.
+- **Regression rule** (screening, not proof of equivalence; seed-1 default since 2026-10-18, to keep an engine update
+  to one ~1 h run): per task against the baseline arm, a seed-1 loss (baseline passes, candidate fails) reruns that
+  task with seeds 2-3 on both arms; on seeds 1-3 a `tests` drop of 2 or more is a regression, a drop of 1 reruns seeds
+  4-6 on both arms, where a drop of 2 or more of 6 is a regression. Any regression rejects the arm.
 - **CS4 depth**: real files, `util.py` first so the cause is at the earliest position and farthest from the symptom,
   then the rest of the package, tests and docs, until the initial request would pass 120,000 tokens (Qwen3.8-27B
   tokenizer). The file list is then frozen, so every model gets the same bytes and reports its own token count. 128K
@@ -85,8 +91,9 @@ suites: tomli 18 tests, more-itertools 930, Python-Markdown 1,126, bottle 377 (n
 third-party packages); kjd/idna (its suite needs `hypothesis`); a 190K or 240K default depth, and 150K (too close to a
 60% compaction threshold).
 
-**Limits and open items**: 6 tasks × 3 seeds catches large regressions, not small ones; the ceiling risk is checked
-by B1c's weaker arm; the 120,000-token cutoff is measured in B1b; whether Strata honours `seed` is unverified; CS5
+**Limits and open items**: one seed per task catches only large regressions and a task the baseline fails gives no
+signal; flakiness and the ceiling risk were not measured (B1c cut); the 120,000-token cutoff is measured in B1b;
+whether Strata honours `seed` is unverified; CS5
 uses a fixed summary, so it tests continuation, not the harness's compaction quality.
 
 ## llama.cpp PR #29509 local trial (2026-10-04)

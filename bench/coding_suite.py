@@ -12,7 +12,7 @@ it never starts an engine. Each (task, seed) runs in a fresh `git worktree` of a
   systemd-inhibit --what=sleep:idle --mode=block env IA_BENCH_INHIBITED=1 \\
       python3 bench/coding_suite.py --freeze-pack        # once, against the 27B: CS4 file lists
   systemd-inhibit --what=sleep:idle --mode=block env IA_BENCH_INHIBITED=1 BENCH_EXPECT_POWER_CAP_W=272 \\
-      python3 bench/coding_suite.py --run --label 27b    # 6 tasks x seeds 1,2,3
+      python3 bench/coding_suite.py --run --label 27b    # 6 tasks x seed 1
   python3 bench/coding_suite.py --rescore <run dir>      # re-score saved diffs; must match
   python3 bench/coding_suite.py --compare <base run> <candidate run>
 """
@@ -53,7 +53,7 @@ READ_MAX_LINES = 2000
 READ_MAX_BYTES = 64 * 1024
 TESTS_TAIL_CHARS = 4000
 BAD_TOOL_CALL_LIMIT = 3
-SEEDS = (1, 2, 3)
+SEEDS = (1,)
 EXCLUDES = "__pycache__/\n*.pyc\n.suite/\n"
 GIT_ID = ["-c", "user.name=coding-suite", "-c", "user.email=coding-suite@localhost"]
 PACK_PREAMBLE = "Read these files from the repository first; the task follows after them."
@@ -75,6 +75,15 @@ TOOLS = [
             "path": {"type": "string", "description": "Path relative to the repository root"},
             "content": {"type": "string", "description": "The whole new file content"}},
             "required": ["path", "content"]}}},
+    {"type": "function", "function": {
+        "name": "edit_file",
+        "description": "Replace one exact occurrence of old_string with new_string in a file. old_string must "
+                       "match the file text exactly (including indentation) and occur exactly once.",
+        "parameters": {"type": "object", "properties": {
+            "path": {"type": "string", "description": "Path relative to the repository root"},
+            "old_string": {"type": "string", "description": "Exact text to replace; must be unique in the file"},
+            "new_string": {"type": "string", "description": "Replacement text"}},
+            "required": ["path", "old_string", "new_string"]}}},
     {"type": "function", "function": {
         "name": "run_tests",
         "description": "Run the repository's test suite and return the exit code and the end of the output.",
@@ -215,11 +224,15 @@ class Tools:
     def __init__(self, worktree: pathlib.Path, task: dict, hidden_dir: pathlib.Path | None):
         self.root, self.task, self.hidden_dir = worktree, task, hidden_dir
         self.calls: dict[str, int] = {}
+        self.fault_calls: dict[str, int] = {}
         self.deadline: float | None = None  # run_tests never outlives the episode
 
     def call(self, name: str, args: dict) -> str:
         self.calls[name] = self.calls.get(name, 0) + 1
-        fault = self.task.get("faults", {}).get(name, {}).get(str(self.calls[name]))
+        # Both write tools share the write_file fault counter, so CS3's injected write error can't be dodged.
+        kind = "write_file" if name == "edit_file" else name
+        self.fault_calls[kind] = self.fault_calls.get(kind, 0) + 1
+        fault = self.task.get("faults", {}).get(kind, {}).get(str(self.fault_calls[kind]))
         if fault:
             return f"error: {fault}"
         try:
@@ -227,6 +240,8 @@ class Tools:
                 return self.read_file(**args)
             if name == "write_file":
                 return self.write_file(**args)
+            if name == "edit_file":
+                return self.edit_file(**args)
             if name == "run_tests":
                 return self.run_tests()
             return f"error: unknown tool {name!r}"
@@ -272,6 +287,19 @@ class Tools:
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(content)
         return f"wrote {len(content.encode())} bytes to {path}"
+
+    def edit_file(self, path, old_string, new_string):
+        if not isinstance(old_string, str) or not isinstance(new_string, str) or not old_string:
+            raise ToolError("old_string must be a non-empty string and new_string a string")
+        target = resolve_in(self.root, path)
+        if not target.is_file():
+            raise ToolError(f"no such file: {path}")
+        text = target.read_text()
+        n = text.count(old_string)
+        if n != 1:
+            raise ToolError(f"old_string occurs {n} times in {path}; it must occur exactly once")
+        target.write_text(text.replace(old_string, new_string, 1))
+        return f"edited {path}"
 
     def run_tests(self):
         timeout = TEST_TIMEOUT_S
@@ -786,11 +814,13 @@ def rescore(run: pathlib.Path) -> int:
 
 
 def compare_task(base: dict[int, bool], cand: dict[int, bool]) -> str:
-    """Predeclared rule on the `tests` column (design doc): seeds 1-3, or 1-6 after an
-    inconclusive result, on both arms."""
-    if set(base) not in ({1, 2, 3}, {1, 2, 3, 4, 5, 6}) or set(base) != set(cand):
-        return "incomplete: both arms need seeds 1-3 (or 1-6) for this task"
+    """Predeclared rule on the `tests` column (design doc): seed 1 screens; a loss there needs
+    seeds 1-3, then 1-6 after an inconclusive result, on both arms."""
+    if set(base) not in ({1}, {1, 2, 3}, {1, 2, 3, 4, 5, 6}) or set(base) != set(cand):
+        return "incomplete: both arms need the same seeds (1, 1-3 or 1-6) for this task"
     drop = sum(base.values()) - sum(cand.values())
+    if len(base) == 1:
+        return "inconclusive: rerun this task with seeds 2,3 on both arms" if drop == 1 else "ok"
     if drop >= 2:
         return "regression"
     if drop == 1 and len(base) < 6:
@@ -867,7 +897,7 @@ def main(argv=None) -> int:
     mode.add_argument("--compare", nargs=2, metavar=("BASE", "CANDIDATE"),
                       help="apply the regression rule; comma-separate several run dirs per arm")
     ap.add_argument("--tasks", help="comma-separated task ids (default: all)")
-    ap.add_argument("--seeds", default=",".join(map(str, SEEDS)), help="comma-separated seeds (default 1,2,3)")
+    ap.add_argument("--seeds", default=",".join(map(str, SEEDS)), help="comma-separated seeds (default 1)")
     ap.add_argument("--url", default=None, help="server URL (default http://127.0.0.1:<[defaults].port>)")
     ap.add_argument("--alias", help="models.toml alias for sampling (default: [defaults].default_alias)")
     ap.add_argument("--sampling", help="key=value,... sent instead of the alias table (e.g. for Strata)")

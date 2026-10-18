@@ -107,6 +107,27 @@ class TestTools(WorkdirCase):
         self.assertEqual(tools.call("write_file", {"path": "f.txt", "content": "x"}), "wrote 1 bytes to f.txt")
         self.assertEqual((self.root / "f.txt").read_text(), "x")
 
+    def test_edit_file_replaces_only_a_unique_match(self):
+        (self.root / "f.txt").write_text("a = 1\nb = 1\n")
+        tools = cs.Tools(self.root, {"tests_cmd": "true"}, None)
+        self.assertEqual(tools.call("edit_file", {"path": "f.txt", "old_string": "b = 1", "new_string": "b = 2"}),
+                         "edited f.txt")
+        self.assertEqual((self.root / "f.txt").read_text(), "a = 1\nb = 2\n")
+        for old, n in (("= ", 2), ("c = 3", 0)):
+            r = tools.call("edit_file", {"path": "f.txt", "old_string": old, "new_string": "x"})
+            self.assertEqual(r, f"error: old_string occurs {n} times in f.txt; it must occur exactly once")
+        self.assertEqual((self.root / "f.txt").read_text(), "a = 1\nb = 2\n")
+
+    def test_write_fault_also_hits_the_first_edit(self):
+        (self.root / "f.txt").write_text("x")
+        task = {"tests_cmd": "true", "faults": {"write_file": {"1": "EAGAIN; file not modified"}}}
+        tools = cs.Tools(self.root, task, None)
+        args = {"path": "f.txt", "old_string": "x", "new_string": "y"}
+        self.assertEqual(tools.call("edit_file", args), "error: EAGAIN; file not modified")
+        self.assertEqual((self.root / "f.txt").read_text(), "x")
+        self.assertEqual(tools.call("edit_file", args), "edited f.txt")
+        self.assertEqual((self.root / "f.txt").read_text(), "y")
+
     def test_bounded_run_tests_keeps_full_log_in_worktree(self):
         task = {"tests_cmd": "for i in 1 2 3 4 5 6; do echo line$i; done; exit 3", "run_tests_tail_lines": 3}
         out = cs.Tools(self.root, task, None).call("run_tests", {})
@@ -262,7 +283,14 @@ class TestCompareRule(unittest.TestCase):
     def test_missing_seeds_or_tasks_are_incomplete(self):
         self.assertTrue(cs.compare_task(self.seeds(True, True, True), {}).startswith("incomplete"))
         self.assertTrue(cs.compare_task(self.seeds(True, True, True), {1: True}).startswith("incomplete"))
-        self.assertTrue(cs.compare_task({1: True}, {1: True}).startswith("incomplete"))
+        self.assertTrue(cs.compare_task({1: True, 2: True}, {1: True, 2: True}).startswith("incomplete"))
+
+    def test_seed_one_screen(self):
+        for base, cand, expected in (({1: True}, {1: False}, "inconclusive: rerun this task with seeds 2,3"),
+                                     ({1: True}, {1: True}, "ok"), ({1: False}, {1: False}, "ok"),
+                                     ({1: False}, {1: True}, "ok")):
+            with self.subTest(base=base, cand=cand):
+                self.assertTrue(cs.compare_task(base, cand).startswith(expected))
 
 
 if __name__ == "__main__":
