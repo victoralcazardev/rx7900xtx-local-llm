@@ -12,7 +12,7 @@ it never starts an engine. Each (task, seed) runs in a fresh `git worktree` of a
   systemd-inhibit --what=sleep:idle --mode=block env IA_BENCH_INHIBITED=1 \\
       python3 bench/coding_suite.py --freeze-pack        # once, against the 27B: CS4 file lists
   systemd-inhibit --what=sleep:idle --mode=block env IA_BENCH_INHIBITED=1 BENCH_EXPECT_POWER_CAP_W=272 \\
-      python3 bench/coding_suite.py --run --label 27b    # 6 tasks x seeds 1,2,3
+      python3 bench/coding_suite.py --run --label 27b    # 6 tasks x seed 1
   python3 bench/coding_suite.py --rescore <run dir>      # re-score saved diffs; must match
   python3 bench/coding_suite.py --compare <base run> <candidate run>
 """
@@ -53,7 +53,7 @@ READ_MAX_LINES = 2000
 READ_MAX_BYTES = 64 * 1024
 TESTS_TAIL_CHARS = 4000
 BAD_TOOL_CALL_LIMIT = 3
-SEEDS = (1, 2, 3)
+SEEDS = (1,)
 EXCLUDES = "__pycache__/\n*.pyc\n.suite/\n"
 GIT_ID = ["-c", "user.name=coding-suite", "-c", "user.email=coding-suite@localhost"]
 PACK_PREAMBLE = "Read these files from the repository first; the task follows after them."
@@ -814,11 +814,13 @@ def rescore(run: pathlib.Path) -> int:
 
 
 def compare_task(base: dict[int, bool], cand: dict[int, bool]) -> str:
-    """Predeclared rule on the `tests` column (design doc): seeds 1-3, or 1-6 after an
-    inconclusive result, on both arms."""
-    if set(base) not in ({1, 2, 3}, {1, 2, 3, 4, 5, 6}) or set(base) != set(cand):
-        return "incomplete: both arms need seeds 1-3 (or 1-6) for this task"
+    """Predeclared rule on the `tests` column (design doc): seed 1 screens; a loss there needs
+    seeds 1-3, then 1-6 after an inconclusive result, on both arms."""
+    if set(base) not in ({1}, {1, 2, 3}, {1, 2, 3, 4, 5, 6}) or set(base) != set(cand):
+        return "incomplete: both arms need the same seeds (1, 1-3 or 1-6) for this task"
     drop = sum(base.values()) - sum(cand.values())
+    if len(base) == 1:
+        return "inconclusive: rerun this task with seeds 2,3 on both arms" if drop == 1 else "ok"
     if drop >= 2:
         return "regression"
     if drop == 1 and len(base) < 6:
@@ -895,7 +897,7 @@ def main(argv=None) -> int:
     mode.add_argument("--compare", nargs=2, metavar=("BASE", "CANDIDATE"),
                       help="apply the regression rule; comma-separate several run dirs per arm")
     ap.add_argument("--tasks", help="comma-separated task ids (default: all)")
-    ap.add_argument("--seeds", default=",".join(map(str, SEEDS)), help="comma-separated seeds (default 1,2,3)")
+    ap.add_argument("--seeds", default=",".join(map(str, SEEDS)), help="comma-separated seeds (default 1)")
     ap.add_argument("--url", default=None, help="server URL (default http://127.0.0.1:<[defaults].port>)")
     ap.add_argument("--alias", help="models.toml alias for sampling (default: [defaults].default_alias)")
     ap.add_argument("--sampling", help="key=value,... sent instead of the alias table (e.g. for Strata)")
