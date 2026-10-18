@@ -99,17 +99,16 @@ Sampling is the Qwen3.8-27B card's own; `--min-p 0.0` is set explicitly because 
 
 ## Next steps
 
-Qwen3.8-27B tuning is paused until Qwen4 ships (2026-10-16, [`DECISIONS.md`](DECISIONS.md)); items 2-4 wait
-for it. Strata: [tuning plan](models/strata-flash-next.md#tuning-plan-2026-10-16-not-run).
+Execution order, dependencies and gates: [current plan](ENGINES-EXPERIMENTS.md#current-plan-2026-10-18).
+Qwen3.8-27B tuning stays paused until Qwen4 ships (2026-10-16, [`DECISIONS.md`](DECISIONS.md)).
 
-1. Measure the harness compaction change in the next real session (no in-flight wait > 60 s, no
-   full miss outside compaction) —
+1. B1: build and calibrate the fixed coding suite; the design is done
+   ([design](ENGINES-EXPERIMENTS.md#coding-suite-design-b1a-2026-10-18)).
+2. A1 (needs the user's go): measure the b11718 `hip-kvmix` build in use (numbers above are b11454).
+3. B2: baseline the 27B and the Strata Coder on the suite.
+4. A2: check the harness compaction change in the next real session —
    [agent-traffic.md](measurements/agent-traffic.md#root-cause-speculative-compaction-on-the-local-slot-2026-10-03).
-2. Kernel: a native quantized-KV FlashAttention verify kernel (FA is ~55% of a 240K MTP step;
-   upper bound ~+30% decode); development, not started —
-   [FA attribution](../results/20261003-fa-attribution-qwen38-shape/README.md).
-3. `ngram-mod` and probabilistic drafting only via a real coding-session replay (T09) —
-   [speculative.md](measurements/speculative.md).
-4. Run the quality-gated tool-output, request-locality and engine experiments in that order —
-   [priorities and prerequisites](ENGINES-EXPERIMENTS.md#queue-reconciliation-and-priority).
-5. GPU care beyond the 272 W cap (undervolt): deferred — [sop/power-cap.md](sop/power-cap.md).
+5. C1: Qwen4 on day one, gated by the coding suite.
+6. D1: native quantized-KV FlashAttention verify kernel (FA is ~55% of a 240K MTP step; upper
+   bound ~+30% decode) —
+   [T29](ENGINES-EXPERIMENTS.md#new-t29-native-quantized-kv-multi-query-verify-kernel-2026-10-18-not-started).

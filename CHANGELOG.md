@@ -7,6 +7,10 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- Designed the fixed six-task coding suite (pinned repos, injected bugs, pass rules, 128K long-context task, regression rule); tool-eval-bench reviewed and not reused ([`docs/ENGINES-EXPERIMENTS.md`](docs/ENGINES-EXPERIMENTS.md#coding-suite-design-b1a-2026-10-18)).
+- README front page lists every model and engine (Qwen3.8-27B default, Flash-Next Coder via Strata, Qwen4 planned, Nemotron 3.5 Bolt candidate); the upstream-contributions section is removed ([`README.md`](README.md#models)).
+- Reviewed the tinygrad-qwen38 fork (~100 tok/s claim), llama.cpp's verify-batch FA dispatch and TurboQuant KV; planned T29, a native quantized-KV multi-query verify kernel ([`docs/ENGINES-EXPERIMENTS.md`](docs/ENGINES-EXPERIMENTS.md#new-t29-native-quantized-kv-multi-query-verify-kernel-2026-10-18-not-started), [`docs/SOURCES.md`](docs/SOURCES.md#tinygrad-qwen38-fork-verify-kernel-references-and-turboquant-kv-2026-10-18)).
+- Current execution plan with dependencies and gates (measure b11718, coding suite, Qwen4, Strata, Nemotron, T29); replaces the 2026-10-03 queue ([`docs/ENGINES-EXPERIMENTS.md`](docs/ENGINES-EXPERIMENTS.md#current-plan-2026-10-18)).
 - `hip-kvmix` engine moves to llama.cpp b11718 (own build, no PR #29509 patch: upstream #30514 replaces it); not measured on this machine, rollback b11454 + PR #29509 ([`docs/ENGINES.md`](docs/ENGINES.md)).
 - Strata Coder setup moves to 262K, KV int8 and `--vram-reserve-mib 3072` (~1.4 GiB VRAM left for the desktop; a Slack launch no longer crashes it; 240K retrieval 20/20); the optional harness provider is renamed `local-flash-262k` (contextWindow 262144) in `check-sync.py` ([`results/20261016-strata-coder-vram-reserve/`](results/20261016-strata-coder-vram-reserve/README.md)).
 - No second GPU on this machine (no room in the case); desktop VRAM headroom comes from engine settings ([`docs/measurements/coexistence.md`](docs/measurements/coexistence.md)).
@@ -27,7 +31,7 @@ All notable changes to this project are documented here. Format follows
 - Remaining cache-miss classes after the compaction change, from one session ([`docs/measurements/agent-traffic.md`](docs/measurements/agent-traffic.md#remaining-miss-classes-after-the-compaction-change-2026-10-04-single-session)).
 - Moved the KVMem trial write-up out of the experiments queue; added a KVMem row to TRIED ([`docs/measurements/kvmem.md`](docs/measurements/kvmem.md)).
 - SOP to keep the repo description, README, release and upstream links in sync after a push ([`sop/publish-sync.md`](docs/sop/publish-sync.md)).
-- README links the upstream contributions: local-ai-registry recipe (merged) and qwen38-mtp #88 (open) ([`README.md`](README.md#upstream)).
+- README links the upstream contributions: local-ai-registry recipe (merged) and qwen38-mtp #88 (open) ([`README.md`](README.md); section removed 2026-10-18).
 - Published the b11371 `hip-kvmix` engine as a GitHub release; quick start points to it ([`ENGINES.md`](docs/ENGINES.md)).
 - Power at depth: decode at 240K is power-limited at the 272 W minimum; overdrive procedure for an undervolt/clock cap ([`sop/power-cap.md`](docs/sop/power-cap.md)).
 - Measured llama.cpp b11371 (neutral vs. b11160) and `--spec-draft-sampling probabilistic` (not adopted, pending) ([`results/20261003-b11371-mtp-draft-sampling/`](results/20261003-b11371-mtp-draft-sampling/README.md)).
