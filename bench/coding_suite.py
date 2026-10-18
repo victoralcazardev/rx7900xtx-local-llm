@@ -375,17 +375,18 @@ def chat(url: str, body: dict, deadline: float, monitor=None) -> dict:
     if time.monotonic() >= deadline:
         raise EpisodeTimeout()
     u = urllib.parse.urlsplit(url)
-    conn = http.client.HTTPConnection(u.hostname, u.port or 80, timeout=deadline - time.monotonic())
-    stop, why = threading.Event(), []
+    cls = http.client.HTTPSConnection if u.scheme == "https" else http.client.HTTPConnection
+    conn = cls(u.hostname, u.port, timeout=deadline - time.monotonic())
+    stop, why, sock = threading.Event(), [], []  # sock: kept because getresponse() may drop conn.sock
 
     def watch():
         while not stop.wait(0.5):
             failure = monitor_failure(monitor)
             if failure or time.monotonic() >= deadline:
                 why.append(failure or "timeout")
-                if conn.sock is not None:
+                for s in sock:
                     try:
-                        conn.sock.shutdown(socket.SHUT_RDWR)
+                        s.shutdown(socket.SHUT_RDWR)
                     except OSError:
                         pass
                 return
@@ -394,6 +395,8 @@ def chat(url: str, body: dict, deadline: float, monitor=None) -> dict:
     watcher.start()
     out, error = None, None
     try:
+        conn.connect()
+        sock.append(conn.sock)
         conn.request("POST", u.path.rstrip("/") + "/v1/chat/completions", body=json.dumps(body),
                      headers={"Content-Type": "application/json"})
         resp = conn.getresponse()
@@ -782,9 +785,10 @@ def rescore(run: pathlib.Path) -> int:
 
 
 def compare_task(base: dict[int, bool], cand: dict[int, bool]) -> str:
-    """Predeclared rule on the `tests` column (design doc); both arms must have run the same seeds."""
-    if not base or set(base) != set(cand):
-        return "incomplete: both arms need the same seeds for this task"
+    """Predeclared rule on the `tests` column (design doc): seeds 1-3, or 1-6 after an
+    inconclusive result, on both arms."""
+    if set(base) not in ({1, 2, 3}, {1, 2, 3, 4, 5, 6}) or set(base) != set(cand):
+        return "incomplete: both arms need seeds 1-3 (or 1-6) for this task"
     drop = sum(base.values()) - sum(cand.values())
     if drop >= 2:
         return "regression"
