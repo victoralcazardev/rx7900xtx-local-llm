@@ -102,7 +102,7 @@ Sampling is the Qwen3.8-27B card's own; `--min-p 0.0` is set explicitly because 
 Execution order, dependencies and gates: [current plan](ENGINES-EXPERIMENTS.md#current-plan-2026-10-18).
 Qwen3.8-27B tuning stays paused until Qwen4 ships (2026-10-16, [`DECISIONS.md`](DECISIONS.md)).
 
-1. B1: build and calibrate the fixed coding suite; the design is done
+1. B1: calibrate the fixed coding suite (B1c); design and runner are done
    ([design](ENGINES-EXPERIMENTS.md#coding-suite-design-b1a-2026-10-18)).
 2. A1 (needs the user's go): measure the b11718 `hip-kvmix` build in use (numbers above are b11454).
 3. B2: baseline the 27B and the Strata Coder on the suite.

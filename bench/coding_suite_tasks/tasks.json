@@ -1,0 +1,92 @@
+{
+  "suite_version": 1,
+  "system_prompt": "You are a coding agent working in a Git checkout of {repo} at its root. Use the tools to read files, write files and run the test suite. Do not modify test files. When the task is complete, reply with a short summary and no tool call.",
+  "repos": {
+    "tomli": {"url": "https://github.com/hukkin/tomli", "commit": "a2a578949199336ebc3884eeba4aede87da41ef2", "tag": "2.5.0", "license": "MIT"},
+    "more-itertools": {"url": "https://github.com/more-itertools/more-itertools", "commit": "4aeb4338ae1407d8da9723e86da99efeb446f719", "tag": "v11.2.1", "license": "MIT"},
+    "bottle": {"url": "https://github.com/bottlepy/bottle", "commit": "b0a0a1014f7a7e6f6b7c193886a0913f46ee3ee6", "tag": "0.13.4", "license": "MIT"},
+    "markdown": {"url": "https://github.com/Python-Markdown/markdown", "commit": "2258b48e551d0df7b149ea9c33969bea7c7a0a2b", "tag": "3.11.1", "license": "BSD-3-Clause"}
+  },
+  "tasks": [
+    {
+      "id": "CS1",
+      "category": "local bug fix",
+      "repo": "tomli",
+      "bug_patch": "CS1/bug.patch",
+      "test_dir": "tests",
+      "tests_cmd": "PYTHONPATH=src python3 -m unittest -q",
+      "score_cmd": "PYTHONPATH=src python3 -m unittest -q",
+      "timeout_s": 1200,
+      "prompt": "`tomli.loads()` on the TOML document `s = \"\\U0001F600\"` returns `{'s': '\\x01F600'}` instead of `{'s': '\\U0001f600'}` (U+1F600). Fix the parser so 8-digit `\\U` escapes decode correctly, then make sure the test suite passes."
+    },
+    {
+      "id": "CS2",
+      "category": "cross-file change",
+      "repo": "more-itertools",
+      "bug_patch": "CS2/bug.patch",
+      "hidden": {"file": "CS2/hidden_cs2.py", "where": "worktree-at-scoring"},
+      "test_dir": "tests",
+      "tests_cmd": "python3 -m unittest discover -s tests -q",
+      "score_cmd": "python3 -m unittest discover -s tests -q && python3 -m unittest -q hidden_cs2",
+      "timeout_s": 1200,
+      "prompt": "Add `iequals(*iterables)` to more_itertools. It returns `True` if all given iterables yield equal elements in the same order and have the same length, else `False`; with zero or one iterable it returns `True`. Do not use a fill value that a real element could equal. Export it like the other functions in `more_itertools/more.py`, add its type stub to `more_itertools/more.pyi`, and add its `autofunction` entry to `docs/api.rst` in the same section as `argmin`, `argmax` and `minmax`. Then make sure the test suite passes."
+    },
+    {
+      "id": "CS3",
+      "category": "tool-error recovery",
+      "repo": "bottle",
+      "bug_patch": "CS3/bug.patch",
+      "test_dir": "test",
+      "tests_cmd": "python3 -m unittest discover -s test -t . -q",
+      "score_cmd": "python3 -m unittest discover -s test -t . -q",
+      "timeout_s": 1200,
+      "faults": {
+        "write_file": {"1": "write failed: EAGAIN (resource temporarily unavailable); file not modified"},
+        "run_tests": {"1": "test runner crashed before start: BrokenPipeError; no tests ran"}
+      },
+      "prompt": "`bottle.parse_range_header('bytes=0-9', 100)` yields `(0, 9)`, but HTTP byte ranges are inclusive, so it must yield `(0, 10)` (ten bytes). Fix it and make sure the test suite passes."
+    },
+    {
+      "id": "CS4",
+      "category": "long-context dependency lookup",
+      "repo": "markdown",
+      "bug_patch": "CS4/bug.patch",
+      "test_dir": "tests",
+      "tests_cmd": "python3 -m unittest discover -s tests -t . -q",
+      "score_cmd": "python3 -m unittest discover -s tests -t . -q",
+      "timeout_s": 3600,
+      "pack": {
+        "first": ["markdown/util.py"],
+        "globs": ["markdown/**/*.py", "tests/**/*.py", "docs/**/*.md"],
+        "targets": {"default": 120000, "deep": 180000},
+        "frozen": "CS4/pack.json"
+      },
+      "prompt": "In rendered Markdown, HTML entities inside code are no longer shown literally: `` `&copy;` `` renders as `<code>&copy;</code>` (a copyright sign) instead of `<code>&amp;copy;</code>`, in both code spans and indented code blocks. Find the cause in the code already loaded above, fix it, and make sure the test suite passes."
+    },
+    {
+      "id": "CS5",
+      "category": "post-compaction continuation",
+      "repo": "bottle",
+      "bug_patch": "CS5/bug.patch",
+      "test_dir": "test",
+      "tests_cmd": "python3 -m unittest discover -s test -t . -q",
+      "score_cmd": "python3 -m unittest discover -s test -t . -q",
+      "timeout_s": 1200,
+      "summary": "Summary of the conversation so far (earlier messages were compacted): The user asked to fix two bugs in bottle.py. Bug 1 is done: `parse_range_header` returned an exclusive end for `bytes=0-9`; it now yields `(0, 10)`, and the range tests passed after the fix. Bug 2 is not started: `html_escape(\"it's\")` must return `it&#039;s`, but single quotes are no longer escaped. Remaining steps: fix bug 2 in bottle.py without touching bug 1's fix, then run the full test suite.",
+      "prompt": "Continue."
+    },
+    {
+      "id": "CS6",
+      "category": "artifact omitted from a bounded tool result",
+      "repo": "tomli",
+      "fix_patch": "CS6/fix.patch",
+      "hidden": {"file": "CS6/hidden_cs6.py", "where": "external"},
+      "test_dir": "tests",
+      "tests_cmd": "PYTHONPATH=src python3 -m unittest -q && PYTHONPATH=src:{hidden_dir} python3 -m unittest -q hidden_cs6",
+      "score_cmd": "PYTHONPATH=src python3 -m unittest -q && PYTHONPATH=src:{hidden_dir} python3 -m unittest -q hidden_cs6",
+      "timeout_s": 1200,
+      "run_tests_tail_lines": 3,
+      "prompt": "`run_tests` reports a failing acceptance test that lives outside this repository. Change the library so it passes, without breaking the existing tests."
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+diff --git a/src/tomli/_parser.py b/src/tomli/_parser.py
+index 515ed72..ede27e8 100644
+--- a/src/tomli/_parser.py
++++ b/src/tomli/_parser.py
+@@ -604,7 +604,7 @@ def parse_basic_str_escape(
+     if escape_id == "\\u":
+         return parse_hex_char(src, pos, 4)
+     if escape_id == "\\U":
+-        return parse_hex_char(src, pos, 8)
++        return parse_hex_char(src, pos, 4)
+     try:
+         return pos, BASIC_STR_ESCAPE_REPLACEMENTS[escape_id]
+     except KeyError:

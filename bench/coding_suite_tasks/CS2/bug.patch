@@ -1,0 +1,73 @@
+diff --git a/docs/api.rst b/docs/api.rst
+index 7b40a8e..d4abb28 100644
+--- a/docs/api.rst
++++ b/docs/api.rst
+@@ -170,7 +170,6 @@ These tools return summarized or aggregated data from an iterable.
+ .. function:: minmax(iterable, *[, key, default])
+ .. autofunction:: minmax(arg1, arg2, *args[, key])
+   :noindex:
+-.. autofunction:: iequals
+ 
+ ----
+ 
+diff --git a/more_itertools/more.py b/more_itertools/more.py
+index 9c56ab3..6e44539 100755
+--- a/more_itertools/more.py
++++ b/more_itertools/more.py
+@@ -101,7 +101,6 @@ __all__ = [
+     'groupby_transform',
+     'ichunked',
+     'idft',
+-    'iequals',
+     'ilen',
+     'interleave',
+     'interleave_evenly',
+@@ -3734,28 +3733,6 @@ def ichunked(iterable, n):
+         consume(cacher)
+ 
+ 
+-def iequals(*iterables):
+-    """Return ``True`` if all given *iterables* are equal to each other,
+-    which means that they contain the same elements in the same order.
+-
+-    The function is useful for comparing iterables of different data types
+-    or iterables that do not support equality checks.
+-
+-    >>> iequals("abc", ['a', 'b', 'c'], ('a', 'b', 'c'), iter("abc"))
+-    True
+-
+-    >>> iequals("abc", "acb")
+-    False
+-
+-    Not to be confused with :func:`all_equal`, which checks whether all
+-    elements of iterable are equal to each other.
+-
+-    """
+-    try:
+-        return all(map(all_equal, zip(*iterables, strict=True)))
+-    except ValueError:
+-        return False
+-
+ 
+ def distinct_combinations(iterable, r):
+     """Yield the distinct combinations of *r* items taken from *iterable*.
+diff --git a/more_itertools/more.pyi b/more_itertools/more.pyi
+index 2ae730e..2f9569f 100644
+--- a/more_itertools/more.pyi
++++ b/more_itertools/more.pyi
+@@ -75,7 +75,6 @@ __all__ = [
+     'groupby_transform',
+     'ichunked',
+     'idft',
+-    'iequals',
+     'ilen',
+     'interleave',
+     'interleave_evenly',
+@@ -944,7 +943,6 @@ def minmax(
+ def longest_common_prefix(
+     iterables: Iterable[Iterable[_T]],
+ ) -> Iterator[_T]: ...
+-def iequals(*iterables: Iterable[Any]) -> bool: ...
+ def constrained_batches(
+     iterable: Iterable[_T],
+     max_size: int,
