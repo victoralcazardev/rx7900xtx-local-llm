@@ -59,7 +59,11 @@ upstream fixes was rejected because those fixes are public and older than the mo
 | CS5 | post-compaction continuation | bottle, same commit | `html_escape` stops escaping `'`; the only description is in a fixed compaction summary, then "Continue." | as CS3 | 1,200 s |
 | CS6 | artifact omitted from a bounded tool result | tomli, same commit | none; a hidden test outside the worktree expects a new duplicate-table message, visible only in the full log that the truncated `run_tests` result points to | as CS1, then the hidden test | 1,200 s |
 
-- **Tools**: `read_file`, `write_file`, `run_tests` (the visible command, last 4,000 characters; CS6 shows 3 lines).
+- **Tools**: `read_file`, `write_file`, `edit_file` (one exact, unique replacement), `run_tests` (the visible command,
+  last 4,000 characters; CS6 shows 3 lines). `edit_file` came in suite version 2 (B1c, 2026-10-18): with whole-file
+  writes only, CS2 (`more.py`, ~4,900 lines) and CS3 (`bottle.py`, ~4,500 lines) hit `max_tokens` while rewriting
+  the file (5/5 episodes `length`), a limit failure, not a quality one. CS3's injected write error hits the first
+  write of either kind.
   Limits: 40 assistant turns, `max_tokens` 32768. Harness wiring is out of scope; the runner is its own client of
   `/v1/chat/completions` with streaming tool calls, attached to the engine already serving `:8080`.
 - **Scoring**: restore the test folder from the pinned commit (edited tests cannot pass), add hidden tests, run the

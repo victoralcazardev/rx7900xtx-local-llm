@@ -76,6 +76,15 @@ TOOLS = [
             "content": {"type": "string", "description": "The whole new file content"}},
             "required": ["path", "content"]}}},
     {"type": "function", "function": {
+        "name": "edit_file",
+        "description": "Replace one exact occurrence of old_string with new_string in a file. old_string must "
+                       "match the file text exactly (including indentation) and occur exactly once.",
+        "parameters": {"type": "object", "properties": {
+            "path": {"type": "string", "description": "Path relative to the repository root"},
+            "old_string": {"type": "string", "description": "Exact text to replace; must be unique in the file"},
+            "new_string": {"type": "string", "description": "Replacement text"}},
+            "required": ["path", "old_string", "new_string"]}}},
+    {"type": "function", "function": {
         "name": "run_tests",
         "description": "Run the repository's test suite and return the exit code and the end of the output.",
         "parameters": {"type": "object", "properties": {}}}},
@@ -215,11 +224,15 @@ class Tools:
     def __init__(self, worktree: pathlib.Path, task: dict, hidden_dir: pathlib.Path | None):
         self.root, self.task, self.hidden_dir = worktree, task, hidden_dir
         self.calls: dict[str, int] = {}
+        self.fault_calls: dict[str, int] = {}
         self.deadline: float | None = None  # run_tests never outlives the episode
 
     def call(self, name: str, args: dict) -> str:
         self.calls[name] = self.calls.get(name, 0) + 1
-        fault = self.task.get("faults", {}).get(name, {}).get(str(self.calls[name]))
+        # Both write tools share the write_file fault counter, so CS3's injected write error can't be dodged.
+        kind = "write_file" if name == "edit_file" else name
+        self.fault_calls[kind] = self.fault_calls.get(kind, 0) + 1
+        fault = self.task.get("faults", {}).get(kind, {}).get(str(self.fault_calls[kind]))
         if fault:
             return f"error: {fault}"
         try:
@@ -227,6 +240,8 @@ class Tools:
                 return self.read_file(**args)
             if name == "write_file":
                 return self.write_file(**args)
+            if name == "edit_file":
+                return self.edit_file(**args)
             if name == "run_tests":
                 return self.run_tests()
             return f"error: unknown tool {name!r}"
@@ -272,6 +287,19 @@ class Tools:
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(content)
         return f"wrote {len(content.encode())} bytes to {path}"
+
+    def edit_file(self, path, old_string, new_string):
+        if not isinstance(old_string, str) or not isinstance(new_string, str) or not old_string:
+            raise ToolError("old_string must be a non-empty string and new_string a string")
+        target = resolve_in(self.root, path)
+        if not target.is_file():
+            raise ToolError(f"no such file: {path}")
+        text = target.read_text()
+        n = text.count(old_string)
+        if n != 1:
+            raise ToolError(f"old_string occurs {n} times in {path}; it must occur exactly once")
+        target.write_text(text.replace(old_string, new_string, 1))
+        return f"edited {path}"
 
     def run_tests(self):
         timeout = TEST_TIMEOUT_S

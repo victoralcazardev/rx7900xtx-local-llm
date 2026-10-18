@@ -1,6 +1,6 @@
 {
-  "suite_version": 1,
-  "system_prompt": "You are a coding agent working in a Git checkout of {repo} at its root. Use the tools to read files, write files and run the test suite. Do not modify test files. When the task is complete, reply with a short summary and no tool call.",
+  "suite_version": 2,
+  "system_prompt": "You are a coding agent working in a Git checkout of {repo} at its root. Use the tools to read files, edit or write files and run the test suite. Do not modify test files. When the task is complete, reply with a short summary and no tool call.",
   "repos": {
     "tomli": {
       "url": "https://github.com/hukkin/tomli",
