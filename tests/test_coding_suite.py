@@ -262,6 +262,7 @@ class TestCompareRule(unittest.TestCase):
     def test_missing_seeds_or_tasks_are_incomplete(self):
         self.assertTrue(cs.compare_task(self.seeds(True, True, True), {}).startswith("incomplete"))
         self.assertTrue(cs.compare_task(self.seeds(True, True, True), {1: True}).startswith("incomplete"))
+        self.assertTrue(cs.compare_task({1: True}, {1: True}).startswith("incomplete"))
 
 
 if __name__ == "__main__":
