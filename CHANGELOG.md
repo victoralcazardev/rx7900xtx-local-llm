@@ -7,6 +7,7 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- `hip-kvmix` engine moves to llama.cpp b11718 (own build, no PR #29509 patch: upstream #30514 replaces it); not measured on this machine, rollback b11454 + PR #29509 ([`docs/ENGINES.md`](docs/ENGINES.md)).
 - Strata + Qwen3.8-Flash-Next Coder IQ1_M as an optional second engine on `:8080` (128K, KV int8); `check-sync.py` accepts an optional `local-flash-128k` provider ([`docs/sop/strata.md`](docs/sop/strata.md), [`results/20261015-strata-coder-first-run/`](results/20261015-strata-coder-first-run/README.md)).
 - Reviewed Nemotron 3.5 Bolt 74B-A9B 24GB GGUF: b11454 cannot load it (per-layer expert counts, NVFP4 scale tensors); KV at 262K is only ~1.06 GiB q8_0, so text-only likely fits once a newer build loads it ([`docs/SOURCES.md`](docs/SOURCES.md#ideas-for-future-moe-models-not-pursued-2026-09-29)).
 - Reviewed the awesome-local-ai catalog: nothing changes the profile; tool-eval-bench noted as a tool-calling quality lead ([`docs/SOURCES.md`](docs/SOURCES.md#awesome-local-ai-catalog-2026-10-10)).
