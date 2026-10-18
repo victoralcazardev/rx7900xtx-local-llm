@@ -12,8 +12,9 @@
   desktop needs real VRAM headroom, not just GTT fallback.
 - **Mitigations that keep the 262K profile**: disable hardware acceleration in the browser (the
   first allocation to fail in the incident came from a Flatpak GPU client), and avoid GPU-heavy
-  applications while the model is loaded. The complete fix is a second, display-only GPU (see
-  below).
+  applications while the model is loaded. A second, display-only GPU would be the complete fix,
+  but it does not fit in this machine's case (2026-10-16), so VRAM headroom has to come from the
+  engine's own settings.
 - **Never suspend the machine with a model loaded**: with ~22 GB in use by a ROCm process, a
   suspend attempt hung the entire machine (incident below). `launch.py` now wraps the server in
   `systemd-inhibit --what=sleep:idle --mode=block` (works without sudo) specifically to prevent this.
@@ -85,8 +86,10 @@ with `q8_0`/`q5_1` stays the chosen quality/context trade-off.
 
 - **Browser hardware acceleration off**: free and reversible; costs some CPU and desktop
   smoothness. First step.
-- **A second, display-only GPU**: moves the compositor off the 7900 XTX so the full 24 GiB is
-  available to the model. The CPU on this machine (Ryzen 7 5700X) has no integrated graphics, so
+- **A second, display-only GPU** (ruled out on this machine 2026-10-16: there is no physical room
+  for a second card; still valid for owners who have the slot and space): moves the compositor off
+  the 7900 XTX so the full 24 GiB is available to the model. The CPU on this machine (Ryzen 7
+  5700X) has no integrated graphics, so
   this needs a card in a second PCIe slot. Prefer an AMD card, so the whole stack stays on Mesa and
   amdgpu/radeon, instead of mixing NVIDIA and AMD drivers under KWin. An old TeraScale card
   (Radeon HD 5000/6000) works with the `radeon` kernel driver and Mesa r600 (OpenGL ES only, no

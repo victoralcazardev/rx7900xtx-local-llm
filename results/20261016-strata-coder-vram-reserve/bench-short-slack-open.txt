@@ -1,0 +1,2 @@
+short#1: prompt 82 new / 0 cached @ 72 tok/s, gen 800 @ 49.0 tok/s, drafts 351/545, wall 17 s
+short#2: prompt 5 new / 77 cached @ 69 tok/s, gen 800 @ 49.1 tok/s, drafts 347/543, wall 16 s

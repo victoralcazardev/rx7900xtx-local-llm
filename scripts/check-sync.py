@@ -7,7 +7,7 @@ Two independent checks:
      only a WARNING (not installed yet) -- it does not fail the check.
   2. If your local machine config has a `[harness]` table with `targets`, each
      config file is checked for EXACTLY the local provider (local-262k) with
-     the right port and contextWindow, optionally local-flash-128k (Strata,
+     the right port and contextWindow, optionally local-flash-262k (Strata,
      same port, docs/sop/strata.md), and no other provider pointing at
      127.0.0.1 (an orphan from an earlier setup). This check is off by
      default -- see local.example.toml.
@@ -31,7 +31,7 @@ EXPECTED_ENTRIES = {
 }
 # Allowed but not required: the Strata Flash-Next Coder setup (docs/sop/strata.md) on the same port.
 OPTIONAL_ENTRIES = {
-    "local-flash-128k": 131072,
+    "local-flash-262k": LOCAL_262K_CONTEXT,
 }
 EXPECTED_PORT = 8080
 

@@ -89,12 +89,16 @@ Sampling is the Qwen3.8-27B card's own; `--min-p 0.0` is set explicitly because 
   [agent-traffic.md](measurements/agent-traffic.md#open-ab-tests).
 - **KVMem**: not adopted until a real agent run —
   [ENGINES-EXPERIMENTS.md](ENGINES-EXPERIMENTS.md#kvmem-trial-round-2-and-final-round-2026-09-30-not-adopted).
-- **Qwen3.8-Flash-Next Coder via Strata**: optional engine (`local-flash-128k`); 128K int8 works, longer
-  context is RAM-bound and quality is unmeasured — [next iteration](models/strata-flash-next.md#next-iteration-goal-the-longest-context-that-keeps-quality).
+- **Qwen3.8-Flash-Next Coder via Strata**: optional engine (`local-flash-262k`); 262K, KV int8, 3 GiB VRAM
+  reserve works (52-57 tok/s, retrieval 20/20 to 240K); agentic coding quality unmeasured —
+  [owner](models/strata-flash-next.md#next-iteration-goal-the-longest-context-that-keeps-quality).
 - **Nemotron 3.5 Bolt 74B-A9B (IQ2 GGUF)**: needs a llama.cpp newer than b11454; fit at 262K
   estimated, not measured — [SOURCES.md](SOURCES.md#ideas-for-future-moe-models-not-pursued-2026-09-29).
 
 ## Next steps
+
+Qwen3.8-27B tuning is paused until Qwen4 ships (2026-10-16, [`DECISIONS.md`](DECISIONS.md)); items 2-4 wait
+for it. Strata: [tuning plan](models/strata-flash-next.md#tuning-plan-2026-10-16-not-run).
 
 1. Measure the harness compaction change in the next real session (no in-flight wait > 60 s, no
    full miss outside compaction) —

@@ -14,7 +14,7 @@ of data in 8.5 GiB of RAM. Almost all of it was `/tmp`, a tmpfs: 42 test renders
 
 **Command.** `qwen-flash start` (the wrapper from [`docs/sop/strata.md`](../../docs/sop/strata.md)).
 
-**Observed** (excerpts: [`strata-start.log`](strata-start.log), [`kernel-oom.txt`](kernel-oom.txt)):
+**Observed** (excerpts: [`strata-start.txt`](strata-start.txt), [`kernel-oom.txt`](kernel-oom.txt)):
 
 | Item | Value |
 |---|---|

@@ -7,6 +7,8 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- Strata Coder setup moves to 262K, KV int8 and `--vram-reserve-mib 3072` (~1.4 GiB VRAM left for the desktop; a Slack launch no longer crashes it; 240K retrieval 20/20); the optional harness provider is renamed `local-flash-262k` (contextWindow 262144) in `check-sync.py` ([`results/20261016-strata-coder-vram-reserve/`](results/20261016-strata-coder-vram-reserve/README.md)).
+- No second GPU on this machine (no room in the case); desktop VRAM headroom comes from engine settings ([`docs/measurements/coexistence.md`](docs/measurements/coexistence.md)).
 - Strata + Qwen3.8-Flash-Next Coder IQ1_M as an optional second engine on `:8080` (128K, KV int8); `check-sync.py` accepts an optional `local-flash-128k` provider ([`docs/sop/strata.md`](docs/sop/strata.md), [`results/20261015-strata-coder-first-run/`](results/20261015-strata-coder-first-run/README.md)).
 - Reviewed Nemotron 3.5 Bolt 74B-A9B 24GB GGUF: b11454 cannot load it (per-layer expert counts, NVFP4 scale tensors); KV at 262K is only ~1.06 GiB q8_0, so text-only likely fits once a newer build loads it ([`docs/SOURCES.md`](docs/SOURCES.md#ideas-for-future-moe-models-not-pursued-2026-09-29)).
 - Reviewed the awesome-local-ai catalog: nothing changes the profile; tool-eval-bench noted as a tool-calling quality lead ([`docs/SOURCES.md`](docs/SOURCES.md#awesome-local-ai-catalog-2026-10-10)).

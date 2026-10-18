@@ -301,6 +301,11 @@ Evidence: [`results/20261015-strata-coder-first-run/`](../../results/20261015-st
    `bench/strata_longctx_quality.py`) 20/20 at 128K and 190K, like the 27B; 240K 4/4 when opening Slack
    crashed the desktop: with ~600 MiB VRAM free the driver pushed 10-15 GiB of GPU memory into RAM.
    Next: `./setup.sh --vram-reserve-mib 3072`, re-measure speed, finish the 240K row (documents 2-5).
+   **Done 2026-10-16** ([`results/20261016-strata-coder-vram-reserve/`](../../results/20261016-strata-coder-vram-reserve/README.md)):
+   ~1.4 GiB of VRAM stays free (0.6 GiB at the prefill peak) and a Slack launch costs 0.11 GiB with no
+   eviction to RAM; gen 52.2-56.6 tok/s (single runs, -3% to -13%); 240K retrieval 20/20. The cost is a
+   15.03 GiB RAM copy (was 12.71), so start with `MemAvailable` ≥ 21 GiB. This is the recommended Strata
+   config: 262K, KV int8 (no 4-bit KV), 3 GiB VRAM reserve.
 2. Step context up with RAM free: 200K (`--context 204800`, inside the trained 262K) int8, then 262K int8.
    Pass = no stall, `pswpin` flat, decode > 45 tok/s at 128K+ fill. Record `experts in RAM` and VRAM free.
 3. Only if RAM allows: `--kv-streaming on` (upstream: ~1.8 GiB RAM at 128K, ~3.6 GiB at 262K) keeps the KV off
@@ -308,4 +313,82 @@ Evidence: [`results/20261015-strata-coder-first-run/`](../../results/20261015-st
 4. Quality gate before any wider use: adapt `bench/longctx_quality.py` to Strata's API (it is OpenAI-compatible)
    and compare with the 27B at the same depths; temperature 0, reasoning off.
 5. Not tried yet: a hipBLASLt tuning table (system ROCm 7.2.4 ships no hipBLASLt; setup's TheRock wheels path
-   would bring one, ~10 GB) for faster prefill; `--adapt-async 1` (upstream: +4-5% decode, arena mode).
+   would bring one, ~10 GB) for faster prefill. `--adapt-async 1` moved to the tuning plan below.
+
+### Tuning plan 2026-10-16 (not run)
+
+Config-only: flags, env vars and the run config JSON; Strata's source stays untouched so official updates apply
+cleanly. Base: the 2026-10-16 config (262K, KV int8, `--vram-reserve-mib 3072`). One variable per phase; each
+phase starts from the previous phase's adopted config. A candidate that misses its bar goes to
+[`TRIED.md`](../TRIED.md). Paths: `<S>` = the Strata clone (`~/IA/Motores/Strata`), `<D>` = `~/IA/Motores/Strata-data`,
+`<cfg>` = `<S>/strata-coder-iq1_m.json`.
+
+**P0: preconditions (every phase).**
+
+1. Record `git -C <S> describe --tags` and do not run `./update.sh` or `./setup.sh` until the plan ends: the bench
+   filler is `<S>/src`, so an update changes the prompts, and setup can rewrite `<cfg>` args (see the SOP gotcha).
+2. `cp <cfg> <cfg>.pre-<phase>` before each edit; rollback = copy it back and `qwen-flash stop && qwen-flash start`.
+3. Same desktop state for every run: browser and Electron apps closed, `/tmp` under 2 GiB, `MemAvailable` ≥ 21 GiB
+   (`qwen-flash start` refuses otherwise; never pass `--force` during the plan).
+4. Keep each phase's tooling in its result folder, `results/<date>-strata-<phase>/`: copy
+   `results/20261015-strata-coder-context-steps/strata_bench.py` there and add a RAM watcher script there (2 s
+   samples: `MemAvailable`, `GPUActive`, GTT, VRAM used, zram, swap used, `pswpin`; GTT is
+   `mem_info_gtt_used`, not `GPUReclaim`). Both are part of the evidence.
+
+**F1: vendor sampling (quality, ~15 min).** Without a `sampling` block the server answers requests that send no
+temperature greedily (Strata `serve/server.py:743-744`, `serve/runconfig.py:20-21`); the harness entry in the
+omp `models.yml` sets none. The [Qwen3.8-Flash-Next card](https://huggingface.co/Qwen/Qwen3.8-Flash-Next) gives for
+thinking mode `temperature=1.0, top_p=0.95, top_k=20, min_p=0.0, presence_penalty=0.0,
+repetition_penalty=1.0`; its SWE results use temperature 1.0.
+
+1. Add to `<cfg>`: `"sampling": {"temperature": 1.0, "top_p": 0.95, "top_k": 20, "min_p": 0.0}` (the penalties
+   are the card's values already; `top_k` must be 1-64). Validate with `python3 -m json.tool <cfg>`.
+2. Restart. Done when the server log shows `[strata] sampling defaults from the config: ...` with these four values.
+3. Send the same prompt twice with no `temperature` field: the two answers differ (greedy would repeat them).
+   Send it once with `"temperature": 0`: two such answers are identical (explicit values still win).
+4. One short harness session on `local-flash-262k` ends with `finish_reason: stop` and no repetition loop.
+5. Docs: install section of [`../sop/strata.md`](../sop/strata.md) (the block next to the headroom env), one
+   `DECISIONS.md` row, `CHANGELOG.md`. Rollback: remove the block.
+
+Whether omp sends its own temperature is unverified (the server log does not print request sampling); the block
+is harmless either way, because a request's own values win.
+
+**F2: adaptive expert swaps, interleaved A/B/C (speed, ~75 min).**
+
+| Arm | Change in `<cfg>` | Bit-exact run to run |
+|---|---|---|
+| A | none (F1 config) | yes |
+| B | `"--adapt-async", "1"` appended to `args` | no (`--help`) |
+| C | `"STRATA_ADAPT_OVERLAP_RESIDENT": "1"` in `env` | yes; upstream comment: RTX A4000 +7.0%, RTX 3060 -2.6% where CPU experts and copies share RAM bandwidth (`src/program/generate.cpp:8746-8747`) |
+
+1. Edit the phase copy of `strata_bench.py`: request `"temperature": 0` (instead of 0.6) so every arm decodes the
+   same text and MTP acceptance is comparable, and print a SHA-256 of `content + reasoning_content` per request.
+2. Order A B C, three times; a fresh `qwen-flash start` per run; `STRATA_DIR=<S> python3 strata_bench.py 120000
+   250000` with the watcher running. Save each run's output, its engine start lines and the `expert tiers:` lines.
+3. Checks per run: the start log for C says the adaptive overlap is on (A says
+   `not in the resident RAM mode unless STRATA_ADAPT_OVERLAP_RESIDENT=1`); B and C exclude each other
+   (`generate.cpp:8741`), so never set both; no `stall report`; `files 0 blobs`.
+4. A and C must give the same SHA per request. A difference means C is not exact here: record it and judge C
+   by B's rule.
+5. Adopt an arm only if its median gen tok/s beats A by ≥ 5% at both ~120K and ~250K, it wins at least 2 of the 3
+   A/arm pairs at each depth, there is no stall, and min `MemAvailable` stays > 5 GiB. B also needs 8/8 in
+   `cd bench && python3 strata_longctx_quality.py --depths 190000 --docs 2`. If B and C both pass, take C.
+6. Docs: result folder + `results/INDEX.md` row, outcome here, `DECISIONS.md` or `TRIED.md` row, SOP if adopted.
+
+**F3: learned expert profile (cold-start speed, ~40 min, needs a real session).** Shipped profile:
+`<S>/data/expert-profile-coder.bin` (the `--expert-profile` value in `<cfg>`).
+
+1. Baseline: two fresh starts on the F2 config; on each, record short #1 and ~120K (phase bench, temperature 0)
+   and the `expert tiers: GPU <N> hits` lines.
+2. Add `"--expert-profile-save", "<D>/profile-coder-learned.bin"` to `args`; run at least 20 min of real
+   harness coding work (the user's session). Do not train on `strata_bench.py`: it is the measurement workload,
+   so the result would be circular. No real session = skip F3 and say so.
+3. `qwen-flash stop` (the profile is written on quit); check the file exists and is non-empty.
+4. Point `--expert-profile` at the learned file, remove `--expert-profile-save`, repeat step 1 twice.
+5. Adopt if the first request is ≥ 5% faster at ~120K or the GPU hits per request rise, with no growth of the
+   `experts in RAM` start line. Keep the shipped profile; after any Strata update, go back to it and re-learn
+   (the pack or profile format can change). Risk: the profile is biased toward the traffic it learned from.
+
+**Out of scope, with reason:** `--conversation-cache-mib` (costs RAM, the binding limit here); the hipBLASLt
+table (needs another ROCm install, ~10 GB); `--kv-grow` (needs every expert in RAM, not the resident mode);
+`STRATA_HIP_WMMA` (RDNA4 only); `--vram-reserve-later-mib` (layer-split later cards only).

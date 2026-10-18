@@ -1,0 +1,4 @@
+short#1: prompt 82 new / 0 cached @ 65 tok/s, gen 800 @ 54.4 tok/s, drafts 368/564, wall 16 s
+short#2: prompt 5 new / 77 cached @ 67 tok/s, gen 800 @ 56.6 tok/s, drafts 373/558, wall 14 s
+deep~120K: prompt 120423 new / 0 cached @ 773 tok/s, gen 800 @ 52.2 tok/s, drafts 395/558, wall 171 s
+deep~250K: prompt 141945 new / 114688 cached @ 739 tok/s, gen 800 @ 55.1 tok/s, drafts 504/713, wall 207 s
