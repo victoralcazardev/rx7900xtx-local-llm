@@ -7,6 +7,7 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- b11718 engine measured at 240K against b11454 + PR #29509 and kept; engine updates now take one 240K pair plus one coding-suite run ([`results/20261018-engine-b11718-vs-b11454-240k/`](results/20261018-engine-b11718-vs-b11454-240k/README.md), [`docs/sop/update-engine.md`](docs/sop/update-engine.md)).
 - `bench/coding_suite.py`: the fixed six-task coding suite runner (streaming tool calls, worktrees, scoring, `--smoke`, `--verify-fixtures`, `--rescore`, `--compare`) with its frozen task data ([`bench/README.md`](bench/README.md)).
 - Designed the fixed six-task coding suite (pinned repos, injected bugs, pass rules, 128K long-context task, regression rule); tool-eval-bench reviewed and not reused ([`docs/ENGINES-EXPERIMENTS.md`](docs/ENGINES-EXPERIMENTS.md#coding-suite-design-b1a-2026-10-18)).
 - README front page lists every model and engine (Qwen3.8-27B default, Flash-Next Coder via Strata, Qwen4 planned, Nemotron 3.5 Bolt candidate); the upstream-contributions section is removed ([`README.md`](README.md#models)).

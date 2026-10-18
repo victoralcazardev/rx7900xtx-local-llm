@@ -104,7 +104,8 @@ Qwen3.8-27B tuning stays paused until Qwen4 ships (2026-10-16, [`DECISIONS.md`](
 
 1. B1: calibrate the fixed coding suite (B1c); design and runner are done
    ([design](ENGINES-EXPERIMENTS.md#coding-suite-design-b1a-2026-10-18)).
-2. A1 (needs the user's go): measure the b11718 `hip-kvmix` build in use (numbers above are b11454).
+2. A1 done: b11718 kept after a 240K check against b11454 + PR #29509 (numbers above are b11454) —
+   [results](../results/20261018-engine-b11718-vs-b11454-240k/README.md).
 3. B2: baseline the 27B and the Strata Coder on the suite.
 4. A2: check the harness compaction change in the next real session —
    [agent-traffic.md](measurements/agent-traffic.md#root-cause-speculative-compaction-on-the-local-slot-2026-10-03).

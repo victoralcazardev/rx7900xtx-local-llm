@@ -27,11 +27,17 @@ disabled). One single-backend binary per download/build.
 2. **Only if something relevant changed**: build the new engine following "Build a new engine"
    below. The custom `GGML_CUDA_FA_QUANTS` build flags are still required for this build — the
    official binaries don't ship K q8_0 + V q5_1/q4_1 FlashAttention kernels.
-3. **One A/B run** against the current reference profile (see `docs/STATUS.md`) at a couple of
-   depths, ~15-20 minutes under `systemd-inhibit`: `bench/depth_bench.py`. Its hardcoded KV/MTP
-   case list targets whichever profile it was last written for -- adjust `run_case`'s `kv`/`mtp`
-   arguments if it no longer matches the current reference profile. Compare tok/s and MTP
-   acceptance against the last recorded number in `docs/measurements/depth.md`.
+3. **One quick A/B at 240K** (~30 min under `systemd-inhibit`, nothing else using the GPU): run
+   `bench/spec_depth_bench.py --run --depth 240000 --variants n3-map --reps 1 --extra "-ub 256"`
+   once with the new build and once with the current one (`BENCH_SERVER`), back to back. 240K
+   exercises the deep FlashAttention + MTP path the profile depends on; temperature 0 makes the
+   text comparable. Within an arm, cached reps agree within 1% and give the same text
+   ([2026-10-18](../../results/20261018-engine-b11718-vs-b11454-240k/README.md)), so one rep after
+   the warm-up is enough. **Adopt** when tg is within 2% per task, or when a task whose greedy text
+   differs is slower only by its lower MTP acceptance (cost per step unchanged, as on 2026-10-18).
+   **Then** run the coding suite once on the new build (`bench/coding_suite.py --run`) and compare
+   it with the last baseline (`--compare`); keep the current build on a regression. No 190K or
+   retrieval run unless step 1 found a FlashAttention/KV change.
 4. **Adopt or discard**: record the outcome in `docs/DECISIONS.md` and, if adopted, update
    `docs/ENGINES.md` (commit, flags, SHA256) and `models.toml`. Keep the A/B run's output under
    `results/` -- immutable, never overwritten in place (see `docs/STYLE.md` §7).

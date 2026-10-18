@@ -421,7 +421,8 @@ def chat(url: str, body: dict, deadline: float, monitor=None) -> dict:
 def server_model(url: str) -> str:
     models = http_json(url.rstrip("/") + "/v1/models")
     data = models.get("data") or models.get("models") or []
-    return (data[0].get("id") or data[0].get("name")) if data else "local"
+    name = (data[0].get("id") or data[0].get("name")) if data else "local"
+    return pathlib.PurePath(name).name  # llama-server reports the GGUF path; keep only the file name
 
 
 # --- episode ------------------------------------------------------------------------------
