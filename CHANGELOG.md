@@ -7,6 +7,7 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- `hip-kvmix` engine moves to llama.cpp b11718 (own build, no PR #29509 patch: upstream #30514 replaces it); not measured on this machine, rollback b11454 + PR #29509 ([`docs/ENGINES.md`](docs/ENGINES.md)).
 - Strata Coder setup moves to 262K, KV int8 and `--vram-reserve-mib 3072` (~1.4 GiB VRAM left for the desktop; a Slack launch no longer crashes it; 240K retrieval 20/20); the optional harness provider is renamed `local-flash-262k` (contextWindow 262144) in `check-sync.py` ([`results/20261016-strata-coder-vram-reserve/`](results/20261016-strata-coder-vram-reserve/README.md)).
 - No second GPU on this machine (no room in the case); desktop VRAM headroom comes from engine settings ([`docs/measurements/coexistence.md`](docs/measurements/coexistence.md)).
 - Strata + Qwen3.8-Flash-Next Coder IQ1_M as an optional second engine on `:8080` (128K, KV int8); `check-sync.py` accepts an optional `local-flash-128k` provider ([`docs/sop/strata.md`](docs/sop/strata.md), [`results/20261015-strata-coder-first-run/`](results/20261015-strata-coder-first-run/README.md)).

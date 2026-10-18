@@ -19,9 +19,10 @@ default when no alias is given.
 - Model: Qwen3.8-27B GSQ-RCO `IQ3_S-mtp` (native MTP head baked in), 12.1 GB, PPL 6.734 ± 0.084;
   `mmproj-Qwen3.8-27B-BF16.gguf` present but vision disabled. Other quants:
   [`models/qwen38-27b-quants.md`](models/qwen38-27b-quants.md).
-- Engine: llama.cpp b11454 + PR #29509 `hip-kvmix` (own ROCm build with FlashAttention kernels for K `q8_0` +
-  V `q5_1`); ROCm/HIP beats Vulkan 2-3.5x on generation here, Vulkan is reference-only.
-  [`ENGINES.md`](ENGINES.md).
+- Engine: llama.cpp b11718 `hip-kvmix` (own ROCm build with FlashAttention kernels for K `q8_0` +
+  V `q5_1`), in use since 2026-10-18 **without a measurement on this machine**; the numbers below
+  are b11454 + PR #29509. ROCm/HIP beats Vulkan 2-3.5x on generation here, Vulkan is
+  reference-only. [`ENGINES.md`](ENGINES.md).
 - Power: 272 W permanent cap (driver minimum; stock 303 W) — [`sop/power-cap.md`](sop/power-cap.md).
 - Harness wiring: one fixed provider `local-262k` (contextWindow 262144) on `:8080`, verified by
   `python3 scripts/check-sync.py` when `local.toml` has `[harness] enabled = true`.
@@ -92,8 +93,9 @@ Sampling is the Qwen3.8-27B card's own; `--min-p 0.0` is set explicitly because 
 - **Qwen3.8-Flash-Next Coder via Strata**: optional engine (`local-flash-262k`); 262K, KV int8, 3 GiB VRAM
   reserve works (52-57 tok/s, retrieval 20/20 to 240K); agentic coding quality unmeasured —
   [owner](models/strata-flash-next.md#next-iteration-goal-the-longest-context-that-keeps-quality).
-- **Nemotron 3.5 Bolt 74B-A9B (IQ2 GGUF)**: needs a llama.cpp newer than b11454; fit at 262K
-  estimated, not measured — [SOURCES.md](SOURCES.md#ideas-for-future-moe-models-not-pursued-2026-09-29).
+- **Nemotron 3.5 Bolt 74B-A9B (IQ2 GGUF)**: b11454 could not load it; b11718 adds support
+  (upstream #30520), not tried here; fit at 262K estimated, not measured —
+  [SOURCES.md](SOURCES.md#ideas-for-future-moe-models-not-pursued-2026-09-29).
 
 ## Next steps
 

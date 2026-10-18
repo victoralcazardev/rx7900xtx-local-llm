@@ -32,7 +32,7 @@ Launch command, flag rationale and open questions: [`docs/STATUS.md`](docs/STATU
 | CPU / RAM | Ryzen 7 5700X (8C/16T), 32 GiB (31.25 GiB usable) plus zram swap |
 | Board / storage | Gigabyte B450 AORUS PRO, NVMe (Kingston A2000 500 GB) |
 | OS / drivers | CachyOS (Arch-based), kernel 7.2.7, Mesa 26.2.3, ROCm runtime 7.2.4 |
-| Engine | llama.cpp b11454 (`462524043`) + PR #29509 `hip-kvmix`, ROCm 10.0.0 compiler |
+| Engine | llama.cpp b11454 (`462524043`) + PR #29509 `hip-kvmix`, ROCm 10.0.0 compiler (numbers on this page); b11718 in use since 2026-10-18, not measured ([`docs/ENGINES.md`](docs/ENGINES.md)) |
 
 CPU and RAM barely matter (every layer runs on the GPU); GPU and driver notes:
 [`docs/hardware/gpu-7900xtx.md`](docs/hardware/gpu-7900xtx.md).
