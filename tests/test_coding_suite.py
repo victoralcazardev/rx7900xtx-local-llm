@@ -49,6 +49,34 @@ class TestParseSse(unittest.TestCase):
             cs.parse_sse(sse({"error": {"message": "context exceeded"}}))
 
 
+class TestChatDeadline(unittest.TestCase):
+    def test_stalled_stream_is_cut_at_the_episode_deadline(self):
+        import http.server
+        import threading
+        import time
+
+        class Stall(http.server.BaseHTTPRequestHandler):
+            def log_message(self, *a):
+                pass
+
+            def do_POST(self):
+                self.rfile.read(int(self.headers["Content-Length"]))
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(b'data: {"choices": [{"delta": {"content": "x"}}]}\n\n')
+                self.wfile.flush()
+                time.sleep(10)
+
+        server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Stall)
+        server.daemon_threads = True
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        self.addCleanup(server.server_close)
+        t0 = time.monotonic()
+        with self.assertRaises(cs.EpisodeTimeout):
+            cs.chat(f"http://127.0.0.1:{server.server_address[1]}", {}, t0 + 1.0)
+        self.assertLess(time.monotonic() - t0, 3.0)
+
+
 class WorkdirCase(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -127,6 +155,27 @@ class TestScore(WorkdirCase):
         (self.root / "mod.py").write_text("VALUE = 1\n")
         self.assertTrue(cs.score(self.root, self.task, self.commit, None)["tests"])
 
+    def test_model_added_test_file_is_removed_before_scoring(self):
+        (self.root / "mod.py").write_text("VALUE = 1\n")
+        (self.root / "tests/test_added.py").write_text(
+            "import unittest\nclass T(unittest.TestCase):\n    def test_x(self):\n        self.fail()\n")
+        self.assertTrue(cs.score(self.root, self.task, self.commit, None)["tests"])
+        self.assertFalse((self.root / "tests/test_added.py").exists())
+
+    def test_worktree_file_cannot_shadow_the_hidden_test(self):
+        hidden = self.root.parent / f"{self.root.name}-hidden"
+        hidden.mkdir()
+        self.addCleanup(lambda: __import__("shutil").rmtree(hidden))
+        (hidden / "hidden_x.py").write_text(
+            "import unittest, mod\nclass H(unittest.TestCase):\n"
+            "    def test_value(self):\n        self.assertEqual(mod.VALUE, 1)\n")
+        (self.root / "hidden_x.py").write_text("")  # an empty module would run zero tests and pass
+        task = {"test_dir": "tests",
+                "score_cmd": "cd {hidden_dir} && PYTHONPATH={worktree} python3 -m unittest -q hidden_x"}
+        self.assertFalse(cs.score(self.root, task, self.commit, hidden)["tests"])
+        (self.root / "mod.py").write_text("VALUE = 1\n")
+        self.assertTrue(cs.score(self.root, task, self.commit, hidden)["tests"])
+
 
 class TestLoop(WorkdirCase):
     def run_loop(self, responses, task=None):
@@ -165,6 +214,33 @@ class TestLoop(WorkdirCase):
         r = self.run_loop(cs.EpisodeTimeout())
         self.assertEqual((r["completed"], r["reason"]), (False, "timeout"))
 
+    def test_stream_without_terminal_event_is_not_completed(self):
+        r = self.run_loop([{"content": "", "reasoning": "", "tool_calls": [], "finish_reason": None,
+                            "usage": None, "timings": None}])
+        self.assertEqual((r["completed"], r["reason"]), (False, "api-error"))
+
+    def test_monitor_abort_stops_the_run_instead_of_scoring(self):
+        monitor = mock.Mock(bad={"abort_reason": "evicted"}, error=None)
+        task = {"id": "T", "timeout_s": 60, "tests_cmd": "true"}
+        with self.assertRaises(cs.MonitorAbort):
+            cs._loop(task, 1, "http://x", "m", {}, [{"role": "user", "content": "go"}],
+                     cs.Tools(self.root, task, None), self.root, monitor)
+
+    def test_reasoning_is_replayed_with_the_tool_call(self):
+        first = dict(self.call("run_tests", "{}"), reasoning="check tests")
+        final = {"content": "done", "reasoning": "", "tool_calls": [], "finish_reason": "stop",
+                 "usage": None, "timings": None}
+        seen = []
+
+        def fake_chat(url, body, deadline, monitor=None):
+            seen.append([dict(m) for m in body["messages"]])
+            return [first, final][len(seen) - 1]
+        task = {"id": "T", "timeout_s": 60, "tests_cmd": "true"}
+        with mock.patch.object(cs, "chat", side_effect=fake_chat):
+            cs._loop(task, 1, "http://x", "m", {}, [{"role": "user", "content": "go"}],
+                     cs.Tools(self.root, task, None), self.root, None)
+        self.assertEqual(seen[1][1]["reasoning_content"], "check tests")
+
 
 class TestCompareRule(unittest.TestCase):
     def seeds(self, *passes):
@@ -182,6 +258,10 @@ class TestCompareRule(unittest.TestCase):
         for base, cand, expected in cases:
             with self.subTest(base=base, cand=cand):
                 self.assertTrue(cs.compare_task(base, cand).startswith(expected))
+
+    def test_missing_seeds_or_tasks_are_incomplete(self):
+        self.assertTrue(cs.compare_task(self.seeds(True, True, True), {}).startswith("incomplete"))
+        self.assertTrue(cs.compare_task(self.seeds(True, True, True), {1: True}).startswith("incomplete"))
 
 
 if __name__ == "__main__":

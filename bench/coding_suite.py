@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import http.client
 import http.server
 import json
 import os
@@ -27,6 +28,8 @@ import pathlib
 import platform
 import re
 import shutil
+import signal
+import socket
 import subprocess
 import sys
 import tempfile
@@ -34,6 +37,7 @@ import threading
 import time
 import tomllib
 import urllib.error
+import urllib.parse
 import urllib.request
 
 HERE = pathlib.Path(__file__).resolve().parent
@@ -146,11 +150,15 @@ def ensure_repo(name: str, spec: dict, cache: pathlib.Path = CACHE) -> pathlib.P
 def setup_worktree(repo: pathlib.Path, commit: str, task: dict, dest: pathlib.Path) -> None:
     """Pinned commit + the task's bug patch, committed, so `git diff HEAD` is the model's work."""
     git(repo, "worktree", "add", "-q", "--detach", str(dest), commit)
-    if git(dest, "rev-parse", "HEAD").strip() != commit:
-        raise RuntimeError(f"worktree {dest} is not at {commit}")
-    if task.get("bug_patch"):
-        git(dest, "apply", str(TASKS_DIR / task["bug_patch"]))
-    git(dest, *GIT_ID, "commit", "-q", "--allow-empty", "-am", f"coding-suite setup {task['id']}")
+    try:
+        if git(dest, "rev-parse", "HEAD").strip() != commit:
+            raise RuntimeError(f"worktree {dest} is not at {commit}")
+        if task.get("bug_patch"):
+            git(dest, "apply", str(TASKS_DIR / task["bug_patch"]))
+        git(dest, *GIT_ID, "commit", "-q", "--allow-empty", "-am", f"coding-suite setup {task['id']}")
+    except BaseException:
+        remove_worktree(repo, dest)
+        raise
 
 
 def remove_worktree(repo: pathlib.Path, dest: pathlib.Path) -> None:
@@ -174,17 +182,19 @@ def model_diff(dest: pathlib.Path) -> str:
 # --- commands and tools ---------------------------------------------------------------------
 
 def run_cmd(cmd: str, cwd: pathlib.Path, hidden_dir: pathlib.Path | None, timeout=TEST_TIMEOUT_S):
+    """Run in its own process group, so a timeout kills every descendant, not only bash."""
     env = {k: v for k, v in os.environ.items() if k != "PYTHONPATH"}
     env["PYTHONDONTWRITEBYTECODE"] = "1"
-    cmd = cmd.replace("{hidden_dir}", str(hidden_dir or ""))
+    cmd = cmd.replace("{hidden_dir}", str(hidden_dir or "")).replace("{worktree}", str(cwd.resolve()))
+    p = subprocess.Popen(["bash", "-c", cmd], cwd=cwd, env=env, stdout=subprocess.PIPE,
+                         stderr=subprocess.STDOUT, text=True, errors="replace", start_new_session=True)
     try:
-        p = subprocess.run(["bash", "-c", cmd], cwd=cwd, env=env, capture_output=True, text=True,
-                           timeout=timeout)
-        return p.returncode, p.stdout + p.stderr
-    except subprocess.TimeoutExpired as e:
-        out = (e.stdout or b"") + (e.stderr or b"")
-        out = out.decode(errors="replace") if isinstance(out, bytes) else out
-        return 124, out + f"\n[timed out after {timeout} s]"
+        out, _ = p.communicate(timeout=max(1, timeout))
+        return p.returncode, out
+    except subprocess.TimeoutExpired:
+        os.killpg(p.pid, signal.SIGKILL)
+        out, _ = p.communicate()
+        return 124, out + f"\n[timed out after {timeout:.0f} s]"
 
 
 def resolve_in(root: pathlib.Path, rel: str) -> pathlib.Path:
@@ -205,6 +215,7 @@ class Tools:
     def __init__(self, worktree: pathlib.Path, task: dict, hidden_dir: pathlib.Path | None):
         self.root, self.task, self.hidden_dir = worktree, task, hidden_dir
         self.calls: dict[str, int] = {}
+        self.deadline: float | None = None  # run_tests never outlives the episode
 
     def call(self, name: str, args: dict) -> str:
         self.calls[name] = self.calls.get(name, 0) + 1
@@ -223,6 +234,8 @@ class Tools:
             return f"error: {e}"
         except TypeError as e:
             return f"error: bad arguments for {name}: {e}"
+        except (OSError, ValueError) as e:  # e.g. an over-long or NUL-containing path
+            return f"error: {name} failed: {e}"
 
     def read_file(self, path, offset=1, limit=READ_MAX_LINES, whole=False):
         target = resolve_in(self.root, path)
@@ -261,7 +274,10 @@ class Tools:
         return f"wrote {len(content.encode())} bytes to {path}"
 
     def run_tests(self):
-        rc, out = run_cmd(self.task["tests_cmd"], self.root, self.hidden_dir)
+        timeout = TEST_TIMEOUT_S
+        if self.deadline is not None:
+            timeout = min(timeout, self.deadline - time.monotonic())
+        rc, out = run_cmd(self.task["tests_cmd"], self.root, self.hidden_dir, timeout)
         n = self.calls["run_tests"]
         tail_lines = self.task.get("run_tests_tail_lines")
         if tail_lines:
@@ -276,22 +292,20 @@ class Tools:
 
 
 def score(worktree: pathlib.Path, task: dict, commit: str, hidden_dir: pathlib.Path | None) -> dict:
-    """Restore the visible tests, place hidden tests, run the score command. Pure on the worktree."""
+    """Replace the visible test tree with the pinned one (model-added files go too), then run the
+    score command; hidden tests run from hidden_dir, which the model cannot write."""
+    shutil.rmtree(worktree / task["test_dir"], ignore_errors=True)
     git(worktree, "checkout", commit, "--", task["test_dir"])
-    hidden = task.get("hidden")
-    if hidden and hidden["where"] == "worktree-at-scoring":
-        shutil.copy(TASKS_DIR / hidden["file"], worktree / pathlib.Path(hidden["file"]).name)
     rc, out = run_cmd(task["score_cmd"], worktree, hidden_dir)
     return {"tests": rc == 0, "rc": rc, "output_tail": out[-TESTS_TAIL_CHARS:]}
 
 
 def make_hidden_dir(task: dict, parent: pathlib.Path) -> pathlib.Path | None:
-    hidden = task.get("hidden")
-    if not hidden or hidden["where"] != "external":
+    if not task.get("hidden"):
         return None
     d = parent / "hidden"
     d.mkdir()
-    shutil.copy(TASKS_DIR / hidden["file"], d / pathlib.Path(hidden["file"]).name)
+    shutil.copy(TASKS_DIR / task["hidden"], d / pathlib.Path(task["hidden"]).name)
     return d
 
 
@@ -336,11 +350,16 @@ class EpisodeTimeout(Exception):
     pass
 
 
-def _deadline_lines(resp, deadline: float):
-    for line in resp:
-        if time.monotonic() > deadline:
-            raise EpisodeTimeout()
-        yield line
+class MonitorAbort(Exception):
+    """GPU thermal/VRAM guard tripped: stops the whole run, never scored as an episode outcome."""
+
+
+def monitor_failure(monitor) -> str | None:
+    if monitor is None:
+        return None
+    if monitor.bad:
+        return monitor.bad.get("abort_reason", "monitor abort")
+    return f"monitor stopped: {monitor.error}" if monitor.error else None
 
 
 def http_json(url: str, payload: dict | None = None, timeout: float = 60):
@@ -350,17 +369,50 @@ def http_json(url: str, payload: dict | None = None, timeout: float = 60):
         return json.loads(r.read())
 
 
-def chat(url: str, body: dict, deadline: float) -> dict:
-    remaining = deadline - time.monotonic()
-    if remaining <= 0:
+def chat(url: str, body: dict, deadline: float, monitor=None) -> dict:
+    """One streamed request. A watcher thread shuts the socket at the episode deadline or on a
+    monitor abort, so neither a long prefill nor a stalled stream can outlive them."""
+    if time.monotonic() >= deadline:
         raise EpisodeTimeout()
-    req = urllib.request.Request(url.rstrip("/") + "/v1/chat/completions", data=json.dumps(body).encode(),
-                                 headers={"Content-Type": "application/json"})
+    u = urllib.parse.urlsplit(url)
+    conn = http.client.HTTPConnection(u.hostname, u.port or 80, timeout=deadline - time.monotonic())
+    stop, why = threading.Event(), []
+
+    def watch():
+        while not stop.wait(0.5):
+            failure = monitor_failure(monitor)
+            if failure or time.monotonic() >= deadline:
+                why.append(failure or "timeout")
+                if conn.sock is not None:
+                    try:
+                        conn.sock.shutdown(socket.SHUT_RDWR)
+                    except OSError:
+                        pass
+                return
+
+    watcher = threading.Thread(target=watch, daemon=True)
+    watcher.start()
+    out, error = None, None
     try:
-        with urllib.request.urlopen(req, timeout=remaining) as resp:
-            return parse_sse(_deadline_lines(resp, deadline))
-    except TimeoutError:
-        raise EpisodeTimeout() from None
+        conn.request("POST", u.path.rstrip("/") + "/v1/chat/completions", body=json.dumps(body),
+                     headers={"Content-Type": "application/json"})
+        resp = conn.getresponse()
+        if resp.status != 200:
+            raise RuntimeError(f"HTTP {resp.status}: {resp.read()[:500]!r}")
+        out = parse_sse(resp)
+    except (OSError, http.client.HTTPException, ValueError, RuntimeError) as e:
+        error = e
+    finally:
+        stop.set()
+        watcher.join()
+        conn.close()
+    if why:
+        if why[0] == "timeout":
+            raise EpisodeTimeout()
+        raise MonitorAbort(why[0])
+    if error is not None:
+        raise error
+    return out
 
 
 def server_model(url: str) -> str:
@@ -425,6 +477,7 @@ def run_episode(*, suite, task, seed, url, model, sampling, out_dir: pathlib.Pat
 def _loop(task, seed, url, model, sampling, messages, tools, out_dir, monitor) -> dict:
     t0 = time.monotonic()
     deadline = t0 + task["timeout_s"]
+    tools.deadline = deadline
     reason, completed, turns, bad_streak = None, False, 0, 0
     usage_total = {"prompt_tokens": 0, "completion_tokens": 0}
     with (out_dir / "trace.jsonl").open("w") as trace:
@@ -434,8 +487,9 @@ def _loop(task, seed, url, model, sampling, messages, tools, out_dir, monitor) -
         log(type="start", task=task["id"], seed=seed, n_initial_messages=len(messages),
             initial_messages=[m for m in messages if m["role"] != "tool"])
         while True:
-            if monitor is not None and monitor.bad:
-                raise RuntimeError(f"GPU monitor abort: {monitor.bad['abort_reason']}")
+            failure = monitor_failure(monitor)
+            if failure:
+                raise MonitorAbort(failure)
             if turns >= MAX_TURNS:
                 reason = "turn-limit"
                 break
@@ -444,11 +498,13 @@ def _loop(task, seed, url, model, sampling, messages, tools, out_dir, monitor) -
                     "max_tokens": MAX_TOKENS, "seed": seed, **sampling}
             turns += 1
             try:
-                resp = chat(url, body, deadline)
+                resp = chat(url, body, deadline, monitor)
             except EpisodeTimeout:
                 reason = "timeout"
                 break
-            except (urllib.error.URLError, RuntimeError, ValueError, OSError) as e:
+            except MonitorAbort:
+                raise
+            except (urllib.error.URLError, http.client.HTTPException, RuntimeError, ValueError, OSError) as e:
                 log(type="api-error", error=str(e))
                 reason = "api-error"
                 break
@@ -456,6 +512,8 @@ def _loop(task, seed, url, model, sampling, messages, tools, out_dir, monitor) -
                 usage_total[k] += (resp.get("usage") or {}).get(k, 0) or 0
             log(type="response", turn=turns, **resp)
             msg = {"role": "assistant", "content": resp["content"]}
+            if resp["reasoning"]:  # the chat template keeps reasoning inside a tool loop
+                msg["reasoning_content"] = resp["reasoning"]
             calls = [dict(c, id=c["id"] or f"call_{turns}_{i}") for i, c in enumerate(resp["tool_calls"])]
             if calls:
                 msg["tool_calls"] = [{"id": c["id"], "type": "function",
@@ -466,10 +524,16 @@ def _loop(task, seed, url, model, sampling, messages, tools, out_dir, monitor) -
                 reason = "length"
                 break
             if not calls:
+                if resp["finish_reason"] != "stop":  # stream ended without a terminal event
+                    log(type="api-error", error=f"no tool call and finish_reason={resp['finish_reason']!r}")
+                    reason = "api-error"
+                    break
                 completed = time.monotonic() <= deadline
                 reason = None if completed else "timeout"
                 break
             for c in calls:
+                if time.monotonic() > deadline:
+                    break
                 try:
                     args = json.loads(c["arguments"] or "{}")
                     if not isinstance(args, dict):
@@ -718,12 +782,13 @@ def rescore(run: pathlib.Path) -> int:
 
 
 def compare_task(base: dict[int, bool], cand: dict[int, bool]) -> str:
-    """Predeclared rule on the `tests` column over the seeds both arms ran (design doc)."""
-    seeds = sorted(set(base) & set(cand))
-    drop = sum(base[s] for s in seeds) - sum(cand[s] for s in seeds)
+    """Predeclared rule on the `tests` column (design doc); both arms must have run the same seeds."""
+    if not base or set(base) != set(cand):
+        return "incomplete: both arms need the same seeds for this task"
+    drop = sum(base.values()) - sum(cand.values())
     if drop >= 2:
         return "regression"
-    if drop == 1 and len(seeds) < 6:
+    if drop == 1 and len(base) < 6:
         return "inconclusive: rerun this task with seeds 4,5,6 on both arms"
     return "ok"
 
@@ -744,13 +809,20 @@ def compare(base_runs: list[pathlib.Path], cand_runs: list[pathlib.Path]) -> int
                 out.setdefault(task, {}).update(seeds)
         return out
     base, cand = merged(base_runs), merged(cand_runs)
-    verdicts = {t: compare_task(base[t], cand.get(t, {})) for t in sorted(base)}
+    tasks = sorted(set(base) | set(cand))
+    if not tasks:
+        print("verdict: incomplete (no results found)")
+        return 3
+    verdicts = {t: compare_task(base.get(t, {}), cand.get(t, {})) for t in tasks}
     for task, verdict in verdicts.items():
-        print(f"{task}: base {sum(base[task].values())}/{len(base[task])}, "
-              f"candidate {sum(cand.get(task, {}).values())}/{len(cand.get(task, {}))}: {verdict}")
+        b, c = base.get(task, {}), cand.get(task, {})
+        print(f"{task}: base {sum(b.values())}/{len(b)}, candidate {sum(c.values())}/{len(c)}: {verdict}")
     if any(v == "regression" for v in verdicts.values()):
         print("verdict: candidate rejected (regression)")
         return 1
+    if any(v.startswith("incomplete") for v in verdicts.values()):
+        print("verdict: incomplete")
+        return 3
     if any(v.startswith("inconclusive") for v in verdicts.values()):
         print("verdict: inconclusive")
         return 2

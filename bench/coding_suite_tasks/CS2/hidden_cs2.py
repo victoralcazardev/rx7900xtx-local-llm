@@ -1,9 +1,10 @@
-"""Hidden scoring test for CS2: copied to the worktree root only after the episode."""
+"""Hidden scoring test for CS2: runs at scoring only, from a directory outside the worktree."""
 import ast
+import os
 import pathlib
 import unittest
 
-ROOT = pathlib.Path(__file__).resolve().parent
+ROOT = pathlib.Path(os.environ["SUITE_WORKTREE"])
 
 
 class HiddenCS2(unittest.TestCase):
