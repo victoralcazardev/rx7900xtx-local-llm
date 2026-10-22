@@ -9,16 +9,21 @@ All scripts here should be run under `systemd-inhibit` (suspending mid-measureme
 mid-inference in general, with the GPU full has been observed to hang the machine), but the
 guard they enforce differs per script:
 
-- `depth_bench.py`, `longctx_quality.py` and `concurrency_bench.py` require both the
-  `IA_BENCH_INHIBITED=1` environment variable and `--inhibitor-ok` before smoke or run handling.
-  Therefore `depth_bench.py --smoke` is a guarded server smoke (it starts `llama-server`), not a
-  server-free check. Run it under the inhibitor:
+- `depth_bench.py` requires both `IA_BENCH_INHIBITED=1` and `--inhibitor-ok` for `--smoke` **and**
+  `--run`. `depth_bench.py --smoke` starts a real `llama-server` (one 2048-token case on the GPU);
+  it is not a server-free check. Run it under the inhibitor:
   `systemd-inhibit --what=sleep:idle --mode=block env IA_BENCH_INHIBITED=1 python3 bench/depth_bench.py --smoke --inhibitor-ok`.
-- `spec_bench.py`, `spec_depth_bench.py`, `probe_ab.py` and `coding_suite.py` (`--run`, `--freeze-pack`)
-  only check `IA_BENCH_INHIBITED=1`; `coding_suite.py`'s `--smoke`, `--verify-fixtures`, `--rescore`
-  and `--compare` need no server and no guard.
-- `ladder_bench.py`, `oom_probe.py` and `summarize.py` have no guard at all — wrap them in
-  `systemd-inhibit` yourself.
+- `longctx_quality.py` and `concurrency_bench.py`: `--smoke` only validates the CLI and matrix (no
+  server, no GPU, no guard); `--run` requires both `IA_BENCH_INHIBITED=1` and `--inhibitor-ok`.
+- `spec_bench.py` requires `IA_BENCH_INHIBITED=1` for `--smoke` and `--run`; its `--smoke` also
+  starts a real server. `spec_depth_bench.py` (`--run` only) and `probe_ab.py` require
+  `IA_BENCH_INHIBITED=1` and no `--inhibitor-ok`.
+- `coding_suite.py`: `--run` and `--freeze-pack` require `IA_BENCH_INHIBITED=1`;
+  `--smoke` (built-in fake model), `--verify-fixtures` (clones the pinned task repos into
+  `_tmp/coding-suite/repos` on first use, so it needs network once), `--rescore` and `--compare`
+  need no guard.
+- `ladder_bench.py` starts a real server and `oom_probe.py` hits one already running on port 8080;
+  neither has a guard, so wrap them in `systemd-inhibit` yourself. `summarize.py` is offline.
 
 ## Configuration
 

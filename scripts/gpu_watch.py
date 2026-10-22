@@ -21,16 +21,14 @@ import sys
 import time
 import urllib.request
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from manifest import gpu_device  # noqa: E402
+
 LIMITS = {"junction": 104.0, "mem": 105.0, "vram_free_mib": 300}
+# Columns after `flag` were appended later (clock/voltage under the power cap); keep the order stable.
 FIELDS = ["utc", "edge_c", "junction_c", "mem_c", "power_w", "busy_pct",
-          "vram_used_mib", "vram_free_mib", "processing", "flag"]
-
-
-def find_card() -> pathlib.Path:
-    for dev in sorted(pathlib.Path("/sys/class/drm").glob("card[0-9]*/device")):
-        if (dev / "mem_info_vram_total").exists():
-            return dev
-    sys.exit("no amdgpu card with mem_info_vram_total found")
+          "vram_used_mib", "vram_free_mib", "processing", "flag",
+          "sclk_mhz", "mclk_mhz", "vddgfx_mv"]
 
 
 def read(path: pathlib.Path) -> int | None:
@@ -55,6 +53,7 @@ def sample(dev: pathlib.Path, port: int) -> dict:
         value = read(hw / label.name.replace("_label", "_input"))
         temps[label.read_text().strip()] = value / 1000 if value is not None else None
     power = read(hw / "power1_average")
+    sclk, mclk = read(hw / "freq1_input"), read(hw / "freq2_input")
     used, total = read(dev / "mem_info_vram_used"), read(dev / "mem_info_vram_total")
     free_mib = (total - used) // 2**20 if used is not None and total is not None else None
     flag = []
@@ -69,6 +68,9 @@ def sample(dev: pathlib.Path, port: int) -> dict:
         "busy_pct": read(dev / "gpu_busy_percent"),
         "vram_used_mib": used // 2**20 if used is not None else None,
         "vram_free_mib": free_mib, "processing": processing(port), "flag": "+".join(flag),
+        "sclk_mhz": sclk // 10**6 if sclk is not None else None,  # freq*_input is in Hz
+        "mclk_mhz": mclk // 10**6 if mclk is not None else None,
+        "vddgfx_mv": read(hw / "in0_input"),  # in0_input is in mV
     }
 
 
@@ -79,7 +81,7 @@ def main() -> None:
     ap.add_argument("--port", type=int, default=8080)
     ap.add_argument("--pid", type=int, help="stop when this process exits")
     args = ap.parse_args()
-    dev = find_card()
+    dev = gpu_device() or sys.exit("no amdgpu card with mem_info_vram_total found")
     print(",".join(FIELDS), flush=True)
     n = 0
     while (not args.count or n < args.count) and (not args.pid or os.path.exists(f"/proc/{args.pid}")):

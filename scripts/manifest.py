@@ -280,20 +280,32 @@ def server_executable(m: Manifest, backend: str) -> pathlib.Path:
     return exe
 
 
-def free_vram_gib() -> float | None:
-    """Free VRAM in GiB on the amdgpu device with the most VRAM (sysfs, Linux only), or None."""
-    if IS_WINDOWS:
-        return None
+def gpu_device(drm: pathlib.Path = pathlib.Path("/sys/class/drm")) -> pathlib.Path | None:
+    """The amdgpu sysfs device dir (`<drm>/cardN/device`) with the most VRAM, or None (also off Linux).
+
+    The single selection rule for every script: an iGPU or a second card never wins over the
+    discrete card, whatever its `cardN` index."""
     best = None
-    for dev in pathlib.Path("/sys/class/drm").glob("card*/device"):
+    for dev in sorted(drm.glob("card*/device")):
         try:
             total = int((dev / "mem_info_vram_total").read_text())
-            used = int((dev / "mem_info_vram_used").read_text())
         except (OSError, ValueError):
             continue
         if best is None or total > best[0]:
-            best = (total, used)
-    return (best[0] - best[1]) / 2**30 if best else None
+            best = (total, dev)
+    return best[1] if best else None
+
+
+def free_vram_gib() -> float | None:
+    """Free VRAM in GiB on the `gpu_device()` card, or None when unknown."""
+    dev = gpu_device()
+    if dev is None:
+        return None
+    try:
+        return (int((dev / "mem_info_vram_total").read_text())
+                - int((dev / "mem_info_vram_used").read_text())) / 2**30
+    except (OSError, ValueError):
+        return None
 
 
 def running_servers() -> list[int] | None:

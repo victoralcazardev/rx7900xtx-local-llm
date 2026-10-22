@@ -564,6 +564,30 @@ class TestServerExecutable(unittest.TestCase):
         self.assertEqual(manifest.server_executable(m, "hip"), engine_dir / exe_name)
 
 
+class TestGpuDevice(unittest.TestCase):
+    def _card(self, drm: pathlib.Path, name: str, total: str | None) -> pathlib.Path:
+        dev = drm / name / "device"
+        dev.mkdir(parents=True)
+        if total is not None:
+            (dev / "mem_info_vram_total").write_text(total)
+        return dev
+
+    def test_picks_card_with_most_vram_not_lowest_index(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            drm = pathlib.Path(tmp)
+            self._card(drm, "card0", "536870912\n")  # iGPU carve-out
+            self._card(drm, "card1", "25753026560\n")
+            self._card(drm, "card2", "garbage")  # unreadable total is skipped
+            self._card(drm, "card3", None)  # no VRAM counters (not amdgpu)
+            self.assertEqual(manifest.gpu_device(drm), drm / "card1" / "device")
+
+    def test_returns_none_without_a_device(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertIsNone(manifest.gpu_device(pathlib.Path(tmp)))
+            self.assertIsNone(manifest.gpu_device(pathlib.Path(tmp) / "missing"))
+
+
+
 class TestRealModelsToml(unittest.TestCase):
     """The real models.toml, loaded and schema-validated without touching real GGUF
     files: pathlib.Path.exists is stubbed so this never needs actual weights or a GPU."""
