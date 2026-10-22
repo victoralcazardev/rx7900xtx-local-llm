@@ -43,7 +43,8 @@ Perf ran twice in the order A, B, A, B. Raw logs: [`raw/`](raw/).
 |131,072|q8_0/q5_1 B/A|0.42|0.69|0.70|0.70|0.76|
 |240,128|f16/f16 control B/A|0.96|1.02|1.02|1.01|1.01|
 
-q8_0/q8_0 improves similarly (B/A 0.70-0.82 at 240K, n_q 2-8). Per-round numbers: `raw/perf-{A,B}-r{1,2}.log`.
+q8_0/q8_0 improves similarly (B/A 0.70-0.82 at 240K, n_q 2-8). Per-round numbers: `raw/perf-{A,B}-r{1,2}.txt`
+(`.txt` because the repository ignores `*.log`).
 
 ## Conclusion
 
