@@ -1,5 +1,7 @@
 # SOP: Strata with the Qwen3.8-Flash-Next Coder
 
+**Parked since 2026-10-21**: the Coder is not installed ([state](../models/strata-flash-next.md#parked-state-2026-10-21)); this procedure is kept for when testing resumes.
+
 Run [Strata](https://github.com/Niko1221/Strata) with the ISTA-DASLab Coder IQ1_M as an alternative to the
 default llama.cpp profile, on the same port and harness wiring. Background, upstream claims and the trial
 criterion: [`../models/strata-flash-next.md`](../models/strata-flash-next.md). Measurements:

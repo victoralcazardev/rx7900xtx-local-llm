@@ -1,8 +1,8 @@
 # Engines: llama.cpp builds for the RX 7900 XTX (gfx1100)
 
 Inventory of llama.cpp `llama-server` builds used on this GPU, with pinned versions and SHA256 so
-a build can be verified or reproduced. Windows engines and NVIDIA/CUDA engines are out of scope for
-this repository — see `docs/measurements/engines.md` for the performance research behind these
+a build can be verified or reproduced. Windows engines and NVIDIA/CUDA engines are not measured or
+inventoried in this repository (Windows is documented best-effort: [`hardware/windows.md`](hardware/windows.md)) — see `docs/measurements/engines.md` for the performance research behind these
 choices (Vulkan vs. ROCm, why single-backend binaries only).
 
 All builds are llama.cpp **`b11160`** (commit `70c4e1582`) unless noted otherwise. SHA256 is of the
@@ -35,6 +35,22 @@ build recipe — downloaded as-is. Runtime dependency: the ROCm binary uses the 
 ROCm runtime libraries (ROCm 7.2.4 packages on this Arch-based system) unless a newer runtime is
 provided on the library path.
 
+### `llama-b11820-linux-rocm10-gfx1100-kvmix` and `llama-b11820-pr30792q51-linux-rocm10-gfx1100-kvmix` (candidates, 2026-10-22)
+
+llama.cpp b11820 (commit `d77256999f21`, `--version` `0.7.0-dev`), the b11718 recipe below unchanged
+(ROCm 10.0.0 venv, `GPU_TARGETS=gfx1100`, same `GGML_CUDA_FA_QUANTS`). `--help` vs. b11718 adds only
+`--connect` / `--connect-code`; no default of a `models.toml` flag changed. The `pr30792q51` build adds
+[`pr30792-q5_1.patch`](../results/20261022-fa-native-q8q51-tile-op-level/pr30792-q5_1.patch) (open PR
+#30792 + a `q5_1` V TILE loader, native dequant only for `ne[1] <= 8`). Op level only so far
+([results](../results/20261022-fa-native-q8q51-tile-op-level/README.md)); not adopted until the 240K A/B.
+
+|File|b11820|b11820 + pr30792q51|
+|---|---|---|
+|`llama-server`|`410a809bcd04ffaa46100dd68b29eb5d6d0fb12b84d25bc3c543ce18c7968ac6`|same|
+|`libggml-hip.so`|`53a485ffb56317f69184ed7b8f05afc4664c25f00e647e94573bfb8d9f495650`|`96da7109b361e0b7547eafe3ae478b08140a727d47d9b5655b150d99af822389`|
+
+`libllama-server-impl.so` differs between any two builds (the web UI is downloaded at configure time).
+
 ### `llama-b11718-linux-rocm10-gfx1100-kvmix` (current `hip-kvmix` engine, 2026-10-18)
 
 llama.cpp b11718 (commit `547208dca`, `LLAMA_VERSION` 0.7), no patch: PR #29509 was closed
@@ -46,9 +62,10 @@ plain KV cache). Same recipe and toolchain as the b11160 build below (ROCm 10.0.
 and `--spec-draft-n-ubatch`; `--port` default 8080 -> 9931 (the launcher always passes `--port`);
 no default changed for the `models.toml` flags. SHA256: `libggml-hip.so`
 `5c264baa7dd53ae821ba883d605688ac96de353dd381c8579f110ff9cc039cae`, `libllama-server-impl.so`
-`0c21f1486ccdfd97b63678eb45087501a575c0aecc318a63300a78b3dc0a7eac`. **Not measured**: switched
-on the user's call without the 240K A/B, PPL parity or smoke test of the re-validation cycle; the
-headline numbers in `STATUS.md` are b11454's. No release asset. Rollback:
+`0c21f1486ccdfd97b63678eb45087501a575c0aecc318a63300a78b3dc0a7eac`. **Measured only at 240K** (A/B
+vs. b11454 + PR #29509, 2026-10-18, run after the switch): no kernel slowdown; PPL parity, other
+depths and retrieval were not re-run, so the headline numbers in `STATUS.md` are still b11454's. No
+release asset. Rollback:
 `llama-b11454-pr29509-linux-rocm10-gfx1100-kvmix`.
 
 ### `llama-b11454-pr29509-linux-rocm10-gfx1100-kvmix` (`hip-kvmix` engine 2026-10-06 to 2026-10-18, rollback)
@@ -193,8 +210,9 @@ Moved to [`ENGINES-EXPERIMENTS.md`](ENGINES-EXPERIMENTS.md#upstream-watchlist-20
 
 ## Not included here
 
-Windows binaries (`*-bin-win-*`) and any NVIDIA/CUDA engine folder are out of scope for this
-repository — see `AGENTS.md`.
+Windows binaries (`*-bin-win-*`) and any NVIDIA/CUDA engine folder are not inventoried or
+measured here. Windows is documented best-effort, not measured
+([`hardware/windows.md`](hardware/windows.md), [`sop/install.md`](sop/install.md)); CUDA is out of scope.
 
 ## Source
 

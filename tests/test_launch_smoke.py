@@ -44,6 +44,26 @@ class TestLauncherAndSmoke(unittest.TestCase):
             self.assertEqual(launch.main(), 0)
         self.assertIn("'/models/a model.gguf'", output.getvalue())
 
+    def test_dry_run_warns_only_when_free_vram_is_below_profile_need_plus_margin(self):
+        profile = {"context": 262144, "vram_gib": 22.0}
+        # free < needed + VRAM_MARGIN_GIB (0.5) warns; the boundary itself does not.
+        for free, warns in ((21.9, True), (22.4, True), (22.5, False), (24.0, False)):
+            m = mock.Mock(default_port=8080, allow_low_context=False)
+            out, err = io.StringIO(), io.StringIO()
+            with self.subTest(free=free), \
+                 mock.patch.object(sys, "argv", ["launch.py", "demo", "--dry-run"]), \
+                 mock.patch.object(launch, "load", return_value=m), \
+                 mock.patch.object(launch, "resolve", return_value=(object(), "default", profile)), \
+                 mock.patch.object(launch, "backend_for", return_value="vulkan"), \
+                 mock.patch.object(launch, "validate"), \
+                 mock.patch.object(launch, "harness_entry", return_value="local-262k"), \
+                 mock.patch.object(launch, "build_argv", return_value=[]), \
+                 mock.patch.object(launch, "free_vram_gib", return_value=free), \
+                 contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+                self.assertEqual(launch.main(), 0)  # a warning never blocks the launch
+                self.assertIn(f"VRAM: {free:.1f} GiB free", out.getvalue())
+                self.assertEqual("WARNING: less than 0.5 GiB of margin" in err.getvalue(), warns)
+
     def test_tee_copies_server_output_to_console_and_log(self):
         src = io.BufferedReader(io.BytesIO(b"line 1\nline 2\n"))
         console, log = io.BytesIO(), io.BytesIO()

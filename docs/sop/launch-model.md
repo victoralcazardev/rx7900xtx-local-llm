@@ -70,7 +70,7 @@ shorthand for the `launch.py` invocation below.
    Both modes write the server log to `_tmp/logs/<alias>-<profile>-<timestamp>.log`; foreground
    also echoes it to the console. Keep these logs: cache misses and timings of a real session can
    only be analyzed from them. On Linux the launcher also writes `<log>.gpu.csv` from
-   `scripts/gpu_watch.py`: GPU temperatures, power and VRAM every 5 s, with rows flagged
+   `scripts/gpu_watch.py`: GPU temperatures, power, VRAM and (trailing columns) sclk/mclk/vddgfx every 5 s, with rows flagged
    `HOT` or `VRAM` past the safety limits; it is read-only and stops with the server. Pass an explicit
    `<alias> --profile <profile>` (see the table above) to load something other than the default.
 

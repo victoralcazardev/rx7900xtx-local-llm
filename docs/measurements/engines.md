@@ -75,8 +75,9 @@ Flags tested and **not** added, because they change nothing or are already the d
   [`speculative.md`](speculative.md#-ub-and-mtp-screening-at-128k-fill-272-w-2026-09-25) and
   [`../../results/20260925-ubatch-mtp-screening-128k/`](../../results/20260925-ubatch-mtp-screening-128k/).
   `-ub 512` (the default) is kept.
-- `ROCBLAS_USE_HIPBLASLT=1`: pp2048 and tg128 stay within ±1% of default (noise); not re-tested at
-  depth.
+- `ROCBLAS_USE_HIPBLASLT=1`: pp2048 and tg128 stay within ±1% of default (noise), but this tested
+  nothing: `hipblaslt` is not installed (`pacman -Q hipblaslt` finds no package) and IQ3_S matmuls take
+  MMQ on RDNA3, not rocBLAS. Not a valid negative result; not re-tested.
 - `--no-kv-unified`: unified KV **only** activates when `-np` is auto. With `-np 1` it is already
   disabled.
 - `--spec-ngram-map-k4v-size-n 12 / size-m 48 / min-hits 1`: already b11160's defaults.

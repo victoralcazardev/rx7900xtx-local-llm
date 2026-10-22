@@ -12,6 +12,7 @@ import contextlib
 import io
 import pathlib
 import sys
+import tempfile
 import unittest
 from unittest import mock
 
@@ -19,6 +20,14 @@ BENCH_DIR = pathlib.Path(__file__).resolve().parent.parent / "bench"
 sys.path.insert(0, str(BENCH_DIR))
 
 import depth_bench  # noqa: E402
+
+
+class TestMakeRunDir(unittest.TestCase):
+    def test_same_second_runs_get_distinct_directories(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = pathlib.Path(tmp)
+            names = [depth_bench.make_run_dir(base, "depth-20261022-101500").name for _ in range(3)]
+            self.assertEqual(names, ["depth-20261022-101500", "depth-20261022-101500-2", "depth-20261022-101500-3"])
 
 
 class TestExtraArgv(unittest.TestCase):

@@ -263,6 +263,31 @@ class TestLoop(WorkdirCase):
         self.assertEqual(seen[1][1]["reasoning_content"], "check tests")
 
 
+class TestLoadSampling(unittest.TestCase):
+    def test_override_parses_int_float_and_scientific_notation(self):
+        alias, sampling = cs.load_sampling(None, "temp=1e-3, top_k=20,top_p=0.95,min_p=0")
+        self.assertIsNone(alias)
+        self.assertEqual(sampling, {"temperature": 1e-3, "top_k": 20, "top_p": 0.95, "min_p": 0})
+        self.assertIsInstance(sampling["top_k"], int)
+
+    def test_override_rejects_non_finite_and_non_numeric_values(self):
+        for raw in ("temp=nan", "temp=inf", "temp=-inf", "temp=abc", "temp="):
+            with self.subTest(raw=raw), self.assertRaises(SystemExit):
+                cs.load_sampling(None, raw)
+
+
+class TestRunDir(unittest.TestCase):
+    def test_same_second_runs_get_distinct_directories(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = pathlib.Path(tmp)
+            first = cs.make_run_dir(base, "20261022-101500-27b")
+            second = cs.make_run_dir(base, "20261022-101500-27b")
+            third = cs.make_run_dir(base, "20261022-101500-27b")
+            self.assertEqual([first.name, second.name, third.name],
+                             ["20261022-101500-27b", "20261022-101500-27b-2", "20261022-101500-27b-3"])
+            self.assertTrue(all(p.is_dir() for p in (first, second, third)))
+
+
 class TestCompareRule(unittest.TestCase):
     def seeds(self, *passes):
         return {i + 1: p for i, p in enumerate(passes)}

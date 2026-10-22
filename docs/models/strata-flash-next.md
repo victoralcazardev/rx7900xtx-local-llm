@@ -1,9 +1,17 @@
 # Qwen3.8-Flash-Next via Strata: evaluation note (2026-09-29, reviewed again 2026-10-06 and 2026-10-08)
 
-**Status (2026-10-15): installed as an optional second engine, not the default; quality not measured.** First
+**Status (2026-10-21): parked** ([parked state](#parked-state-2026-10-21)); it was installed as an optional second engine from 2026-10-15, never the default, coding quality not measured. First
 run and setup below ([first run](#first-run-2026-10-15-v01441-coder-iq1_m)). Before that: a desk review of upstream claims against
 upstream's own docs and code, to decide whether an on-hardware trial is worth it. Nothing in
 `models.toml` changes.
+
+## Parked state (2026-10-21)
+
+Decision 2026-10-21 (commit `475405c`): park Gyro-S/Strata testing until new models arrive. Coder shard 1
+was deleted on 2026-10-19 (upstream replaced it; shard 2 kept), so the Coder is not installed. Last
+measured config and numbers: the sections below (262K, KV int8, 3 GiB VRAM reserve, 52-57 tok/s, retrieval
+20/20 to 240K). Version drift: upstream Strata is at v0.2.2 (2026-10-21); the last local build was
+v0.2.0-beta-4. Nothing was tested on v0.2.x.
 
 ## Credits and upstream
 

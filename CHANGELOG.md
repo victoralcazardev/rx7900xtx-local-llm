@@ -7,6 +7,7 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- Engines b11820 and b11820 + native `q8_0`/`q5_1` TILE FlashAttention (PR #30792 extended) built as candidates; op level the MTP verify step is -29% at 240K; b11718 stays in production until the 240K A/B ([`results/20261022-fa-native-q8q51-tile-op-level/`](results/20261022-fa-native-q8q51-tile-op-level/README.md)).
 - Decision: Gyro-S and Strata v0.2.0-beta are installed but not tested; Strata/Flash-Next work waits for a 24 GB Gyro size or Qwen4 ([`docs/DECISIONS.md`](docs/DECISIONS.md)).
 - b11718 engine measured at 240K against b11454 + PR #29509 and kept; engine updates now take one 240K pair plus one coding-suite run ([`results/20261018-engine-b11718-vs-b11454-240k/`](results/20261018-engine-b11718-vs-b11454-240k/README.md), [`docs/sop/update-engine.md`](docs/sop/update-engine.md)).
 - `bench/coding_suite.py`: the fixed six-task coding suite runner (streaming tool calls, worktrees, scoring, `--smoke`, `--verify-fixtures`, `--rescore`, `--compare`) with its frozen task data ([`bench/README.md`](bench/README.md)).
@@ -56,6 +57,12 @@ All notable changes to this project are documented here. Format follows
 
 ### Changed
 
+- CI runs Python 3.11 and 3.14 with `actions/checkout@v7` and `actions/setup-python@v7` ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)).
+- One GPU sysfs lookup, `gpu_device()` (largest VRAM card), shared by the launcher, `gpu_watch.py`, `ladder_bench.py` and `probe_ab.py`; `gpu_watch.py` CSV gains trailing `sclk_mhz`, `mclk_mhz`, `vddgfx_mv` columns ([`scripts/manifest.py`](scripts/manifest.py)).
+- Bench fixes: `--sampling` accepts scientific notation and rejects NaN/inf; `depth_bench.py`/`coding_suite.py` no longer crash when two runs start in the same second; `ladder_bench.py --help` and `probe_ab.py` work without amdgpu; guard rules in the README match the code ([`bench/README.md`](bench/README.md)).
+- Docs audit: STATUS/ENGINES state b11718 as measured at 240K only; README drops the Strata row (parked) and updates tested-setup versions; README, STATUS and TRIED back under their word budgets ([`docs/STATUS.md`](docs/STATUS.md)).
+- `ENGINES-EXPERIMENTS.md` keeps only the live plan and open trials (finished write-ups in [`docs/archive/engines-experiments-2026.md`](docs/archive/engines-experiments-2026.md)); `SOURCES.md` becomes an index over `SOURCES-upstream`/`-community`/`-alternatives`; all old anchors kept as pointers ([`docs/SOURCES.md`](docs/SOURCES.md)).
+- update-engine SOP watchlist reduced to live upstream items (#28391, #30573, #30792, #28867); the hipBLASLt negative result is marked invalid (package not installed, IQ3_S uses MMQ) ([`docs/sop/update-engine.md`](docs/sop/update-engine.md)).
 - Headline 240K numbers now come from the adopted profile on b11454 (essay/copy/code 25.9 / 45.9 / 19.3 tok/s, prefill 391, 22,641 MiB); the MTP-only b11160 figures stay as context ([`docs/STATUS.md`](docs/STATUS.md#headline-numbers)).
 - `hip-kvmix` engine moves to llama.cpp b11454 (v0.6.0-dev) + PR #29509: +0.7..+3.2% tg at 240K, same VRAM and PPL; published as the `engine-b11454-rocm10-gfx1100-kvmix` release ([`results/20261006-b11454-engine-update/`](results/20261006-b11454-engine-update/README.md)).
 - Scoped long-context retrieval claims to the 40/40 run's settings (b11160, temperature 0, thinking off, no n-gram map) ([`docs/measurements/depth.md`](docs/measurements/depth.md)).

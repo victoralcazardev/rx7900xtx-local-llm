@@ -14,7 +14,7 @@ import argparse, json, pathlib, subprocess, sys, time, urllib.request
 AQUI = pathlib.Path(__file__).resolve().parent
 REPO = AQUI.parent
 sys.path.insert(0, str(REPO / "scripts"))
-from manifest import Model, load, build_argv, running_servers, server_executable  # noqa: E402
+from manifest import Model, gpu_device, load, build_argv, running_servers, server_executable  # noqa: E402
 
 HEALTH_WAIT_S = 1800  # same deadline as bench/depth_bench.py's wait_health
 
@@ -31,26 +31,7 @@ def request_json(url, payload=None, timeout=900):
         return json.load(r)
 
 
-def _vram_used_path():
-    """Path to mem_info_vram_used for the amdgpu device with the most total VRAM (see
-    scripts/manifest.py's free_vram_gib for the same heuristic)."""
-    best = None
-    for dev in pathlib.Path("/sys/class/drm").glob("card*/device"):
-        try:
-            total = int((dev / "mem_info_vram_total").read_text())
-        except (OSError, ValueError):
-            continue
-        if best is None or total > best[0]:
-            best = (total, dev / "mem_info_vram_used")
-    if best is None:
-        raise SystemExit("no amdgpu device found under /sys/class/drm")
-    return best[1]
-
-
-VRAM = _vram_used_path()
-
-
-def run_case(m, backend, spec):
+def run_case(m, backend, spec, vram):
     (AQUI / "res").mkdir(parents=True, exist_ok=True)
     alive = running_servers()
     if alive:
@@ -67,7 +48,7 @@ def run_case(m, backend, spec):
     argv = build_argv(m, model, spec, profile, backend)
     exe = server_executable(m, backend)
     log = AQUI / "res" / f"{backend}-{spec.replace('/', '_').replace(':', '-')}.log"
-    vram_before = int(VRAM.read_text())
+    vram_before = int(vram.read_text())
     t0 = time.time()
     proc = subprocess.Popen([str(exe)] + argv, cwd=exe.parent, stdout=open(log, "w"),
                             stderr=subprocess.STDOUT)
@@ -87,7 +68,7 @@ def run_case(m, backend, spec):
             except OSError:
                 time.sleep(2)
         r["load_s"] = round(time.time() - t0)
-        r["vram_gib"] = round((int(VRAM.read_text()) - vram_before) / 2**30, 2)
+        r["vram_gib"] = round((int(vram.read_text()) - vram_before) / 2**30, 2)
         try:
             d = request_json("http://127.0.0.1:8080/v1/chat/completions",
                              {"max_tokens": 1024, "messages": [{"role": "user", "content": PROMPT}]})
@@ -100,7 +81,7 @@ def run_case(m, backend, spec):
         r["tokens"] = t.get("predicted_n")
         if t.get("draft_n"):
             r["mtp_accept"] = f"{t.get('draft_n_accepted')}/{t['draft_n']}"
-        r["vram_peak_gib"] = round((int(VRAM.read_text()) - vram_before) / 2**30, 2)
+        r["vram_peak_gib"] = round((int(vram.read_text()) - vram_before) / 2**30, 2)
         return r
     finally:
         proc.terminate()
@@ -117,9 +98,10 @@ def main():
     ap.add_argument("specs", nargs="*", help="case specs (see usage above)")
     args = ap.parse_args()
     backend = args.backend
+    dev = gpu_device() or sys.exit("no amdgpu device found under /sys/class/drm")
     m = load(local=AQUI / "local.bench.toml")
     for s in args.specs:
-        r = run_case(m, backend, s)
+        r = run_case(m, backend, s, dev / "mem_info_vram_used")
         print(json.dumps(r, ensure_ascii=False), flush=True)
         with open(AQUI / "res" / "ladder.jsonl", "a") as f:
             f.write(json.dumps(r, ensure_ascii=False) + "\n")

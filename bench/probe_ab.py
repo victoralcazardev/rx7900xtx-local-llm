@@ -12,6 +12,8 @@ Configure via BENCH_SERVER, BENCH_MODEL and BENCH_OUT (see bench/README.md). The
 are the `262k-q8q51-mtp` profile's; port 8080 because probe.py's default URL points there.
 """
 import argparse, json, os, pathlib, re, signal, subprocess, sys, time, urllib.request
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "scripts"))
+from manifest import gpu_device  # noqa: E402
 
 BASE = ["--port", "8080", "-c", "262144", "-ctk", "q8_0", "-ctv", "q5_1",
         "--temp", "1.0", "--top-p", "0.95", "--top-k", "20", "--min-p", "0.0", "-fa", "on", "-np", "1",
@@ -30,10 +32,6 @@ def wait_for_health(proc, health, arm, timeout=1800):
         if remaining <= 0: raise TimeoutError(f"{arm}: timed out waiting for /health after {timeout} seconds")
         time.sleep(min(2, remaining))
 
-def amdgpu():
-    """The first DRM device exposing VRAM counters (the discrete card)."""
-    return next(p.parent for p in sorted(pathlib.Path("/sys/class/drm").glob("card?/device/mem_info_vram_used")))
-
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -46,7 +44,7 @@ def main():
     if os.environ.get("IA_BENCH_INHIBITED") != "1": ap.error("requires systemd-inhibit and IA_BENCH_INHIBITED=1")
     server, model = os.environ.get("BENCH_SERVER", ""), os.environ.get("BENCH_MODEL", "")
     if not (os.path.isfile(server) and os.path.isfile(model)): ap.error("set BENCH_SERVER and BENCH_MODEL to existing files")
-    dev = amdgpu(); hw = next(dev.glob("hwmon/hwmon*"))
+    dev = gpu_device() or sys.exit("no amdgpu device found under /sys/class/drm"); hw = next(dev.glob("hwmon/hwmon*"))
     mib = lambda f: int((dev / f).read_text()) // 2**20
     temps = lambda: {(hw / f"temp{i}_label").read_text().strip(): int((hw / f"temp{i}_input").read_text()) // 1000
                      for i in (1, 2, 3) if (hw / f"temp{i}_label").exists()}

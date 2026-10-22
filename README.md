@@ -13,11 +13,11 @@ number reproducible. Not a multi-GPU, NVIDIA/CUDA, vLLM/Ollama or harness-wiring
 | Model | Engine | Status | Context | Speed (empty / deep fill) | Setup |
 |---|---|---|---|---|---|
 | Qwen3.8-27B GSQ-RCO `IQ3_S-mtp` | llama.cpp `hip-kvmix` (ROCm) | **Default** | 262K | 68.9 / 19.3-25.9 tok/s at 240K | [`STATUS.md`](docs/STATUS.md) |
-| Qwen3.8-Flash-Next GSQ-RCO Coder `IQ1_M` | [Strata](https://github.com/Niko1221/Strata) (HIP, VRAM + RAM experts) | Optional; coding quality not measured | 262K | ~55 / 55.1 tok/s at ~250K | [`sop/strata.md`](docs/sop/strata.md) |
 | Qwen4 | — | Planned when released; 27B tuning paused until then | — | — | [`DECISIONS.md`](docs/DECISIONS.md) |
 | Nemotron 3.5 Bolt 74B-A9B (24 GB GGUF) | llama.cpp (needs b11718+) | Candidate, not tried | — | — | [`SOURCES.md`](docs/SOURCES.md#ideas-for-future-moe-models-not-pursued-2026-09-29) |
 
-Only one engine serves `:8080` at a time; each needs nearly all of the 24 GB.
+Only one engine serves `:8080` at a time; each needs nearly all of the 24 GB. The Strata Coder is
+parked, not installed: [`strata-flash-next.md`](docs/models/strata-flash-next.md#parked-state-2026-10-21).
 
 ## Default profile
 
@@ -31,9 +31,9 @@ Only one engine serves `:8080` at a time; each needs nearly all of the 24 GB.
 | Quality | Retrieval only: 68/68 pooled (32K-240K); 40/40 at 190K/240K; real-history recall holds at 80K/176K |
 | Power | 272 W cap (this card's driver minimum; stock 303 W) |
 
-Launch command, flag rationale and open questions: [`docs/STATUS.md`](docs/STATUS.md). Evidence:
-[`docs/measurements/`](docs/measurements/), method in [`docs/BENCHMARK-FORMAT.md`](docs/BENCHMARK-FORMAT.md).
-Planned trials and optimization ideas: [`docs/ENGINES-EXPERIMENTS.md`](docs/ENGINES-EXPERIMENTS.md).
+Launch command, flags, open questions: [`docs/STATUS.md`](docs/STATUS.md). Evidence:
+[`docs/measurements/`](docs/measurements/), method [`docs/BENCHMARK-FORMAT.md`](docs/BENCHMARK-FORMAT.md),
+planned trials [`docs/ENGINES-EXPERIMENTS.md`](docs/ENGINES-EXPERIMENTS.md).
 
 ## Tested setup
 
@@ -42,11 +42,10 @@ Planned trials and optimization ideas: [`docs/ENGINES-EXPERIMENTS.md`](docs/ENGI
 | GPU | AMD Radeon RX 7900 XTX, 24 GB (RDNA3, gfx1100), Sapphire PULSE (PCI `1da2:471e`), VBIOS `113-3E4710U-O4O` |
 | CPU / RAM | Ryzen 7 5700X (8C/16T), 32 GiB (31.25 GiB usable) plus zram swap |
 | Board / storage | Gigabyte B450 AORUS PRO, NVMe (Kingston A2000 500 GB) |
-| OS / drivers | CachyOS (Arch-based), kernel 7.2.7, Mesa 26.2.3, ROCm runtime 7.2.4 |
-| Engine | llama.cpp b11718 `hip-kvmix`, ROCm 10.0.0 compiler; numbers on this page are b11454 + PR #29509 ([`docs/ENGINES.md`](docs/ENGINES.md)) |
+| OS / drivers | CachyOS (Arch-based), kernel 7.2.11-1-cachyos, Mesa 26.2.4, ROCm runtime 7.2.4 |
+| Engine | llama.cpp b11718 `hip-kvmix`, ROCm 10.0.0 compiler; numbers on this page are b11454 + PR #29509, b11718 checked at 240K ([`docs/ENGINES.md`](docs/ENGINES.md)) |
 
-The default profile runs every layer on the GPU, so CPU and RAM barely matter; Strata keeps experts
-in RAM. GPU and driver notes: [`docs/hardware/gpu-7900xtx.md`](docs/hardware/gpu-7900xtx.md).
+The default profile runs every layer on the GPU, so CPU and RAM barely matter. GPU and driver notes: [`docs/hardware/gpu-7900xtx.md`](docs/hardware/gpu-7900xtx.md).
 
 ## Quick start
 
@@ -93,7 +92,7 @@ Suspending with a model loaded (VRAM full) has hung the machine. `launch.py` wra
 
 The model card also drives the display. When a GPU client can't allocate, the journal shows `Not
 enough memory for command submission!` and KWin may quit. Disable browser hardware acceleration and
-avoid GPU-heavy apps; Strata can keep VRAM free with `--vram-reserve-mib`.
+avoid GPU-heavy apps.
 [`coexistence.md`](docs/measurements/coexistence.md)
 </details>
 
@@ -142,7 +141,7 @@ results/              # curated result folders, see results/INDEX.md
 | [`docs/measurements/`](docs/measurements/) | Benchmark results by topic |
 | [`docs/ENGINES.md`](docs/ENGINES.md), [`docs/ENGINES-EXPERIMENTS.md`](docs/ENGINES-EXPERIMENTS.md), [`docs/hardware/`](docs/hardware/), [`docs/models/`](docs/models/) | Engine builds, engine trials and watchlist, GPU/driver specs, model and quant provenance |
 | [`docs/BENCHMARK-FORMAT.md`](docs/BENCHMARK-FORMAT.md) | How every number was produced |
-| [`docs/sop/`](docs/sop/) | Procedures: install, launch, add a model, update the engine, measure, Strata, and more |
+| [`docs/sop/`](docs/sop/) | Procedures: install, launch, add a model, update the engine, measure, and more |
 | [`docs/STYLE.md`](docs/STYLE.md) | Language, units, naming, evidence rules |
 | `scripts/check-repo.py`, `tests/`, [`CONTRIBUTING.md`](CONTRIBUTING.md), `.github/` | Hygiene check, unittest suite, contributing guide, CI and templates |
 

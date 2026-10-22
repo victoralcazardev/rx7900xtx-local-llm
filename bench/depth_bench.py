@@ -15,6 +15,7 @@ Configure via environment variables before running:
 import argparse
 import datetime as dt
 import hashlib
+import itertools
 import json
 import math
 import os
@@ -484,6 +485,17 @@ def run_case(out, kv, mtp, depth, rep, wiki, hashes, args):
                         "system_baseline": system_baseline})+"\n")
 
 
+def make_run_dir(base, name):
+    """Create `base/name`, or `base/name-2`, `-3`... when two runs start in the same second."""
+    for n in itertools.count(1):
+        out = base / (name if n == 1 else f"{name}-{n}")
+        try:
+            out.mkdir(parents=True)
+            return out
+        except FileExistsError:
+            pass
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     g = ap.add_mutually_exclusive_group(required=True)
@@ -502,8 +514,7 @@ def main():
         ap.error("requires the IA_BENCH_INHIBITED=1 guard and --inhibitor-ok; use systemd-inhibit (see the docstring/README)")
     for p in (SERVER, MODEL, WIKI):
         if not p.is_file(): raise SystemExit(f"Missing required file: {p} (set BENCH_SERVER / BENCH_MODEL / BENCH_WIKI)")
-    stamp = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
-    out = BASE/f"depth-{stamp}"; out.mkdir(parents=True)
+    out = make_run_dir(BASE, "depth-" + dt.datetime.now().strftime("%Y%m%d-%H%M%S"))
     help_result = subprocess.run([str(SERVER), "--help"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     help_text = help_result.stdout
     (out/"server-help.txt").write_text(help_text)

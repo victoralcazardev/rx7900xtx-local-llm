@@ -23,6 +23,7 @@ import datetime as dt
 import http.client
 import http.server
 import json
+import math
 import os
 import pathlib
 import platform
@@ -45,6 +46,10 @@ ROOT = HERE.parent
 TASKS_DIR = HERE / "coding_suite_tasks"
 CACHE = ROOT / "_tmp" / "coding-suite" / "repos"
 OUTPUT = HERE / "res" / "coding_suite"
+
+sys.path.insert(0, str(HERE))
+import depth_bench  # noqa: E402  (GPU telemetry, power-cap helpers and make_run_dir shared by every bench)
+from depth_bench import make_run_dir  # noqa: E402
 
 MAX_TURNS = 40
 MAX_TOKENS = 32768
@@ -97,6 +102,19 @@ class ToolError(Exception):
 
 # --- suite data -----------------------------------------------------------------------------
 
+
+def parse_number(what: str, raw: str) -> int | float:
+    """int first, then float (accepts `1e-3`); NaN/inf would poison the request, so they are errors."""
+    for conv in (int, float):
+        try:
+            value = conv(raw)
+        except ValueError:
+            continue
+        if math.isfinite(value):
+            return value
+    raise SystemExit(f"{what}: {raw!r} is not a finite number")
+
+
 def load_suite() -> dict:
     return json.loads((TASKS_DIR / "tasks.json").read_text())
 
@@ -121,7 +139,7 @@ def load_sampling(alias: str | None, override: str | None) -> tuple[str | None, 
             key, _, raw = item.partition("=")
             if not raw:
                 raise SystemExit(f"--sampling expects key=value pairs, got {item!r}")
-            out[key.strip()] = float(raw) if "." in raw else int(raw)
+            out[key.strip()] = parse_number(f"--sampling {item!r}", raw)
         return None, {("temperature" if k == "temp" else k): v for k, v in out.items()}
     manifest = tomllib.loads((ROOT / "models.toml").read_text())
     alias = alias or manifest["defaults"]["default_alias"]
@@ -765,8 +783,7 @@ def summarize(results: list[dict]) -> dict:
 
 
 def run_suite(args, suite, tasks, url, model, sampling, meta, monitor=None, cache=CACHE) -> list[dict]:
-    out = args.output / run_dir_name(args.label)
-    out.mkdir(parents=True)
+    out = make_run_dir(args.output, run_dir_name(args.label))
     (out / "meta.json").write_text(json.dumps(meta, indent=2) + "\n")
     results = []
     for task in tasks:
@@ -944,8 +961,6 @@ def main(argv=None) -> int:
 
     alias, sampling = load_sampling(args.alias, args.sampling)
     model = server_model(url)
-    sys.path.insert(0, str(HERE))
-    import depth_bench  # GPU telemetry and the power-cap helpers shared by every bench
 
     expect = depth_bench.resolve_expect_power_cap_w(os.environ)
     for w in depth_bench.power_cap_warnings(depth_bench.power_cap_snapshot()["cards"], 1, expect, deep_threshold=0):
