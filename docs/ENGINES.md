@@ -35,6 +35,22 @@ build recipe — downloaded as-is. Runtime dependency: the ROCm binary uses the 
 ROCm runtime libraries (ROCm 7.2.4 packages on this Arch-based system) unless a newer runtime is
 provided on the library path.
 
+### `llama-b11820-linux-rocm10-gfx1100-kvmix` and `llama-b11820-pr30792q51-linux-rocm10-gfx1100-kvmix` (candidates, 2026-10-22)
+
+llama.cpp b11820 (commit `d77256999f21`, `--version` `0.7.0-dev`), the b11718 recipe below unchanged
+(ROCm 10.0.0 venv, `GPU_TARGETS=gfx1100`, same `GGML_CUDA_FA_QUANTS`). `--help` vs. b11718 adds only
+`--connect` / `--connect-code`; no default of a `models.toml` flag changed. The `pr30792q51` build adds
+[`pr30792-q5_1.patch`](../results/20261022-fa-native-q8q51-tile-op-level/pr30792-q5_1.patch) (open PR
+#30792 + a `q5_1` V TILE loader, native dequant only for `ne[1] <= 8`). Op level only so far
+([results](../results/20261022-fa-native-q8q51-tile-op-level/README.md)); not adopted until the 240K A/B.
+
+|File|b11820|b11820 + pr30792q51|
+|---|---|---|
+|`llama-server`|`410a809bcd04ffaa46100dd68b29eb5d6d0fb12b84d25bc3c543ce18c7968ac6`|same|
+|`libggml-hip.so`|`53a485ffb56317f69184ed7b8f05afc4664c25f00e647e94573bfb8d9f495650`|`96da7109b361e0b7547eafe3ae478b08140a727d47d9b5655b150d99af822389`|
+
+`libllama-server-impl.so` differs between any two builds (the web UI is downloaded at configure time).
+
 ### `llama-b11718-linux-rocm10-gfx1100-kvmix` (current `hip-kvmix` engine, 2026-10-18)
 
 llama.cpp b11718 (commit `547208dca`, `LLAMA_VERSION` 0.7), no patch: PR #29509 was closed

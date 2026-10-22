@@ -204,7 +204,8 @@ flash-attn tile kernel" is **open and not merged** (updated 2026-10-22; one revi
   and +61.9% at 63K with `q8_0`/`q8_0`, f16 control within ±0.2%, `test-backend-ops -o FLASH_ATTN_EXT`
   3998/3998. Nothing is measured on gfx1100, the 27B, 240K or MTP verify.
 
-Extension to try, a local patch on the pinned build (not written, not validated):
+Extension, a local patch on b11820 (written and op-level validated 2026-10-22,
+[results](../results/20261022-fa-native-q8q51-tile-op-level/README.md)):
 
 1. A `q5_1` V loader (same register dequantization to the shared f16 layout) and a native rule for K `q8_0`
    + V `q5_1`, mirrored in `get_alloc_size()` (the PR's own comment requires both places to agree).
@@ -215,7 +216,11 @@ Extension to try, a local patch on the pinned build (not written, not validated)
    then the end-to-end gate. Hypothesis to check by parity: the loader yields the same f16 values as the
    current staging, so KLD should not move; still measure it.
 
-If the op-level time reaches the f16 TILE bar (2,559 µs), stop there; otherwise build the kernel above.
+**Op-level outcome (2026-10-22).** Steps 1-3 done: 30/30 `FLASH_ATTN_EXT` cases OK (n_q 1-4, 8, 9, 64), and at
+240K the verify op (n_q 4) drops from 4,550 to 3,244 µs (-29%), n_q 1 from 3,986 to 1,625 µs (-59%), f16
+control unchanged. 3,244 µs misses the f16 TILE bar (2,559 µs), so the gain ceiling is ~15% end-to-end at
+240K (calculated). Next: the end-to-end 240K A/B against plain b11820; the full kernel above only if a
+measured gap remains worth it.
 
 ### Adoption and rollback
 
