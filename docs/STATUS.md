@@ -102,12 +102,11 @@ Sampling is the Qwen3.8-27B card's own; `--min-p 0.0` is set explicitly because 
 Execution order, dependencies and gates: [current plan](ENGINES-EXPERIMENTS.md#current-plan-2026-10-18).
 Qwen3.8-27B tuning stays paused until Qwen4 ships (2026-10-16, [`DECISIONS.md`](DECISIONS.md)).
 
-1. B1: calibrate the fixed coding suite (B1c); design and runner are done
-   ([design](ENGINES-EXPERIMENTS.md#coding-suite-design-b1a-2026-10-18)).
-2. B2: baseline the 27B on the suite (Strata Coder parked).
-3. A2: check the harness compaction change in the next real session —
+1. D1: 240K end-to-end A/B of b11820 vs. b11820 + native `q8_0`/`q5_1` TILE FlashAttention (built; op level
+   -29% on the MTP verify step at 240K, ~+15% decode ceiling), then one coding-suite run; needs GPU-heavy
+   desktop apps closed — [results](../results/20261022-fa-native-q8q51-tile-op-level/README.md),
+   [sop/update-engine.md](sop/update-engine.md).
+2. A2: check the harness compaction change in the next real session —
    [agent-traffic.md](measurements/agent-traffic.md#root-cause-speculative-compaction-on-the-local-slot-2026-10-03).
-4. C1: Qwen4 on day one, gated by the coding suite.
-5. D1: native quantized-KV FlashAttention verify kernel (FA is ~55% of a 240K MTP step; upper
-   bound ~+30% decode) —
-   [T29](ENGINES-EXPERIMENTS.md#new-t29-native-quantized-kv-multi-query-verify-kernel-2026-10-18-not-started).
+3. C1: Qwen4 on day one, gated by the coding suite (27B baseline 6/6:
+   [results](../results/20261018-coding-suite-baseline-27b/README.md)).
