@@ -32,11 +32,11 @@ body:
       placeholder: |
         GPU: AMD Radeon RX 7900 XTX, 24 GB
         Power cap: 272 W
-        OS/kernel: CachyOS, kernel 7.2.7
-        Mesa: 26.2.3
+        OS/kernel: CachyOS, kernel 7.2.11
+        Mesa: 26.2.4
         ROCm runtime: 7.2.4
-        llama.cpp: b11160 (70c4e1582)
-        Python: 3.12
+        llama.cpp: b11718 (own hip-kvmix build)
+        Python: 3.14
     validations:
       required: true
   - type: textarea

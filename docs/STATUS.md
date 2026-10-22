@@ -20,8 +20,9 @@ default when no alias is given.
   `mmproj-Qwen3.8-27B-BF16.gguf` present but vision disabled. Other quants:
   [`models/qwen38-27b-quants.md`](models/qwen38-27b-quants.md).
 - Engine: llama.cpp b11718 `hip-kvmix` (own ROCm build with FlashAttention kernels for K `q8_0` +
-  V `q5_1`), in use since 2026-10-18 **without a measurement on this machine**; the numbers below
-  are b11454 + PR #29509. ROCm/HIP beats Vulkan 2-3.5x on generation here, Vulkan is
+  V `q5_1`), in use since 2026-10-18; measured on this machine only at 240K against b11454 +
+  PR #29509 (no kernel slowdown, [results](../results/20261018-engine-b11718-vs-b11454-240k/README.md)).
+  The numbers below are b11454 + PR #29509. ROCm/HIP beats Vulkan 2-3.5x on generation here, Vulkan is
   reference-only. [`ENGINES.md`](ENGINES.md).
 - Power: 272 W permanent cap (driver minimum; stock 303 W) — [`sop/power-cap.md`](sop/power-cap.md).
 - Harness wiring: one fixed provider `local-262k` (contextWindow 262144) on `:8080`, verified by
@@ -90,10 +91,8 @@ Sampling is the Qwen3.8-27B card's own; `--min-p 0.0` is set explicitly because 
   [agent-traffic.md](measurements/agent-traffic.md#open-ab-tests).
 - **KVMem**: not adopted until a real agent run —
   [ENGINES-EXPERIMENTS.md](ENGINES-EXPERIMENTS.md#kvmem-trial-round-2-and-final-round-2026-09-30-not-adopted).
-- **Qwen3.8-Flash-Next Coder via Strata**: not installed since 2026-10-19 (upstream replaced shard 1; old shard and
-  pack deleted, shard 2 kept). Old build measured 262K, KV int8, 3 GiB VRAM reserve, 52-57 tok/s, retrieval 20/20
-  to 240K; agentic coding quality unmeasured —
-  [owner](models/strata-flash-next.md#next-iteration-goal-the-longest-context-that-keeps-quality).
+- **Qwen3.8-Flash-Next Coder via Strata**: parked (2026-10-21) until new models; not installed —
+  [owner](models/strata-flash-next.md#parked-state-2026-10-21).
 - **Nemotron 3.5 Bolt 74B-A9B (IQ2 GGUF)**: b11454 could not load it; b11718 adds support
   (upstream #30520), not tried here; fit at 262K estimated, not measured —
   [SOURCES.md](SOURCES.md#ideas-for-future-moe-models-not-pursued-2026-09-29).
@@ -105,12 +104,10 @@ Qwen3.8-27B tuning stays paused until Qwen4 ships (2026-10-16, [`DECISIONS.md`](
 
 1. B1: calibrate the fixed coding suite (B1c); design and runner are done
    ([design](ENGINES-EXPERIMENTS.md#coding-suite-design-b1a-2026-10-18)).
-2. A1 done: b11718 kept after a 240K check against b11454 + PR #29509 (numbers above are b11454) —
-   [results](../results/20261018-engine-b11718-vs-b11454-240k/README.md).
-3. B2: baseline the 27B and the Strata Coder on the suite.
-4. A2: check the harness compaction change in the next real session —
+2. B2: baseline the 27B on the suite (Strata Coder parked).
+3. A2: check the harness compaction change in the next real session —
    [agent-traffic.md](measurements/agent-traffic.md#root-cause-speculative-compaction-on-the-local-slot-2026-10-03).
-5. C1: Qwen4 on day one, gated by the coding suite.
-6. D1: native quantized-KV FlashAttention verify kernel (FA is ~55% of a 240K MTP step; upper
+4. C1: Qwen4 on day one, gated by the coding suite.
+5. D1: native quantized-KV FlashAttention verify kernel (FA is ~55% of a 240K MTP step; upper
    bound ~+30% decode) —
    [T29](ENGINES-EXPERIMENTS.md#new-t29-native-quantized-kv-multi-query-verify-kernel-2026-10-18-not-started).

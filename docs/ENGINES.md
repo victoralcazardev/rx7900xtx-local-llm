@@ -1,8 +1,8 @@
 # Engines: llama.cpp builds for the RX 7900 XTX (gfx1100)
 
 Inventory of llama.cpp `llama-server` builds used on this GPU, with pinned versions and SHA256 so
-a build can be verified or reproduced. Windows engines and NVIDIA/CUDA engines are out of scope for
-this repository — see `docs/measurements/engines.md` for the performance research behind these
+a build can be verified or reproduced. Windows engines and NVIDIA/CUDA engines are not measured or
+inventoried in this repository (Windows is documented best-effort: [`hardware/windows.md`](hardware/windows.md)) — see `docs/measurements/engines.md` for the performance research behind these
 choices (Vulkan vs. ROCm, why single-backend binaries only).
 
 All builds are llama.cpp **`b11160`** (commit `70c4e1582`) unless noted otherwise. SHA256 is of the
@@ -46,9 +46,10 @@ plain KV cache). Same recipe and toolchain as the b11160 build below (ROCm 10.0.
 and `--spec-draft-n-ubatch`; `--port` default 8080 -> 9931 (the launcher always passes `--port`);
 no default changed for the `models.toml` flags. SHA256: `libggml-hip.so`
 `5c264baa7dd53ae821ba883d605688ac96de353dd381c8579f110ff9cc039cae`, `libllama-server-impl.so`
-`0c21f1486ccdfd97b63678eb45087501a575c0aecc318a63300a78b3dc0a7eac`. **Not measured**: switched
-on the user's call without the 240K A/B, PPL parity or smoke test of the re-validation cycle; the
-headline numbers in `STATUS.md` are b11454's. No release asset. Rollback:
+`0c21f1486ccdfd97b63678eb45087501a575c0aecc318a63300a78b3dc0a7eac`. **Measured only at 240K** (A/B
+vs. b11454 + PR #29509, 2026-10-18, run after the switch): no kernel slowdown; PPL parity, other
+depths and retrieval were not re-run, so the headline numbers in `STATUS.md` are still b11454's. No
+release asset. Rollback:
 `llama-b11454-pr29509-linux-rocm10-gfx1100-kvmix`.
 
 ### `llama-b11454-pr29509-linux-rocm10-gfx1100-kvmix` (`hip-kvmix` engine 2026-10-06 to 2026-10-18, rollback)
@@ -193,8 +194,9 @@ Moved to [`ENGINES-EXPERIMENTS.md`](ENGINES-EXPERIMENTS.md#upstream-watchlist-20
 
 ## Not included here
 
-Windows binaries (`*-bin-win-*`) and any NVIDIA/CUDA engine folder are out of scope for this
-repository — see `AGENTS.md`.
+Windows binaries (`*-bin-win-*`) and any NVIDIA/CUDA engine folder are not inventoried or
+measured here. Windows is documented best-effort, not measured
+([`hardware/windows.md`](hardware/windows.md), [`sop/install.md`](sop/install.md)); CUDA is out of scope.
 
 ## Source
 

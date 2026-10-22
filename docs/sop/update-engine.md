@@ -9,21 +9,22 @@ disabled). One single-backend binary per download/build.
 1. **Check the upstream diff** between the pinned commit (`docs/ENGINES.md`) and the new release:
    `https://github.com/ggml-org/llama.cpp/compare/b<current>...b<latest>`, filtered on
    `hip|rocm|gfx11|rdna|fattn|mtp|spec|draft|kv-cache`. Record the check in `docs/DECISIONS.md`
-   even if nothing relevant changed (see the 2026-09-25 entry for the format). Specifically check
-   whether the diff includes [PR #28102](https://github.com/ggml-org/llama.cpp/pull/28102)
-   (FlashAttention tuning change that may regress gfx1100 deep-prefill performance) — if it does,
-   the A/B below should include a deep-depth case, not just the default couple of depths (see
-   `docs/SOURCES.md`). Also check whether the diff includes
-   [PR #29393](https://github.com/ggml-org/llama.cpp/pull/29393) (RMS_NORM+SCALE fusion, author-
-   measured +4.2-4.8% pp on CUDA with MTP) — if merged, re-measure prefill at depth on this
-   profile — and check `fattn.cu`/`fattn-common.cuh` for a GQA-folding change (`ncols2`) or a
-   quantized-KV TILE-path change that could remove the attention-bandwidth bottleneck described in
-   [`docs/measurements/depth.md`](../measurements/depth.md#why-decode-slows-with-depth-attention-bandwidth-2026-09-26-round-4)
-   (tracked upstream: [#27796](https://github.com/ggml-org/llama.cpp/issues/27796),
-   [#28867](https://github.com/ggml-org/llama.cpp/issues/28867)). Also check whether it includes
-   [PR #28391](https://github.com/ggml-org/llama.cpp/pull/28391) (ngram-mod on by default,
-   additive `--spec-type`): the current MTP profile would silently become MTP + ngram-mod, so
-   re-measure (see `docs/measurements/speculative.md`).
+   even if nothing relevant changed (see the 2026-09-25 entry for the format). Live checks (states
+   confirmed 2026-10-22; #28102, #29393 and #27796 are settled and already in the b11718 baseline):
+   - [PR #28391](https://github.com/ggml-org/llama.cpp/pull/28391), open: ngram-mod on by default
+     (additive `--spec-type`). If merged, the MTP profile silently becomes MTP + ngram-mod: re-measure
+     ([`speculative.md`](../measurements/speculative.md)).
+   - [PR #30792](https://github.com/ggml-org/llama.cpp/pull/30792), open: native q8_0 KV in the
+     FlashAttention TILE kernel (author: gfx1151 tg +19..+62%); it excludes our q5_1 V. If merged,
+     check whether the K q8_0 + V q5_1 pair is covered and re-run the 240K A/B.
+   - [PR #30573](https://github.com/ggml-org/llama.cpp/pull/30573), merged 2026-10-19: syncwarp fix in
+     `flash_attn_ext_vec`, which our decode path uses. Check it is in the build; include a deep-depth
+     case in the A/B.
+   - [#28867](https://github.com/ggml-org/llama.cpp/issues/28867), open, gfx1201-only (WMMA dispatch):
+     not our GPU; re-check only if the diff touches that dispatch.
+   - `fattn.cu`/`fattn-common.cuh`: a GQA-folding (`ncols2`) or quantized-KV TILE change could remove
+     the attention-bandwidth bottleneck in
+     [`depth.md`](../measurements/depth.md#why-decode-slows-with-depth-attention-bandwidth-2026-09-26-round-4).
 2. **Only if something relevant changed**: build the new engine following "Build a new engine"
    below. The custom `GGML_CUDA_FA_QUANTS` build flags are still required for this build — the
    official binaries don't ship K q8_0 + V q5_1/q4_1 FlashAttention kernels.

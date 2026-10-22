@@ -22,7 +22,8 @@
   `-ub 512` default) with only a small prefill cost; this differs from the 2026-09-25 128K-fill
   screening (`speculative.md`) where `-ub 512` was optimal — the effect of `-ub` depends on
   profile and depth, re-measure rather than assume.
-- No flag exists in b11160 to limit the MTP draft's own context or compute footprint. Smaller `-ub`
+- No flag exists in b11160 to limit the MTP draft's own context or compute footprint; b11718 adds
+  `--spec-draft-n-ubatch N` (draft-context physical batch, default same as `-ub`), **untested here**. Smaller `-ub`
   reduces the declared compute buffers but doesn't consistently lower real VRAM use.
 - **System VRAM headroom depends on the desktop's own usage, measured directly 2026-09-26**: total
   system VRAM (not just the process) left only 12-190 MiB free across every long-context
