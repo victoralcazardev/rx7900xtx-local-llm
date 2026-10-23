@@ -26,7 +26,9 @@ default when no alias is given.
   reference-only. [`ENGINES.md`](ENGINES.md).
 - Power: 272 W permanent cap (driver minimum; stock 303 W) — [`sop/power-cap.md`](sop/power-cap.md).
 - Harness wiring: one fixed provider `local-262k` (contextWindow 262144) on `:8080`, verified by
-  `python3 scripts/check-sync.py` when `local.toml` has `[harness] enabled = true`.
+  `python3 scripts/check-sync.py` when `local.toml` has `[harness] enabled = true`. Hermes profiles
+  outside this repo use the same endpoint (not covered by `check-sync.py`), and `tailscale serve`
+  exposes it to the tailnet without a key ([`DECISIONS.md`](DECISIONS.md), 2026-10-23).
 
 ```bash
 python3 scripts/launch.py            # default profile; add --dry-run to print the command

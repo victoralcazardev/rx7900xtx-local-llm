@@ -67,6 +67,10 @@ shorthand for the `launch.py` invocation below.
    ```
    python3 scripts/launch.py --background
    ```
+   From an agent's shell tool, start it with `setsid -f python3 scripts/launch.py --background
+   >/dev/null 2>&1 </dev/null`: otherwise the tool's timeout kills the launcher's process group and
+   the server with it (observed 2026-10-23: "cleaning up before exit" ~2 min after launch). Stop it
+   with `pkill -INT -x llama-server` when done: it holds ~22 GiB of VRAM.
    Both modes write the server log to `_tmp/logs/<alias>-<profile>-<timestamp>.log`; foreground
    also echoes it to the console. Keep these logs: cache misses and timings of a real session can
    only be analyzed from them. On Linux the launcher also writes `<log>.gpu.csv` from
