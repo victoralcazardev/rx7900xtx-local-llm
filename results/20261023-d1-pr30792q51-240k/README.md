@@ -74,5 +74,7 @@ Wall times are sampled episodes (temperature 1) with different turn counts, not 
 - Single machine, one prompt per task, temperature 0: speed, not answer quality.
 - Local patch on top of an open upstream PR; PR #30792 may change before it merges.
 - Cross-session spread: a same-engine rerun of arm B on 2026-10-24 gave essay 33.12, copy 54.41, code
-  22.49 tok/s with the same text ([b11846 check](../20261024-engine-b11846-240k/README.md)); arms A and B
-  here ran back to back, so the A/B ratio stands, but single absolute numbers move by up to ~6%.
+  22.49 tok/s with the same text ([b11846 check](../20261024-engine-b11846-240k/README.md)). Copy and code
+  reproduce within ~1%, so their +18% / +27% hold; essay moved 6.5%, so its ratio is uncertain by about
+  that much (26.15 → 33.12 would be +26.6%). The arms also started differently: A after ~0.06 s of
+  cooldown, B after 60 s (`cooldown_s` in the summaries).

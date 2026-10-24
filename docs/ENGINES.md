@@ -41,10 +41,11 @@ provided on the library path.
 ### `llama-b11846-pr30792q51-linux-rocm10-gfx1100-kvmix` (current `hip-kvmix` engine, 2026-10-24)
 
 llama.cpp b11846 (commit `1a24df1`, `--version` `0.7.0-dev (build 200)`), same recipe as b11820 below
-(`build.sh`: ROCm 10.0.0 venv, `GPU_TARGETS=gfx1100`, same `GGML_CUDA_FA_QUANTS`). Source: tag b11846, then
-`tests-kvmix-cases.patch` (applied with offsets) and the kernel hunks of `pr30792-q5_1.patch`
-(`git apply --exclude=tests/test-backend-ops.cpp`; its test hunk conflicts with the Qwen-shape cases).
-`--help` identical to b11820. FlashAttention Qwen-shape cases 30/30 OK. At 240K within +0.5% of b11820
+(`build.sh`: ROCm 10.0.0 venv, `GPU_TARGETS=gfx1100`, same `GGML_CUDA_FA_QUANTS`). Source, from a clean
+checkout of tag b11846: `patch -p1 --fuzz=3 < tests-kvmix-cases.patch` (two hunks, offsets 5 and 17), then
+`git apply --exclude=tests/test-backend-ops.cpp pr30792-q5_1.patch` (its test hunk conflicts with the
+Qwen-shape cases). `--help` identical to b11820. FlashAttention Qwen-shape cases
+(`-p 'hsk=256.*type_K=q8_0'`) 30/30 OK, 12 of them `q8_0`/`q5_1`. At 240K within +0.5% of b11820
 with the same patch and identical greedy text; coding suite 6/6
 ([results](../results/20261024-engine-b11846-240k/README.md)). SHA256: `libggml-hip.so`
 `0be4c1a3fbf945965262e20d810b4c70dacf3370f8ecf35b44c988401679776b`.
