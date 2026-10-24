@@ -17,6 +17,7 @@ from __future__ import annotations
 import argparse
 import json
 import pathlib
+import re
 import shutil
 import subprocess
 import sys
@@ -68,7 +69,7 @@ def load_settings(models: pathlib.Path | None = None, local: pathlib.Path | None
     for name, t in tables.items():
         if not isinstance(t.get("config"), str):
             raise ManifestError(f"[strata.{name}] needs config = \"strata-<model>.json\"")
-    return pathlib.Path(loc["strata_dir"]).expanduser(), tables
+    return pathlib.Path(loc["strata_dir"]).expanduser().resolve(), tables
 
 
 def git(strata: pathlib.Path, *args: str) -> str:
@@ -76,17 +77,19 @@ def git(strata: pathlib.Path, *args: str) -> str:
 
 
 def running(strata: pathlib.Path) -> bool:
-    return subprocess.run(["pgrep", "-f", str(strata / "serve" / "server.py")], capture_output=True).returncode == 0
+    # setup writes the resolved clone path into its launcher; pgrep -f takes a regex
+    return subprocess.run(["pgrep", "-f", re.escape(str(strata / "serve" / "server.py"))],
+                          capture_output=True).returncode == 0
 
 
-def apply_all(strata: pathlib.Path, tables: dict, dry_run: bool) -> int:
-    """Applies every table; returns the number of configs that differed. A missing config is reported, not created."""
-    differed = 0
+def apply_all(strata: pathlib.Path, tables: dict, dry_run: bool) -> tuple[int, int]:
+    """Applies every table; returns (configs that differed, configs missing). A missing config is not created."""
+    differed = missing = 0
     for name, tracked in tables.items():
         path = strata / tracked["config"]
         if not path.is_file():
             print(f"[strata.{name}] {path} does not exist: install the model with setup first (docs/sop/strata.md)")
-            differed += 1
+            missing += 1
             continue
         cfg = json.loads(path.read_text())
         new = overlay(cfg, tracked)
@@ -100,7 +103,7 @@ def apply_all(strata: pathlib.Path, tables: dict, dry_run: bool) -> int:
                 tmp = path.with_name(path.name + ".tmp")
                 tmp.write_text(json.dumps(new, indent=1) + "\n")
                 tmp.replace(path)
-    return differed
+    return differed, missing
 
 
 def cmd_status(strata: pathlib.Path, tables: dict) -> int:
@@ -109,7 +112,7 @@ def cmd_status(strata: pathlib.Path, tables: dict) -> int:
     print(f"upstream: {git(strata, 'describe', '--tags', 'origin/main')}"
           f" ({git(strata, 'rev-list', '--count', 'HEAD..origin/main')} commits ahead of local)")
     print("server:   " + ("running" if running(strata) else "stopped"))
-    return 1 if apply_all(strata, tables, dry_run=True) else 0
+    return 1 if any(apply_all(strata, tables, dry_run=True)) else 0
 
 
 def cmd_update(strata: pathlib.Path, tables: dict, extra: list[str]) -> int:
@@ -136,7 +139,9 @@ def cmd_update(strata: pathlib.Path, tables: dict, extra: list[str]) -> int:
             print(f"{f.name} changed by the update: " + ("nothing" if not diff else ""))
             for line in diff:
                 print("  " + line)
-    apply_all(strata, tables, dry_run=False)
+    if apply_all(strata, tables, dry_run=False)[1]:
+        print("Updated, but a tracked run config is missing (see above): install that model before starting it.")
+        return 1
     print("Next: start it (qwen-flash) and run the update checks in docs/sop/strata.md.")
     return 0
 
@@ -161,7 +166,8 @@ def main() -> int:
     if a.cmd == "status":
         return cmd_status(strata, tables)
     if a.cmd == "apply":
-        return 1 if apply_all(strata, tables, a.dry_run) and a.dry_run else 0
+        differed, missing = apply_all(strata, tables, a.dry_run)
+        return 1 if missing or (a.dry_run and differed) else 0
     return cmd_update(strata, tables, [x for x in a.extra if x != "--"])
 
 

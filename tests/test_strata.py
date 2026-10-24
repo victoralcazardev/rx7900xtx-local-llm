@@ -50,7 +50,7 @@ class ApplyAllTest(unittest.TestCase):
 
     def test_dry_run_reports_drift_without_writing(self):
         n, out = self.run_apply({"x": TRACKED}, dry_run=True)
-        self.assertEqual(n, 1)
+        self.assertEqual(n, (1, 0))
         self.assertIn("env.STRATA_RESIDENT_HEADROOM_GIB: None -> '6'", out)
         self.assertEqual(json.loads(self.cfg.read_text()), GENERATED)
 
@@ -58,12 +58,12 @@ class ApplyAllTest(unittest.TestCase):
         self.run_apply({"x": TRACKED}, dry_run=False)
         self.assertEqual(json.loads(self.cfg.read_text()), strata.overlay(GENERATED, TRACKED))
         n, out = self.run_apply({"x": TRACKED}, dry_run=True)
-        self.assertEqual(n, 0)
+        self.assertEqual(n, (0, 0))
         self.assertIn("matches models.toml", out)
 
     def test_missing_config_is_reported_not_created(self):
         n, out = self.run_apply({"y": {**TRACKED, "config": "strata-y.json"}}, dry_run=False)
-        self.assertEqual(n, 1)
+        self.assertEqual(n, (0, 1))
         self.assertFalse((self.dir / "strata-y.json").exists())
         self.assertIn("does not exist", out)
 
