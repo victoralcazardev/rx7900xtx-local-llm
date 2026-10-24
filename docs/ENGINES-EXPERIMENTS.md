@@ -50,14 +50,15 @@ session** (cross-session spread reaches ~6%: [results](../results/20261024-engin
 
 | ID | Change | Why now | Gate |
 |---|---|---|---|
-| E4 | `--spec-draft-sampling probabilistic` at 240K, temperature 1 (`n3-prob-map` vs. `n3-map`, b11846) | Cheaper verify changes the trade-off measured on b11371 | Run started 2026-10-24 ~01:20, raw output in `bench/res/spec-depth-*-e4-*`, not yet read; then the suite plus a session replay (T24) |
 | E5 | Upstream rebase when PR #30792 merges | Drop the local patch if upstream covers `q5_1` V | 240K pair per [sop/update-engine.md](sop/update-engine.md) |
 
 Done in this batch: MTP n=4 re-check, n=3 stays ([results](../results/20261023-mtp-n4-240k-pr30792q51/README.md));
 E2 KV `q8_0`/`q8_0` at 245,760: no faster than `q8_0`/`q5_1` on a same-session rerun, +591 MiB VRAM and 16K
 less context; a quality-only ≤240K alternative, not adopted ([results](../results/20261024-kv-q8q8-240k-pr30792q51/README.md)); E3 empty context:
 MTP n=3 76.3 tok/s, spec off 39.1 ([results](../results/20261024-probe-ab-262k-pr30792q51/README.md)); engine rebased to
-b11846, neutral, adopted ([results](../results/20261024-engine-b11846-240k/README.md)).
+b11846, neutral, adopted ([results](../results/20261024-engine-b11846-240k/README.md)); E4 probabilistic drafts at
+240K, temperature 1: code +9.9%, copy -10.3%, essay +0.2%, undecided with 3 samples, not adopted; next is the
+T24 session replay ([results](../results/20261024-e4-mtp-prob-240k/README.md)).
 
 ## Coding suite design (B1a, 2026-10-18)
 
