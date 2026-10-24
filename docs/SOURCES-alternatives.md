@@ -82,6 +82,10 @@ All claims below are the authors' own and are unverified here.
   engine sizes the copy from `MemAvailable` minus 4 GiB), hypothesis for this machine, where the computed
   budget only fits Q2_0 at 32K and the Coder at any depth.
   Details in [`docs/models/strata-flash-next.md`](models/strata-flash-next.md#review-2026-10-08-releases-amd-notes-and-ram-budget).
+- **Update 2026-10-24 (upstream v0.2.4.2, Coder shard 1 replaced 2026-10-19)**: the new Coder claims SWE-bench
+  Verified 75.60 to 79.20 (card, source-checked, not reproduced); Strata setup still pins the old shard (re-pin:
+  open PR #3445), but accepts the new one through `--gguf-dir` (locally verified). Details in
+  [`docs/models/strata-flash-next.md`](models/strata-flash-next.md#review-2026-10-24-v0242-the-2026-10-19-coder-and-the-27b).
 - **[sybil-solutions/glm53-flash-offload](https://github.com/sybil-solutions/glm53-flash-offload)
   (checked 2026-10-08, README only)**: GLM-5.3-Flash EXL3 3.05 bpw (125 GB; 42 MoE layers x 288
   experts, 8 active, 9.4 MB per expert) on one 24 GB RTX 3090, built on exllamav3 + an SGLang

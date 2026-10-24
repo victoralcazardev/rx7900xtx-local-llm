@@ -1,6 +1,8 @@
 # Qwen3.8-Flash-Next via Strata: evaluation note (2026-09-29, reviewed again 2026-10-06 and 2026-10-08)
 
-**Status (2026-10-21): parked** ([parked state](#parked-state-2026-10-21)); it was installed as an optional second engine from 2026-10-15, never the default, coding quality not measured. First
+**Status (2026-10-24): testing resumed** on the user's request with Strata v0.2.4.2 and the 2026-10-19 Coder
+([review 2026-10-24](#review-2026-10-24-v0242-the-2026-10-19-coder-and-the-27b)); parked 2026-10-21 to 2026-10-24
+([parked state](#parked-state-2026-10-21)); installed as an optional second engine from 2026-10-15, never the default, coding quality not measured. First
 run and setup below ([first run](#first-run-2026-10-15-v01441-coder-iq1_m)). Before that: a desk review of upstream claims against
 upstream's own docs and code, to decide whether an on-hardware trial is worth it. Nothing in
 `models.toml` changes.
@@ -402,3 +404,64 @@ is harmless either way, because a request's own values win.
 **Out of scope, with reason:** `--conversation-cache-mib` (costs RAM, the binding limit here); the hipBLASLt
 table (needs another ROCm install, ~10 GB); `--kv-grow` (needs every expert in RAM, not the resident mode);
 `STRATA_HIP_WMMA` (RDNA4 only); `--vram-reserve-later-mib` (layer-split later cards only).
+
+## Review 2026-10-24: v0.2.4.2, the 2026-10-19 Coder and the 27B
+
+Desk review; nothing measured yet on v0.2.4.2. Strata clone updated with `./update.sh` from v0.2.0-beta-4 to
+`v0.2.4.2-6-g7dd5cf18`; Gyro-S data (81 GB) deleted at the user's choice.
+
+**The Coder changed upstream.** ISTA-DASLab replaced shard 1 on 2026-10-19 (commits `d1d94679`, `6e7d7948`,
+`bba88856`; shard 2 unchanged, sha256 `316b46f3…`). New shard 1: 29,608,446,496 bytes, LFS sha256 `bfa3644d…`.
+Card: "looping is reduced and coding performance is higher, with SWE-bench Verified rising from 75.60 to
+79.20 and LiveCodeBench v6 from 86.28 to 87.43" (source-checked, card text; not reproduced here).
+
+**Setup v0.2.4.2 still pins the old shard 1** (source-checked, `setup.py` at `v0.2.4.2`): `HF_REVISIONS` pins the
+Coder repo to `5348543e` (2026-09-29) and `CODER_FILES` to sha256 `e11083ba…`; the re-pin is upstream
+[PR #3445](https://github.com/Niko1221/Strata/pull/3445) (open). A download gets the old shard. Files given with
+`--gguf-dir` only get a whole-file check against their own tensor directory (finish mark `whole (checked against
+its own tensor directory)`), so the new shard installs with an unmodified `setup.py`: verified 2026-10-24, setup
+run twice (once with PR #3445 applied, once without), exit 0 both times, the mark never held the pinned SHA-256.
+The new shard's SHA-256 was checked by hand against the HF LFS hash.
+
+**The shipped expert profile is stale for the new shard** (upstream
+[#3448](https://github.com/Niko1221/Strata/issues/3448), open; reporter-measured on an RTX 4070): the re-indexed
+experts leave 2 of 12,288 profile pairs pointing at the same expert. The profile is only a tie-breaker after the
+learned heat, and a rebuilt profile measured the same (43.6 vs. 44.8 tok/s, inside ±5%). Hypothesis here; the
+tuning plan's F3 (learned profile) covers it.
+
+**Run config keeps hand-set options** (source-checked, `strata_control/user_args.py`): `"user_args"` in
+`strata-<model>.json` is re-applied on top of setup's generated `"args"` by every setup run and start, so
+settings no longer get lost on `./update.sh` (the 2026-10-16 SOP gotcha). `serve/runconfig.py` also accepts a
+`"sampling"` block (temperature, top_p, top_k 1-64, min_p) used for requests that send none.
+
+**Coder vs. the 27B (vendor numbers, not measured here).** Qwen's
+[Flash-Next card](https://huggingface.co/Qwen/Qwen3.8-Flash-Next) compares the full model with the 27B:
+
+| Benchmark | Flash-Next (full) | Qwen3.8-27B |
+|---|---|---|
+| SWE-bench Pro | 62.5 | 61.7 |
+| DeepSWE 1.1 | 58.7 | 42.2 |
+| SWE-bench Multilingual | 81.0 | 73.8 |
+| NL2Repo-Bench | 48.1 | 42.3 |
+| LiveCodeBench v6 | 91.9 | 90.3 |
+| GPQA Diamond | 91.7 | 89.2 |
+
+The Coder keeps 256 of 512 experts, chosen on code data; ISTA reports 95.7% of BF16 on SWE-bench Verified
+(79.20 vs. 82.80) and 100% on LiveCodeBench v6, at xhigh effort. Its BF16 LiveCodeBench (87.43) differs from
+Qwen's 91.9, so the two tables use different setups and do not combine exactly. Applying 95.7% to SWE-bench Pro
+gives ~60, level with the 27B (inference, not a measurement). Upstream Strata and ISTA both say the Coder is
+weaker outside code and in languages other than English.
+
+Speed is the measured difference (older engine and shard: [first run](#first-run-2026-10-15-v01441-coder-iq1_m)):
+52-57 tok/s at every depth to 262K vs. the 27B's 22.5-33.2 at 240K; at empty context both are ~70-78 tok/s.
+Coding quality on this machine is open until the coding suite runs on both (plan step B2).
+
+
+**Installed 2026-10-24** (procedure: [`../sop/strata.md`](../sop/strata.md); settings: `[strata.coder-iq1_m]` in
+`models.toml`). Setup recompiled the engine for gfx1100 and built the pack from the new shard (`experts.bin`
+23.42 GiB). First start: ready in 33-39 s, `resident RAM mode: 15.06 GiB of experts in RAM`, expert cache 6,184
+slots (11.76 GiB of VRAM), 3,014 MiB of VRAM free with everything loaded, adaptive overlap off (the default in
+the resident mode). Smoke: two short coding requests ended `finish_reason: stop`; without a request temperature
+they gave different text, so the tracked `sampling` block is in use. Speed, retrieval and the coding suite were
+**not** measured on this version: the tuning plan's F2 A/B/C was stopped in its first run (user needed the GPU),
+no numbers. Next: F2, then 240K retrieval, then the coding suite (plan step B2).

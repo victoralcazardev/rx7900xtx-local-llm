@@ -38,7 +38,8 @@ user's explicit go each time.
 | D2 | Workload items one at a time: T25 tool-output bounding, T02 compaction threshold, T24 probabilistic MTP (needs a non-greedy bench), T09 n-gram replay | B1c | The suite plus the item's own metric | Each needs its own result folder and DECISIONS row |
 | Parked | T26, T23, T07, T10-T18, KVMem (T01), TurboQuant KV ([SOURCES](SOURCES.md#tinygrad-qwen38-fork-verify-kernel-references-and-turboquant-kv-2026-10-18)) | new evidence | — | Revisit only with a logged trigger or a measured bottleneck |
 
-Order of work now: A1, B1 and D1 are done; next B2 (Strata parked: B2 and C2 wait for a new MoE model).
+Order of work now: A1, B1 and D1 are done; Strata is installed again (2026-10-24, [sop/strata.md](sop/strata.md)):
+next C2's F2 (A/B/C, no numbers yet), then B2.
 A2 whenever a real session happens. C1 pre-empts everything except a running measurement once Qwen4
 ships. [Next batch](#next-batch-2026-10-23) lists the GPU runs that remain worth doing before then.
 

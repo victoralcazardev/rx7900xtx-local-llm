@@ -7,6 +7,8 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- Strata reinstalled at v0.2.4.2 with the 2026-10-19 Coder IQ1_M (Gyro-S data removed); first start and smoke pass, speed and quality not yet measured on it ([`docs/models/strata-flash-next.md`](docs/models/strata-flash-next.md#review-2026-10-24-v0242-the-2026-10-19-coder-and-the-27b)).
+- `scripts/strata.py` (`status`, `apply`, `update`): Strata settings tracked in `models.toml` `[strata.*]` and re-applied after every Strata update; `local.toml` gains `strata_dir` ([`docs/sop/strata.md`](docs/sop/strata.md)).
 - E4: probabilistic MTP draft sampling at 240K on the new engine is undecided with 3 temperature-1 samples (code +9.9%, copy -10.3%, wall -3.3%); not adopted, waits for the session replay ([`results/20261024-e4-mtp-prob-240k/`](results/20261024-e4-mtp-prob-240k/README.md)).
 - `hip-kvmix` engine rebased to b11846 (same TILE patch): neutral at 240K, identical text, coding suite 6/6; a same-engine rerun showed up to ~6% cross-session spread, so engine A/Bs stay within one session ([`results/20261024-engine-b11846-240k/`](results/20261024-engine-b11846-240k/README.md)).
 - `hip-kvmix` engine moves to b11820 + native `q8_0`/`q5_1` TILE FlashAttention (PR #30792 extended): 240K decode +18-27% with identical greedy text, coding suite 6/6; b11718 is the rollback ([`results/20261023-d1-pr30792q51-240k/`](results/20261023-d1-pr30792q51-240k/README.md)).

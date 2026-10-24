@@ -16,8 +16,9 @@ number reproducible. Not a multi-GPU, NVIDIA/CUDA, vLLM/Ollama or harness-wiring
 | Qwen4 | — | Planned when released; 27B tuning paused until then | — | — | [`DECISIONS.md`](docs/DECISIONS.md) |
 | Nemotron 3.5 Bolt 74B-A9B (24 GB GGUF) | llama.cpp (needs b11718+) | Candidate, not tried | — | — | [`SOURCES.md`](docs/SOURCES.md#ideas-for-future-moe-models-not-pursued-2026-09-29) |
 
-Only one engine serves `:8080` at a time; each needs nearly all of the 24 GB. The Strata Coder is
-parked, not installed: [`strata-flash-next.md`](docs/models/strata-flash-next.md#parked-state-2026-10-21).
+Only one engine serves `:8080` at a time; each needs nearly all of the 24 GB. The Strata Coder (2026-10-19
+build, Strata v0.2.4.2) is installed as an optional second engine, not yet measured on this version:
+[`strata-flash-next.md`](docs/models/strata-flash-next.md#review-2026-10-24-v0242-the-2026-10-19-coder-and-the-27b).
 
 ## Default profile
 
