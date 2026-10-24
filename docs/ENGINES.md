@@ -49,6 +49,10 @@ Qwen-shape cases). `--help` identical to b11820. FlashAttention Qwen-shape cases
 with the same patch and identical greedy text; coding suite 6/6
 ([results](../results/20261024-engine-b11846-240k/README.md)). SHA256: `libggml-hip.so`
 `0be4c1a3fbf945965262e20d810b4c70dacf3370f8ecf35b44c988401679776b`.
+**Prebuilt download**: GitHub release [`engine-b11846-rocm10-gfx1100-kvmix`](https://github.com/victoralcazardev/rx7900xtx-local-llm/releases/tag/engine-b11846-rocm10-gfx1100-kvmix),
+`llama-b11846-pr30792q51-rocm10-gfx1100-kvmix-linux-x64.tar.gz`, sha256
+`4811e9ff7b02cbfa21e8993f964c5e71c1f0fab6fe4b5631f2e5a6223cc83c76` (adds `pr30792-q5_1.patch`,
+`tests-kvmix-cases.patch` and `BUILD.txt`; ROCm runtime not bundled).
 
 ### `llama-b11820-pr30792q51-linux-rocm10-gfx1100-kvmix` (`hip-kvmix` engine 2026-10-23 to 2026-10-24, rollback) and `llama-b11820-linux-rocm10-gfx1100-kvmix`
 
