@@ -69,3 +69,19 @@ vram_gib = 22.2
 # the main conversation re-prefilled for 412 s after one 20K side request; with 12288 it resumed
 # from 179,749 cached tokens in 1.8 s. Costs up to ~4 GiB more host RAM (32 GiB host).
 flags = ["-ub", "256", "--reasoning-effort", "medium", "--cache-ram", "12288"]
+
+# ---------------------------------------------------------------------------
+# Strata (docs/sop/strata.md): its own engine, clone and run config, not launched by launch.py.
+# `python3 scripts/strata.py apply` writes each key below into <strata_dir>/<config> (local.toml has
+# strata_dir): keys replace the run config's, `env` is merged. `user_args` is Strata's list of hand-set
+# engine options, applied by every setup run and start on top of setup's generated `args`.
+# Qwen3.8-Flash-Next Coder IQ1_M, shard 1 at ISTA-DASLab revision bba88856 (2026-10-19).
+[strata.coder-iq1_m]
+config = "strata-coder-iq1_m.json"
+# 262K, KV int8, 3 GiB VRAM left for the desktop (2026-10-16, results/20261016-strata-coder-vram-reserve/).
+user_args = ["--max-context", "262144", "--kv", "int8", "--vram-reserve-mib", "3072"]
+# Keep 6 GiB of RAM free instead of 4 (upstream tip #834 for 31 GB PCs).
+env = { STRATA_RESIDENT_HEADROOM_GIB = "6" }
+# Qwen3.8-Flash-Next card, thinking mode (https://huggingface.co/Qwen/Qwen3.8-Flash-Next); the Coder
+# card sets none. Explicit, so a change of Strata's own defaults cannot change it silently.
+sampling = { temperature = 1.0, top_p = 0.95, top_k = 20, min_p = 0.0 }

@@ -2,6 +2,9 @@
 # models_root: folder that contains the .gguf files referenced in models.toml.
 models_root = "/path/to/Models"
 
+# Optional: the Strata clone (docs/sop/strata.md), for scripts/strata.py.
+# strata_dir = "/path/to/Strata"
+
 # One engine per backend. Empty ("") = not installed on this machine yet.
 # Never a binary with both Vulkan and HIP compiled in (llama.cpp issue #23199,
 # see docs/measurements/engines.md).
