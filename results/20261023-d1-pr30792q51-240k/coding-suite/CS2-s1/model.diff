@@ -1,0 +1,82 @@
+diff --git a/docs/api.rst b/docs/api.rst
+index d4abb28..010f733 100644
+--- a/docs/api.rst
++++ b/docs/api.rst
+@@ -165,6 +165,7 @@ These tools return summarized or aggregated data from an iterable.
+ .. autofunction:: exactly_n(iterable, n, predicate=bool)
+ .. autofunction:: is_sorted
+ .. autofunction:: all_unique
++.. autofunction:: iequals(*iterables)
+ .. autofunction:: argmin
+ .. autofunction:: argmax
+ .. function:: minmax(iterable, *[, key, default])
+diff --git a/more_itertools/more.py b/more_itertools/more.py
+index 6e44539..5b8069a 100755
+--- a/more_itertools/more.py
++++ b/more_itertools/more.py
+@@ -101,6 +101,7 @@ __all__ = [
+     'groupby_transform',
+     'ichunked',
+     'idft',
++    'iequals',
+     'ilen',
+     'interleave',
+     'interleave_evenly',
+@@ -5356,6 +5357,37 @@ def argmax(iterable, *, key=None):
+     return max(enumerate(iterable), key=itemgetter(1))[0]
+ 
+ 
++def iequals(*iterables):
++    """Return ``True`` if the given iterables yield equal elements in the
++    same order and have the same length, otherwise ``False``.
++
++    With zero or one iterables, return ``True``.
++
++        >>> iequals(iter('abc'), iter('abc'))
++        True
++        >>> iequals(iter('abc'), iter('abd'))
++        False
++        >>> iequals(iter('abc'), iter('abcd'))
++        False
++        >>> iequals(iter('abc'))
++        True
++        >>> iequals()
++        True
++
++    """
++    sentinel = object()
++    for row in zip_longest(*iterables, fillvalue=sentinel):
++        # Check identity so the sentinel can never be faked by a real
++        # element (even one that compares equal to everything, such as
++        # mock.ANY).
++        if any(item is sentinel for item in row):
++            return False
++        first, *rest = row
++        if not all(first == item for item in rest):
++            return False
++    return True
++
++
+ def _extract_monotonic(iterator, indices):
+     'Non-decreasing indices, lazily consumed'
+     num_read = 0
+diff --git a/more_itertools/more.pyi b/more_itertools/more.pyi
+index 2f9569f..59d0dae 100644
+--- a/more_itertools/more.pyi
++++ b/more_itertools/more.pyi
+@@ -75,6 +75,7 @@ __all__ = [
+     'groupby_transform',
+     'ichunked',
+     'idft',
++    'iequals',
+     'ilen',
+     'interleave',
+     'interleave_evenly',
+@@ -994,6 +995,7 @@ def argmin(
+ def argmax(
+     iterable: Iterable[_T], *, key: Callable[[_T], _U] | None = ...
+ ) -> int: ...
++def iequals(*iterables: Iterable[Any]) -> bool: ...
+ def extract(
+     iterable: Iterable[_T],
+     indices: Iterable[int],

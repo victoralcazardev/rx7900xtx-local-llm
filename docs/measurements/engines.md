@@ -8,12 +8,13 @@
   memory clock pinned at 1249 MHz (2026-09-29), HIP still wins tg +63% at depth 0 and +18% at 64K
   — see "Vulkan re-test with the memory clock pinned" below. This is a Linux/RADV driver behavior,
   not a kernel P-state bug.
-- **Engine in use**: llama.cpp `b11718` `hip-kvmix` (since 2026-10-18), an own gfx1100 build
-  ([`../ENGINES.md`](../ENGINES.md)) with the same ROCm 10 toolchain as the official Ubuntu ROCm
-  10.0 binary. At 240K it matches or beats b11454 + PR #29509 per decoding step (see
-  [below](#b11718-vs-b11454--pr-29509-at-240k-2026-10-18)). The own build is **required** for the
-  adopted KV `q8_0`/`q5_1` profile: the official binary doesn't ship kernels for that mix. Building
-  with the older ROCm 7.2.4 (Arch's system package) is about 9% slower.
+- **Engine in use**: llama.cpp `b11820` + a local PR #30792 patch extended to V `q5_1` (`hip-kvmix`,
+  since 2026-10-23), an own gfx1100 build ([`../ENGINES.md`](../ENGINES.md)) with the same ROCm 10
+  toolchain as the official Ubuntu ROCm 10.0 binary. Dequantizing K `q8_0` / V `q5_1` inside the
+  FlashAttention TILE kernel makes 240K decode 18-27% faster than plain b11820 with identical greedy
+  text (see [below](#native-q8_0q5_1-tile-flashattention-at-240k-2026-10-23)). The own build is
+  **required** for the adopted KV `q8_0`/`q5_1` profile: the official binary doesn't ship kernels for
+  that mix. Building with the older ROCm 7.2.4 (Arch's system package) is about 9% slower.
 - This mirrors what upstream itself documented when closing
   [ggml-org/llama.cpp#20934](https://github.com/ggml-org/llama.cpp/issues/20934): the HIP backend
   is not expected to beat Vulkan on RDNA, because it shares CUDA-oriented kernels and loses
@@ -349,6 +350,23 @@ greedy text on which the MTP draft is accepted less often (0.431 vs. 0.502); tha
 alone predicts -8.5% tokens per step, so the cost per step is unchanged. The planned 190K pair and
 retrieval run were dropped at the user's request; the engine-update check is now this one 240K pair
 ([`../sop/update-engine.md`](../sop/update-engine.md)).
+
+## Native q8_0/q5_1 TILE FlashAttention at 240K (2026-10-23)
+
+Plain b11820 vs. b11820 + PR #30792 extended with a `q5_1` V loader (native dequant only for
+`ne[1] <= 8`), production profile, temperature 0, 3 cached reps per task after a cold warm-up, back to
+back ([results](../../results/20261023-d1-pr30792q51-240k/README.md)). Greedy text identical on every
+task in both arms. Decode: essay 26.15 → 31.11 (+19.0%), copy 45.50 → 53.78 (+18.2%), code 17.61 →
+22.39 (+27.1%) tok/s. Cold prefill 396.0 vs. 393.6 tok/s, peak process VRAM 22,642 vs. 22,646 MiB.
+Plain b11820 equals b11718 (essay 26.22, copy 45.58, code 17.54 on 2026-10-18). Coding suite on the
+patched build: 6/6, no regression vs. the b11718 baseline. Adopted.
+
+**b11846 rebase (2026-10-24)**: b11846 + the same patch vs. b11820 + patch, back to back: +0.2 / +0.5 /
++0.2% essay/copy/code with identical text, prefill -0.3%, same VRAM, coding suite 6/6; adopted
+([results](../../results/20261024-engine-b11846-240k/README.md)). The b11820 + patch arm of that run
+repeats D1's arm B (same text) at essay 33.12 vs. 31.11 (+6.5%), copy +1.2%, code +0.4%, with matching
+clocks, power and temperatures: cross-session spread on this bench reaches ~6%, so only same-session
+arms are compared.
 
 ## Open questions
 

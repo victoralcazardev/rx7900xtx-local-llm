@@ -11,7 +11,7 @@ keep older links working.
 ## Current plan (2026-10-18)
 
 Replaces the [2026-10-03 queue](archive/engines-experiments-2026.md#queue-reconciliation-and-priority) as the
-execution order. Context: b11718 `hip-kvmix` is the engine in use (240K pair measured, A1), Qwen3.8-27B tuning is
+execution order. Context: b11820 + native `q8_0`/`q5_1` TILE FlashAttention is the `hip-kvmix` engine in use (D1, 2026-10-23), Qwen3.8-27B tuning is
 paused until Qwen4 ([DECISIONS.md](DECISIONS.md)), Strata's coding quality is unmeasured, and the coding suite
 (B1) has one seed-1 baseline on the 27B; every quality-affecting A/B gates on it.
 
@@ -34,12 +34,30 @@ user's explicit go each time.
 | C1 | Qwen4 day one, via [sop/new-model.md](sop/new-model.md): vendor card first, quant that fits 262K with quantized KV, KV KLD vs. `f16`, depth bench, retrieval, suite. If the current engine lacks support, run the engine update first and treat it like A1 | Qwen4 release; B1c | Same measurements as the 27B rows | Adopt only if suite pass rate ≥ the 27B's with no task lost, 262K kept, and 240K tg ≥ 19.3 tok/s (the 27B's slowest 240K task); update `models.toml`, STATUS, README, DECISIONS together; keep the 27B profile for rollback. Record head dim, GQA and MTP verify width for D1 |
 | C2 | Strata [tuning plan](models/strata-flash-next.md#tuning-plan-2026-10-16-not-run) | B2 | Its own per-phase metrics plus the suite | One factor at a time; the suite must not regress |
 | C3 | Nemotron 3.5 Bolt 74B-A9B: load on b11718, 262K fit, depth speed, retrieval, then the suite | A1 path settled; after C1 | Load log, peak VRAM, tg at 240K, exact-match count | README "Models" row becomes "tried" with numbers, or the SOURCES row records why it failed |
-| D1 | [T29](#new-t29-native-quantized-kv-multi-query-verify-kernel-2026-10-18-not-started) verify kernel; start with its [cheaper route](#cheaper-route-via-llamacpp-pr-30792-2026-10-22) (PR #30792 + q5_1 V loader + `ne[1] <= 8` guard), write the full kernel only if that falls short | A1 path settled; C1 shows the adopted model keeps quantized KV with an attention shape T29 covers, or the user keeps the 27B | T29's op-level and end-to-end gates | **Op level done 2026-10-22** (verify op -29% at 240K, [results](../results/20261022-fa-native-q8q51-tile-op-level/README.md)); next the 240K A/B vs. plain b11820 plus one suite run. Local patch only; the unpatched build stays as rollback |
+| D1 | [T29](#new-t29-native-quantized-kv-multi-query-verify-kernel-2026-10-18-not-started) verify kernel; start with its [cheaper route](#cheaper-route-via-llamacpp-pr-30792-2026-10-22) (PR #30792 + q5_1 V loader + `ne[1] <= 8` guard), write the full kernel only if that falls short | A1 path settled; C1 shows the adopted model keeps quantized KV with an attention shape T29 covers, or the user keeps the 27B | T29's op-level and end-to-end gates | **Done 2026-10-23**: 240K tg +18-27% vs. plain b11820, identical greedy text, suite 6/6; adopted ([results](../results/20261023-d1-pr30792q51-240k/README.md)). The full T29 kernel is not needed for now. Rollback: b11718 |
 | D2 | Workload items one at a time: T25 tool-output bounding, T02 compaction threshold, T24 probabilistic MTP (needs a non-greedy bench), T09 n-gram replay | B1c | The suite plus the item's own metric | Each needs its own result folder and DECISIONS row |
 | Parked | T26, T23, T07, T10-T18, KVMem (T01), TurboQuant KV ([SOURCES](SOURCES.md#tinygrad-qwen38-fork-verify-kernel-references-and-turboquant-kv-2026-10-18)) | new evidence | — | Revisit only with a logged trigger or a measured bottleneck |
 
-Order of work now: A1 and B1 are done; next B2. A2 whenever a real session happens. C1 pre-empts
-everything except a running measurement once Qwen4 ships.
+Order of work now: A1, B1 and D1 are done; next B2 (Strata parked: B2 and C2 wait for a new MoE model).
+A2 whenever a real session happens. C1 pre-empts everything except a running measurement once Qwen4
+ships. [Next batch](#next-batch-2026-10-23) lists the GPU runs that remain worth doing before then.
+
+### Next batch (2026-10-23)
+
+Ordered by expected gain per GPU hour on the current engine. Each is one `bench/spec_depth_bench.py` or
+`llama-bench` run with the production flags plus one change, compared with a reference arm **in the same
+session** (cross-session spread reaches ~6%: [results](../results/20261024-engine-b11846-240k/README.md)).
+
+| ID | Change | Why now | Gate |
+|---|---|---|---|
+| E4 | `--spec-draft-sampling probabilistic` at 240K, temperature 1 (`n3-prob-map` vs. `n3-map`, b11846) | Cheaper verify changes the trade-off measured on b11371 | Run started 2026-10-24 ~01:20, raw output in `bench/res/spec-depth-*-e4-*`, not yet read; then the suite plus a session replay (T24) |
+| E5 | Upstream rebase when PR #30792 merges | Drop the local patch if upstream covers `q5_1` V | 240K pair per [sop/update-engine.md](sop/update-engine.md) |
+
+Done in this batch: MTP n=4 re-check, n=3 stays ([results](../results/20261023-mtp-n4-240k-pr30792q51/README.md));
+E2 KV `q8_0`/`q8_0` at 245,760: no faster than `q8_0`/`q5_1` on a same-session rerun, +591 MiB VRAM and 16K
+less context; a quality-only ≤240K alternative, not adopted ([results](../results/20261024-kv-q8q8-240k-pr30792q51/README.md)); E3 empty context:
+MTP n=3 76.3 tok/s, spec off 39.1 ([results](../results/20261024-probe-ab-262k-pr30792q51/README.md)); engine rebased to
+b11846, neutral, adopted ([results](../results/20261024-engine-b11846-240k/README.md)).
 
 ## Coding suite design (B1a, 2026-10-18)
 

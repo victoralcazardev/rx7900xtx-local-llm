@@ -21,6 +21,10 @@ Headline numbers and the adopted flags: [`../STATUS.md`](../STATUS.md).
   68.6 / **n=3 68.9** / n=4 66.9 tok/s (n=2 and n=3 tie within noise); `--spec-draft-p-min`
   0.60/0.75 raises acceptance (0.72 → 0.85/0.91) but lowers speed (66.2/59.8). See "Community
   probe A/B at 262K" below.
+- **On the native `q8_0`/`q5_1` TILE engine (2026-10-23/24)** MTP n=3 stays best: n=4 at 240K is
+  -9.5..-22.7% ([results](../../results/20261023-mtp-n4-240k-pr30792q51/README.md)); empty-context
+  `probe.py` gives spec-off 39.1 → n=3 76.3 tok/s (+95%, acceptance 0.708)
+  ([results](../../results/20261024-probe-ab-262k-pr30792q51/README.md)).
 - **DFlash2 does not beat MTP** once measured at depth (190K): slower on two of three task types,
   ties on the third, and costs more VRAM. A third-party claim that DFlash2 wins at all depths on a
   different GPU (RTX 3090) does not reproduce here.

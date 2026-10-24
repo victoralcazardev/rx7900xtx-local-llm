@@ -1,0 +1,15 @@
+diff --git a/bottle.py b/bottle.py
+index 4e648ce..ac99fd8 100755
+--- a/bottle.py
++++ b/bottle.py
+@@ -3005,8 +3005,8 @@ def parse_range_header(header, maxlen=0):
+                 start, end = max(0, maxlen - int(end)), maxlen
+             elif not end:  # bytes=100-    -> all but the first 99 bytes
+                 start, end = int(start), maxlen
+-            else:  # bytes=100-200 -> bytes 100-200 (inclusive)
+-                start, end = int(start), min(int(end), maxlen)
++            else:  # bytes=100-200 -> bytes 100-200 (inclusive), end index converted to non-inclusive
++                start, end = int(start), min(int(end) + 1, maxlen)
+             if 0 <= start < end <= maxlen:
+                 yield start, end
+         except ValueError:

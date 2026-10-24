@@ -7,6 +7,10 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- `hip-kvmix` engine rebased to b11846 (same TILE patch): neutral at 240K, identical text, coding suite 6/6; a same-engine rerun showed up to ~6% cross-session spread, so engine A/Bs stay within one session ([`results/20261024-engine-b11846-240k/`](results/20261024-engine-b11846-240k/README.md)).
+- `hip-kvmix` engine moves to b11820 + native `q8_0`/`q5_1` TILE FlashAttention (PR #30792 extended): 240K decode +18-27% with identical greedy text, coding suite 6/6; b11718 is the rollback ([`results/20261023-d1-pr30792q51-240k/`](results/20261023-d1-pr30792q51-240k/README.md)).
+- Follow-up runs on the new engine: MTP n=4 still loses at 240K (n=3 stays); KV `q8_0`/`q8_0` at 245,760 is no faster and costs +591 MiB VRAM (quality-only ≤240K alternative); empty context is now 76.3 tok/s (39.1 without MTP); `spec_depth_bench.py` gains an `n4-map` variant ([`results/INDEX.md`](results/INDEX.md)).
+- Qwen4 day-one checklist (card fields, engine support, FA shape check, 262K fit, quality, speed, MoE offload order) ([`docs/sop/new-model.md`](docs/sop/new-model.md#qwen4-day-one-checklist)).
 - Engines b11820 and b11820 + native `q8_0`/`q5_1` TILE FlashAttention (PR #30792 extended) built as candidates; op level the MTP verify step is -29% at 240K; b11718 stays in production until the 240K A/B ([`results/20261022-fa-native-q8q51-tile-op-level/`](results/20261022-fa-native-q8q51-tile-op-level/README.md)).
 - Decision: Gyro-S and Strata v0.2.0-beta are installed but not tested; Strata/Flash-Next work waits for a 24 GB Gyro size or Qwen4 ([`docs/DECISIONS.md`](docs/DECISIONS.md)).
 - b11718 engine measured at 240K against b11454 + PR #29509 and kept; engine updates now take one 240K pair plus one coding-suite run ([`results/20261018-engine-b11718-vs-b11454-240k/`](results/20261018-engine-b11718-vs-b11454-240k/README.md), [`docs/sop/update-engine.md`](docs/sop/update-engine.md)).

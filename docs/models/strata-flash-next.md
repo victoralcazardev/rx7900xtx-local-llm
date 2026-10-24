@@ -10,8 +10,9 @@ upstream's own docs and code, to decide whether an on-hardware trial is worth it
 Decision 2026-10-21 (commit `475405c`): park Gyro-S/Strata testing until new models arrive. Coder shard 1
 was deleted on 2026-10-19 (upstream replaced it; shard 2 kept), so the Coder is not installed. Last
 measured config and numbers: the sections below (262K, KV int8, 3 GiB VRAM reserve, 52-57 tok/s, retrieval
-20/20 to 240K). Version drift: upstream Strata is at v0.2.2 (2026-10-21); the last local build was
-v0.2.0-beta-4. Nothing was tested on v0.2.x.
+20/20 to 240K). Version drift: upstream Strata is at v0.2.3 (2026-10-23, engine 0.1.48; ships a
+`linux-x86_64-hip-rx7900` package the author has not run on real RX 7000 hardware); the last local
+build was v0.2.0-beta-4. Nothing was tested on v0.2.x.
 
 ## Credits and upstream
 
@@ -117,8 +118,9 @@ None of this transfers to `qwen38-iq3s-mtp` / `262k-q8q51-mtp`:
 
 ## Decision criterion for an on-hardware trial
 
-The current 27B profile already does **68.9 tok/s at empty context** and **25.9 / 45.9 / 19.3 tok/s
-(essay/copy/code) at 240K fill** (b11454; see [`STATUS.md`](../STATUS.md)). Upstream's best AMD figure for Flash-Next (55-59 tok/s,
+The current 27B profile does **76.3 tok/s at empty context** and **33.2 / 54.7 / 22.5 tok/s
+(essay/copy/code) at 240K fill** (native TILE engine, 2026-10-24; see [`STATUS.md`](../STATUS.md)); this
+section was written against the b11454 numbers (68.9; 25.9 / 45.9 / 19.3). Upstream's best AMD figure for Flash-Next (55-59 tok/s,
 4-9K prompts, 64 GiB RAM) is below the 27B's empty-context speed. A trial is only worth
 integrating if, on this hardware, the Coder IQ1_M in low-RAM mode on NVMe:
 

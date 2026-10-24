@@ -10,13 +10,19 @@ disabled). One single-backend binary per download/build.
    `https://github.com/ggml-org/llama.cpp/compare/b<current>...b<latest>`, filtered on
    `hip|rocm|gfx11|rdna|fattn|mtp|spec|draft|kv-cache`. Record the check in `docs/DECISIONS.md`
    even if nothing relevant changed (see the 2026-09-25 entry for the format). Live checks (states
-   confirmed 2026-10-22; #28102, #29393 and #27796 are settled and already in the b11718 baseline):
+   confirmed 2026-10-23; #28102, #29393 and #27796 are settled and already in the b11718 baseline):
    - [PR #28391](https://github.com/ggml-org/llama.cpp/pull/28391), open: ngram-mod on by default
      (additive `--spec-type`). If merged, the MTP profile silently becomes MTP + ngram-mod: re-measure
      ([`speculative.md`](../measurements/speculative.md)).
    - [PR #30792](https://github.com/ggml-org/llama.cpp/pull/30792), open: native q8_0 KV in the
-     FlashAttention TILE kernel (author: gfx1151 tg +19..+62%); it excludes our q5_1 V. If merged,
-     check whether the K q8_0 + V q5_1 pair is covered and re-run the 240K A/B.
+     FlashAttention TILE kernel (author: gfx1151 tg +19..+62%); it excludes our q5_1 V. The engine in
+     use carries it plus a local q5_1 V loader
+     ([results](../../results/20261023-d1-pr30792q51-240k/README.md)): any newer base needs the patch
+     rebased. If merged, check whether the K q8_0 + V q5_1 pair is covered; drop the local patch only
+     if the 240K A/B matches.
+   - [PR #30885](https://github.com/ggml-org/llama.cpp/pull/30885), merged 2026-10-23 (after b11840):
+     bf16 WMMA operand type for gfx11/gfx12, fixes the HIP build on LLVM 23. Needed only when the
+     build toolchain moves past ROCm 10.0.0's LLVM.
    - [PR #30573](https://github.com/ggml-org/llama.cpp/pull/30573), merged 2026-10-19: syncwarp fix in
      `flash_attn_ext_vec`, which our decode path uses. Check it is in the build; include a deep-depth
      case in the A/B.

@@ -1,0 +1,19 @@
+{
+  "task": "CS4",
+  "seed": 1,
+  "completed": true,
+  "reason": null,
+  "turns": 3,
+  "wall_s": 309.0,
+  "usage": {
+    "prompt_tokens": 348925,
+    "completion_tokens": 3594
+  },
+  "tool_calls": {
+    "edit_file": 1,
+    "run_tests": 1
+  },
+  "tests": true,
+  "score_rc": 0,
+  "pass": true
+}

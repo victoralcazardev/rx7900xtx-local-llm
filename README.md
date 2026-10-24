@@ -12,7 +12,7 @@ number reproducible. Not a multi-GPU, NVIDIA/CUDA, vLLM/Ollama or harness-wiring
 
 | Model | Engine | Status | Context | Speed (empty / deep fill) | Setup |
 |---|---|---|---|---|---|
-| Qwen3.8-27B GSQ-RCO `IQ3_S-mtp` | llama.cpp `hip-kvmix` (ROCm) | **Default** | 262K | 68.9 / 19.3-25.9 tok/s at 240K | [`STATUS.md`](docs/STATUS.md) |
+| Qwen3.8-27B GSQ-RCO `IQ3_S-mtp` | llama.cpp `hip-kvmix` (ROCm) | **Default** | 262K | 76.3 / 22.5-33.2 tok/s at 240K | [`STATUS.md`](docs/STATUS.md) |
 | Qwen4 | — | Planned when released; 27B tuning paused until then | — | — | [`DECISIONS.md`](docs/DECISIONS.md) |
 | Nemotron 3.5 Bolt 74B-A9B (24 GB GGUF) | llama.cpp (needs b11718+) | Candidate, not tried | — | — | [`SOURCES.md`](docs/SOURCES.md#ideas-for-future-moe-models-not-pursued-2026-09-29) |
 
@@ -25,9 +25,9 @@ parked, not installed: [`strata-flash-next.md`](docs/models/strata-flash-next.md
 |---|---|
 | Profile | `qwen38-iq3s-mtp` / `262k-q8q51-mtp` (IQ3_S-mtp, KV `q8_0`/`q5_1`, MTP n=3 + `ngram-map-k4v`) |
 | Context | 262,144 tokens (native, no YaRN) |
-| Speed at 240K fill | 19.3-25.9 tok/s, copy 45.9 (n-gram), prefill 391 tok/s |
-| Speed, empty context | 68.9 tok/s (37.2 without MTP) |
-| VRAM | 22,641 MiB peak process VRAM at 240K fill |
+| Speed at 240K fill | 22.5-33.2 tok/s, copy 54.7 (n-gram), prefill 395 tok/s |
+| Speed, empty context | 76.3 tok/s (39.1 without MTP) |
+| VRAM | 22,645 MiB peak process VRAM at 240K fill |
 | Quality | Retrieval only: 68/68 pooled (32K-240K); 40/40 at 190K/240K; real-history recall holds at 80K/176K |
 | Power | 272 W cap (this card's driver minimum; stock 303 W) |
 
@@ -43,7 +43,7 @@ planned trials [`docs/ENGINES-EXPERIMENTS.md`](docs/ENGINES-EXPERIMENTS.md).
 | CPU / RAM | Ryzen 7 5700X (8C/16T), 32 GiB (31.25 GiB usable) plus zram swap |
 | Board / storage | Gigabyte B450 AORUS PRO, NVMe (Kingston A2000 500 GB) |
 | OS / drivers | CachyOS (Arch-based), kernel 7.2.11-1-cachyos, Mesa 26.2.4, ROCm runtime 7.2.4 |
-| Engine | llama.cpp b11718 `hip-kvmix`, ROCm 10.0.0 compiler; numbers on this page are b11454 + PR #29509, b11718 checked at 240K ([`docs/ENGINES.md`](docs/ENGINES.md)) |
+| Engine | llama.cpp b11846 + native `q8_0`/`q5_1` TILE FlashAttention patch (`hip-kvmix`), ROCm 10.0.0 compiler; 240K numbers on this page are this build, empty-context numbers b11820 + the same patch ([`docs/ENGINES.md`](docs/ENGINES.md)) |
 
 The default profile runs every layer on the GPU, so CPU and RAM barely matter. GPU and driver notes: [`docs/hardware/gpu-7900xtx.md`](docs/hardware/gpu-7900xtx.md).
 

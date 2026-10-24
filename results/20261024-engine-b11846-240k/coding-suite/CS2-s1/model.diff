@@ -1,0 +1,90 @@
+diff --git a/docs/api.rst b/docs/api.rst
+index d4abb28..1e00f63 100644
+--- a/docs/api.rst
++++ b/docs/api.rst
+@@ -167,6 +167,7 @@ These tools return summarized or aggregated data from an iterable.
+ .. autofunction:: all_unique
+ .. autofunction:: argmin
+ .. autofunction:: argmax
++.. autofunction:: iequals
+ .. function:: minmax(iterable, *[, key, default])
+ .. autofunction:: minmax(arg1, arg2, *args[, key])
+   :noindex:
+diff --git a/more_itertools/more.py b/more_itertools/more.py
+index 6e44539..11cc2e6 100755
+--- a/more_itertools/more.py
++++ b/more_itertools/more.py
+@@ -102,6 +102,7 @@ __all__ = [
+     'ichunked',
+     'idft',
+     'ilen',
++    'iequals',
+     'interleave',
+     'interleave_evenly',
+     'interleave_longest',
+@@ -542,6 +543,45 @@ def ilen(iterable):
+     return sum(compress(repeat(1), zip(iterable)))
+ 
+ 
++def iequals(*iterables):
++    """Return ``True`` if the given *iterables* yield equal items in the
++    same order and for the same number of times, and ``False`` otherwise.
++
++    >>> iequals([1, 2], (1, 2), iter((1, 2)))
++    True
++    >>> iequals('abc', iter('abc'))
++    True
++    >>> iequals([1, 2], [1, 3])
++    False
++    >>> iequals([1, 2], [1, 2, 3])
++    False
++
++    With zero or one iterable, the result is ``True``:
++
++    >>> iequals()
++    True
++    >>> iequals([1, 2])
++    True
++
++    """
++    if len(iterables) <= 1:
++        return True
++
++    iters = [iter(i) for i in iterables]
++    while True:
++        try:
++            a = next(iters[0])
++        except StopIteration:
++            # The first iterable is exhausted, so the rest must be too
++            return all(not list(it) for it in iters[1:])
++        for it in iters[1:]:
++            try:
++                if next(it) != a:
++                    return False
++            except StopIteration:
++                return False
++
++
+ def iterate(func, start):
+     """Return ``start``, ``func(start)``, ``func(func(start))``, ...
+ 
+diff --git a/more_itertools/more.pyi b/more_itertools/more.pyi
+index 2f9569f..e009346 100644
+--- a/more_itertools/more.pyi
++++ b/more_itertools/more.pyi
+@@ -76,6 +76,7 @@ __all__ = [
+     'ichunked',
+     'idft',
+     'ilen',
++    'iequals',
+     'interleave',
+     'interleave_evenly',
+     'interleave_longest',
+@@ -209,6 +210,7 @@ class peekable(Generic[_T], Iterator[_T]):
+ 
+ def consumer(func: _GenFn) -> _GenFn: ...
+ def ilen(iterable: Iterable[_T]) -> int: ...
++def iequals(*iterables: Iterable[_T]) -> bool: ...
+ def iterate(func: Callable[[_T], _T], start: _T) -> Iterator[_T]: ...
+ def with_iter(
+     context_manager: AbstractContextManager[Iterable[_T]],

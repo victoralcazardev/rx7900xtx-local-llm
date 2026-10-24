@@ -1,0 +1,20 @@
+{
+  "task": "CS3",
+  "seed": 1,
+  "completed": true,
+  "reason": null,
+  "turns": 20,
+  "wall_s": 88.6,
+  "usage": {
+    "prompt_tokens": 316219,
+    "completion_tokens": 2981
+  },
+  "tool_calls": {
+    "run_tests": 4,
+    "read_file": 16,
+    "edit_file": 2
+  },
+  "tests": true,
+  "score_rc": 0,
+  "pass": true
+}

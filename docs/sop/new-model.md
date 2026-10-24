@@ -42,6 +42,35 @@
    other than `<think>`/channels already covered (check `tokenizer.chat_template` with
    `gguf_info.py`) — document it in `AGENTS.md` before changing anything.
 
+## Qwen4 day-one checklist
+
+Prepared 2026-10-23, before release (the Hugging Face API query `models?author=Qwen&search=Qwen4`
+returned no models that day). Run in
+order; each step's evidence goes where [`../STYLE.md`](../STYLE.md) §8 says. Gate for adoption:
+[`../ENGINES-EXPERIMENTS.md`](../ENGINES-EXPERIMENTS.md#current-plan-2026-10-18) C1.
+
+1. **Card** (steps 1-2 above): record architecture, total/active params, native context, attention
+   layout (full, linear, sliding window or other), head dim, KV heads, MTP head
+   (`nextn_predict_layers`), sampling and thinking format. Take these from the card, not from an
+   earlier Qwen model.
+2. **Engine support**: `llama-server -m <gguf>` on the current `hip-kvmix` build. If it fails to
+   load, build the newest upstream release with the same recipe ([`../ENGINES.md`](../ENGINES.md)), and
+   check whether the local `pr30792-q5_1.patch` still applies; without it, expect the pre-2026-10-23
+   decode speed with quantized KV.
+3. **FA shape check**: the native `q8_0`/`q5_1` TILE path was measured only at head dim 256, GQA 6.
+   For another shape, run `test-backend-ops test -b ROCm0 -o FLASH_ATTN_EXT` filtered on the new
+   `hsk`/`nh`/`nr23` before trusting quantized KV speed.
+4. **Fit at 262K**: step 4 above with `-ctk q8_0 -ctv q5_1` and with `q8_0`/`q8_0`; hybrid or linear
+   attention layers keep little KV, so `q8/q8` (or `f16`) may fit where it did not for the 27B.
+5. **Quality**: KV KLD vs. `f16` (`llama-perplexity --kl-divergence`, method in
+   [`../measurements/kv-quality.md`](../measurements/kv-quality.md)), then the coding suite
+   (`bench/coding_suite.py --run`, `--compare` with the 27B baseline).
+6. **Speed**: `bench/spec_depth_bench.py --run --depth 240000 --variants none n3-map --reps 3
+   --extra "-ub 256"`; add `n4-map` only if acceptance at n=3 is above ~0.85.
+7. **A MoE that does not fit in 24 GB** (e.g. a Flash size): first `-ngl all --n-cpu-moe N` on
+   llama.cpp with N from `--fit on`, then the same plus `--moe-cache-mib` (b11718+: a GPU cache for the
+   experts kept on the CPU, default 0) as the A/B arm; Strata only after that, per [`strata.md`](strata.md).
+
 ## How to verify
 
 - `python3 scripts/check-sync.py` reports no PROBLEM for the new alias (a WARNING is fine if the

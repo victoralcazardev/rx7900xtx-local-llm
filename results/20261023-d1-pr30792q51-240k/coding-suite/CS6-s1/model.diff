@@ -1,0 +1,17 @@
+diff --git a/src/tomli/_parser.py b/src/tomli/_parser.py
+index 515ed72..5ae98c6 100644
+--- a/src/tomli/_parser.py
++++ b/src/tomli/_parser.py
+@@ -388,7 +388,11 @@ def create_dict_rule(src: str, pos: Pos, out: Output) -> tuple[Pos, Key]:
+     pos, key = parse_key(src, pos)
+ 
+     if out.flags.is_(key, Flags.EXPLICIT_NEST) or out.flags.is_(key, Flags.FROZEN):
+-        raise TOMLDecodeError(f"Cannot declare {key} twice", src, pos)
++        key_repr = ".".join(
++            part if set(part) <= BARE_KEY_CHARS else f'"{part}"'
++            for part in key
++        )
++        raise TOMLDecodeError(f"Cannot declare table [{key_repr}] twice", src, pos)
+     out.flags.set(key, Flags.EXPLICIT_NEST, recursive=False)
+     try:
+         out.data.get_or_create_nest(key)
