@@ -95,9 +95,6 @@ Sampling is the Qwen3.8-27B card's own; `--min-p 0.0` is set explicitly because 
 - **Qwen3.8-Flash-Next Coder via Strata**: reinstalled 2026-10-24 (v0.2.4.2, 2026-10-19 Coder); speed,
   retrieval and coding quality not yet measured on it —
   [owner](models/strata-flash-next.md#review-2026-10-24-v0242-the-2026-10-19-coder-and-the-27b).
-- **Nemotron 3.5 Bolt 74B-A9B (IQ2 GGUF)**: b11454 could not load it; b11718 adds support
-  (upstream #30520), not tried here; fit at 262K estimated, not measured —
-  [SOURCES.md](SOURCES.md#ideas-for-future-moe-models-not-pursued-2026-09-29).
 
 ## Next steps
 

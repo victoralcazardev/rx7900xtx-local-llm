@@ -98,23 +98,3 @@ All claims below are the authors' own and are unverified here.
   numbers claimed by the author. Not applicable here: CUDA only; 31 GiB RAM allows only the 16 GiB
   mode, and our single PCIe 4.0 NVMe (KIOXIA Exceria Plus G3) would likely cut it to a few tok/s
   (estimate, unmeasured). Useful as a reference for decode vs. RAM-tier size in an expert cache.
-- **[NVIDIA-Nemotron-3.5-Bolt-74B-A9B-24GB-GGUF](https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Bolt-74B-A9B-24GB-GGUF)
-  (checked 2026-10-15, card + GGUF header via HTTP range read; not downloaded or run)**: text+vision
-  MoE, 74B total / 9B active, QAD-trained so experts in IQ2_XXS (2.06 bpw) are the native format.
-  Card sampling: temperature 1.0, top_p 0.95 (matches `general.sampling.*`). Vendor hardware: NVIDIA
-  Ada/Blackwell only; recipes ask for 32 GB+ (65K context with `mmproj` and DFlash drafter).
-  Files (HF API): model 20.51 GiB, `mmproj` 1.61 GiB, LiLiCorr DFlash drafter 0.93 GiB.
-  Header: `nemotron_h_moe`, 88 blocks = 40 Mamba + 40 MoE + 8 attention (2 KV heads, head 128);
-  tensor types IQ2_XXS (experts), NVFP4 (Mamba `ssm_in`/`ssm_out` plus F32 `.scale` tensors), Q8_0
-  (embeddings/output); routed experts **vary per layer** (240/304/368/432/496), top-k 9.
-  - **b11454 cannot load it** (from source, not run): `src/models/nemotron-h.cpp` creates expert
-    tensors with the global `expert_count` (496) and has no `ssm_in.scale`/`ssm_out.scale`. Needs a
-    newer llama.cpp; HIP kernel speed for NVFP4/IQ2_XXS on gfx1100 is unknown.
-  - **Context is not the constraint**: only 8 layers keep KV, 4,096 elements/token, so 262K costs
-    ~1.06 GiB at q8_0 (~2.0 GiB f16); Mamba state ~0.2 GiB, fixed. Estimate text-only at 262K q8_0:
-    ~22.3-22.8 GiB (compute buffer guessed at 0.5-1.0 GiB, unverified); `mmproj` or the drafter would
-    not fit alongside.
-  - **A sub-15 GB requant is unlikely to help**: it needs ~1.5 bpw experts (IQ1_S/IQ1_M) requantized
-    from BF16, losing the QAD training (expected quality loss, unmeasured).
-  Status: source-checked (card, file sizes, header); fit and speed are hypotheses. Next: build
-  llama.cpp master for gfx1100, load text-only with KV q8_0, measure peak VRAM at 262K.

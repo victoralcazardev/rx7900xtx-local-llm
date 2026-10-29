@@ -64,6 +64,7 @@ All notable changes to this project are documented here. Format follows
 
 ### Changed
 
+- Scope narrowed to Qwen3.8-27B (llama.cpp), Qwen3.8-Flash-Next via Strata and Qwen4 when released; the Nemotron 3.5 Bolt candidate is removed from the README, STATUS, the plan and SOURCES ([`docs/DECISIONS.md`](docs/DECISIONS.md)).
 - CI runs Python 3.11 and 3.14 with `actions/checkout@v7` and `actions/setup-python@v7` ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)).
 - One GPU sysfs lookup, `gpu_device()` (largest VRAM card), shared by the launcher, `gpu_watch.py`, `ladder_bench.py` and `probe_ab.py`; `gpu_watch.py` CSV gains trailing `sclk_mhz`, `mclk_mhz`, `vddgfx_mv` columns ([`scripts/manifest.py`](scripts/manifest.py)).
 - Bench fixes: `--sampling` accepts scientific notation and rejects NaN/inf; `depth_bench.py`/`coding_suite.py` no longer crash when two runs start in the same second; `ladder_bench.py --help` and `probe_ab.py` work without amdgpu; guard rules in the README match the code ([`bench/README.md`](bench/README.md)).
