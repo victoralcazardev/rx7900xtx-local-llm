@@ -8,13 +8,24 @@ number reproducible. Not a multi-GPU, NVIDIA/CUDA, vLLM/Ollama or harness-wiring
 [![License: CC BY 4.0](https://img.shields.io/badge/docs%20license-CC%20BY%204.0-lightgrey.svg)](LICENSE)
 [![CI](https://github.com/victoralcazardev/rx7900xtx-local-llm/actions/workflows/ci.yml/badge.svg)](https://github.com/victoralcazardev/rx7900xtx-local-llm/actions/workflows/ci.yml)
 
+## Key findings
+
+- **ROCm/HIP, not Vulkan:** generation is 2-3.5x faster on ROCm here ([engines.md](docs/measurements/engines.md)).
+- **MTP is the biggest lever at depth:** n=3 doubles decode at 240K fill (23.3 vs. 11.2 tok/s), and an
+  n-gram drafter on top adds +62% when the output copies the context ([speculative.md](docs/measurements/speculative.md)).
+- **262K fits in 24 GB with KV `q8_0`/`q5_1`:** near-lossless (KLD 0.000744 vs. `f16`); `q4_0`/`q4_0`
+  has 4x the KLD ([kv-quality.md](docs/measurements/kv-quality.md)).
+- **A native mixed-KV FlashAttention kernel:** +18-27% decode at 240K over stock llama.cpp, identical
+  greedy text ([results](results/20261023-d1-pr30792q51-240k/README.md)).
+- **272 W cap:** ~6% slower prefill, hotspot 7-8°C cooler ([thermals-power.md](docs/measurements/thermals-power.md)).
+
 ## Models
 
-| Model | Engine | Status | Context | Speed (empty / deep fill) | Setup |
-|---|---|---|---|---|---|
-| Qwen3.8-27B GSQ-RCO `IQ3_S-mtp` | llama.cpp `hip-kvmix` (ROCm) | **Default** | 262K | 76.3 / 22.5-33.2 tok/s at 240K | [`STATUS.md`](docs/STATUS.md) |
-| Qwen3.8-Flash-Next Coder IQ1_M | Strata | Optional second engine, not yet measured on v0.2.4.2 | 262K | — | [`strata-flash-next.md`](docs/models/strata-flash-next.md#review-2026-10-24-v0242-the-2026-10-19-coder-and-the-27b) |
-| Qwen4 | — | Planned when released; 27B tuning paused until then | — | — | [`DECISIONS.md`](docs/DECISIONS.md) |
+| Model | Engine | Status | Setup |
+|---|---|---|---|
+| Qwen3.8-27B GSQ-RCO `IQ3_S-mtp` | llama.cpp `hip-kvmix` (ROCm) | **Default**, numbers below | [`STATUS.md`](docs/STATUS.md) |
+| Qwen3.8-Flash-Next Coder IQ1_M | Strata | Optional second engine, not yet measured on v0.2.4.2 | [`strata-flash-next.md`](docs/models/strata-flash-next.md#review-2026-10-24-v0242-the-2026-10-19-coder-and-the-27b) |
+| Qwen4 | — | Planned when released; 27B tuning paused until then | [`DECISIONS.md`](docs/DECISIONS.md) |
 
 Only one engine serves `:8080` at a time; each needs nearly all of the 24 GB.
 
@@ -24,8 +35,8 @@ Only one engine serves `:8080` at a time; each needs nearly all of the 24 GB.
 |---|---|
 | Profile | `qwen38-iq3s-mtp` / `262k-q8q51-mtp` (IQ3_S-mtp, KV `q8_0`/`q5_1`, MTP n=3 + `ngram-map-k4v`) |
 | Context | 262,144 tokens (native, no YaRN) |
-| Speed at 240K fill | 22.5-33.2 tok/s, copy 54.7 (n-gram), prefill 395 tok/s |
-| Speed, empty context | 76.3 tok/s (39.1 without MTP) |
+| Speed, empty context | **76.3 tok/s** (39.1 without MTP) |
+| Speed at 240K fill | **22.5-33.2 tok/s**, copy 54.7 (n-gram), prefill 395 tok/s |
 | VRAM | 22,645 MiB peak process VRAM at 240K fill |
 | Quality | Retrieval only: 68/68 pooled (32K-240K); 40/40 at 190K/240K; real-history recall holds at 80K/176K |
 | Power | 272 W cap (this card's driver minimum; stock 303 W) |
@@ -48,33 +59,51 @@ The default profile runs every layer on the GPU, so CPU and RAM barely matter. G
 
 ## Quick start
 
-Requires **Python 3.11+**; `scripts/` use only the standard library.
+Requires **Python 3.11+** (`scripts/` use only the standard library) and the ROCm runtime.
 
-1. **Engine (required).** Official llama.cpp binaries lack the FlashAttention kernels for K `q8_0`
-   + V `q5_1`. Download the prebuilt `hip-kvmix` build from the
-   [`engine-b11846-rocm10-gfx1100-kvmix`](https://github.com/victoralcazardev/rx7900xtx-local-llm/releases/tag/engine-b11846-rocm10-gfx1100-kvmix)
-   release (`llama-b11846-pr30792q51-rocm10-gfx1100-kvmix-linux-x64.tar.gz`, sha256
-   `4811e9ff7b02cbfa21e8993f964c5e71c1f0fab6fe4b5631f2e5a6223cc83c76`; the ROCm runtime is not
-   bundled), or build it (ROCm only, never Vulkan+HIP in one build): [`docs/ENGINES.md`](docs/ENGINES.md).
-2. **Model.** Download `Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp.gguf` (12.1 GB) from
-   [`ISTA-DASLab/Qwen3.8-27B-GSQ-RCO-GGUF`](https://huggingface.co/ISTA-DASLab/Qwen3.8-27B-GSQ-RCO-GGUF)
-   (revision not pinned) into `<models_root>/Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp/`, plus the optional
-   `mmproj-Qwen3.8-27B-BF16.gguf` for vision. SHA256s of this repository's copies (HF publishes none):
+**1. Engine.** Official llama.cpp binaries lack the FlashAttention kernels for K `q8_0` + V `q5_1`,
+so use the prebuilt `hip-kvmix` build from the
+[`engine-b11846-rocm10-gfx1100-kvmix`](https://github.com/victoralcazardev/rx7900xtx-local-llm/releases/tag/engine-b11846-rocm10-gfx1100-kvmix)
+release (ROCm runtime not bundled), or build it yourself, ROCm only: [`docs/ENGINES.md`](docs/ENGINES.md).
 
-   | File | SHA256 |
-   |---|---|
-   | `Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp.gguf` | `58fd826723939933dc86f45b7fe04545cbc2de1c70f6fe2cdd3858c87a98c12f` |
-   | `mmproj-Qwen3.8-27B-BF16.gguf` | `13cb7bebccbd04afc8f4090cb949ecf8937cdf7377c5799b1a0c594e7c0d3e16` |
+```bash
+f=llama-b11846-pr30792q51-rocm10-gfx1100-kvmix-linux-x64.tar.gz
+curl -LO https://github.com/victoralcazardev/rx7900xtx-local-llm/releases/download/engine-b11846-rocm10-gfx1100-kvmix/$f
+echo "4811e9ff7b02cbfa21e8993f964c5e71c1f0fab6fe4b5631f2e5a6223cc83c76  $f" | sha256sum -c
+tar -xzf $f   # note the folder that holds llama-server
+```
 
-   Other candidate quants and provenance: [`docs/models/qwen38-27b-quants.md`](docs/models/qwen38-27b-quants.md).
-3. **Configure.** `cp local.example.toml local.toml`, then set `models_root` and `[engines]`.
-4. **Validate and preview.** `python3 scripts/check-sync.py`, then
-   `python3 scripts/launch.py --dry-run` (no alias: loads the default profile).
-5. **Launch.** `python3 scripts/launch.py`, and point any OpenAI-compatible client at
-   `http://127.0.0.1:8080`. Details: [`docs/sop/launch-model.md`](docs/sop/launch-model.md).
-6. **Optional, recommended.** Cap power to 272 W ([`docs/sop/power-cap.md`](docs/sop/power-cap.md))
-   and close GPU-heavy apps: the 240K-fill run left 190 MiB VRAM free
-   ([`docs/measurements/memory.md`](docs/measurements/memory.md)).
+**2. Model** (12.1 GB, from
+[`ISTA-DASLab/Qwen3.8-27B-GSQ-RCO-GGUF`](https://huggingface.co/ISTA-DASLab/Qwen3.8-27B-GSQ-RCO-GGUF),
+revision not pinned; other quants: [`qwen38-27b-quants.md`](docs/models/qwen38-27b-quants.md)).
+
+```bash
+d=/path/to/Models/Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp   # models_root/... as in local.toml
+hf download ISTA-DASLab/Qwen3.8-27B-GSQ-RCO-GGUF Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp.gguf --local-dir $d
+```
+
+<details>
+<summary>SHA256 of this repository's copies (HF publishes none), and the optional vision projector</summary>
+
+| File | SHA256 |
+|---|---|
+| `Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp.gguf` | `58fd826723939933dc86f45b7fe04545cbc2de1c70f6fe2cdd3858c87a98c12f` |
+| `mmproj-Qwen3.8-27B-BF16.gguf` (vision, off in the default profile) | `13cb7bebccbd04afc8f4090cb949ecf8937cdf7377c5799b1a0c594e7c0d3e16` |
+</details>
+
+**3. Configure, check, launch.** In `local.toml` set `models_root` and `[engines] hip-kvmix` to the
+folder that holds `llama-server`.
+
+```bash
+cp local.example.toml local.toml && $EDITOR local.toml
+python3 scripts/check-sync.py          # validate models.toml + local.toml
+python3 scripts/launch.py --dry-run    # print the command for the default profile
+python3 scripts/launch.py              # serve on http://127.0.0.1:8080 (OpenAI-compatible)
+```
+
+Details: [`docs/sop/launch-model.md`](docs/sop/launch-model.md). Recommended: cap power to 272 W
+([`power-cap.md`](docs/sop/power-cap.md)) and close GPU-heavy apps; the 240K-fill run left 190 MiB
+VRAM free ([`memory.md`](docs/measurements/memory.md)).
 
 ## Troubleshooting
 
