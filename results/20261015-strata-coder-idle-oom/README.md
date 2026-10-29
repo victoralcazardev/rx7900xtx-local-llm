@@ -2,7 +2,7 @@
 
 **What.** A restart of the 128K int8 configuration from
 [`20261015-strata-coder-first-run/`](../20261015-strata-coder-first-run/README.md), meant as step 1 of the
-"Next iteration" plan ([`strata-flash-next.md`](../../docs/models/strata-flash-next.md#next-iteration-goal-the-longest-context-that-keeps-quality)).
+"Next iteration" plan ([`strata-qwen-flash-next.md`](../../docs/models/strata-qwen-flash-next.md#next-iteration-goal-the-longest-context-that-keeps-quality)).
 The kernel OOM killer fired about 75 s after the start log, while the server was idle. No benchmark ran.
 
 **Versions.** Strata `v0.1.44.1` (`296b59d2`), same engine build, model and config as the first run:

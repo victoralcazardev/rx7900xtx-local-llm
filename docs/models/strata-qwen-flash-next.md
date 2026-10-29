@@ -1,13 +1,23 @@
-# Qwen3.8-Flash-Next via Strata: evaluation note (2026-09-29, reviewed again 2026-10-06 and 2026-10-08)
+# Qwen3.8-Flash-Next via Strata
 
-**Status (2026-10-24): testing resumed** on the user's request with Strata v0.2.4.2 and the 2026-10-19 Coder
-([review 2026-10-24](#review-2026-10-24-v0242-the-2026-10-19-coder-and-the-27b)); parked 2026-10-21 to 2026-10-24
-([parked state](#parked-state-2026-10-21)); installed as an optional second engine from 2026-10-15, never the default, coding quality not measured. First
-run and setup below ([first run](#first-run-2026-10-15-v01441-coder-iq1_m)). Before that: a desk review of upstream claims against
-upstream's own docs and code, to decide whether an on-hardware trial is worth it. Nothing in
-`models.toml` changes.
+## Current state (2026-10-29)
 
-## Parked state (2026-10-21)
+- **Role**: optional second engine on `:8080`, never the default; one of the repository's focus models with
+  the 27B and Qwen4 ([`DECISIONS.md`](../DECISIONS.md), 2026-10-29).
+- **Installed**: Strata v0.2.4.2 with the 2026-10-19 Coder IQ1_M shard, 262K, KV int8; settings in
+  `models.toml` `[strata.coder-iq1_m]`, procedure [`../sop/strata.md`](../sop/strata.md)
+  ([install notes](#review-2026-10-24-v0242-the-2026-10-19-coder-and-the-27b)).
+- **Last measured** (older Strata build and the old shard, 2026-10-16): 52-57 tok/s from short prompts to a ~250K
+  context, retrieval 20/20 at 240K, with `--vram-reserve-mib 3072`
+  ([results](../../results/20261016-strata-coder-vram-reserve/README.md)).
+- **Not measured on v0.2.4.2**: speed, retrieval, coding quality. Next: the
+  [tuning plan](#tuning-plan-2026-10-16-not-run)'s F2, then 240K retrieval, then the coding suite (plan step B2).
+- **Limit on this machine**: RAM (31.25 GiB usable), not VRAM.
+
+The sections below are dated history, oldest first: a desk review (2026-09-29 to 2026-10-08), the first run
+(2026-10-15), the tuning plan (2026-10-16) and the 2026-10-24 review.
+
+## Parked state (2026-10-21, ended 2026-10-24)
 
 Decision 2026-10-21 (commit `475405c`): park Gyro-S/Strata testing until new models arrive. Coder shard 1
 was deleted on 2026-10-19 (upstream replaced it; shard 2 kept), so the Coder is not installed. Last

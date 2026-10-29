@@ -2,7 +2,7 @@
 
 Run [Strata](https://github.com/Niko1221/Strata) with the ISTA-DASLab Coder IQ1_M as an alternative to the
 default llama.cpp profile, on the same port. Background, upstream claims and measurements:
-[`../models/strata-flash-next.md`](../models/strata-flash-next.md). Settings this repo tracks:
+[`../models/strata-qwen-flash-next.md`](../models/strata-qwen-flash-next.md). Settings this repo tracks:
 `[strata.*]` in [`../../models.toml`](../../models.toml), applied with `scripts/strata.py`.
 
 Only one engine serves `:8080` at a time: Strata and `llama-server` both need nearly all of the 24 GB VRAM.

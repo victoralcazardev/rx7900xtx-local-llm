@@ -66,13 +66,13 @@ All claims below are the authors' own and are unverified here.
   (gfx1100 only) and a `--kv k8v4` KV cache; v0.1.26 added a low-RAM mode (experts memory-mapped
   from disk). The author's "8GB+ AMD GPU", "1,250 tok/s prompt" and "k8v4 +10%" claims are checked
   against upstream's own docs in
-  [`docs/models/strata-flash-next.md`](models/strata-flash-next.md).
+  [`docs/models/strata-qwen-flash-next.md`](models/strata-qwen-flash-next.md).
 - **Update 2026-10-06 (upstream v0.1.40, xyzzing/Strata v0.1.39-rocm.1)**: a community post for
   the [xyzzing gfx1100 fork](https://github.com/xyzzing/Strata) claims decode above 100 tok/s on
   an RX 7900 XTX. Status: hypothesis, not found in any primary source (best: 88.4 tok/s, warm,
   repeated short request, 96 GB RAM). Its "+22.8% prefill" is source-checked but replaces a
   fallback llama.cpp does not have. Details in
-  [`docs/models/strata-flash-next.md`](models/strata-flash-next.md#review-2026-10-06-v0140-and-the-xyzzing-gfx1100-fork).
+  [`docs/models/strata-qwen-flash-next.md`](models/strata-qwen-flash-next.md#review-2026-10-06-v0140-and-the-xyzzing-gfx1100-fork).
 - **Update 2026-10-08 (upstream v0.1.40.1 to v0.1.41)**: `docs/AMD_HIP.md` reports a 74K prompt on an
   RX 7900 XTX (gfx1100, reporter's run): 2,583 tok/s with the lend-coverage line complete (6201 of 6201),
   1,810 tok/s with it short (5093 of 6202). Status: reporter-measured, hypothesis here; mechanism
@@ -81,11 +81,11 @@ All claims below are the authors' own and are unverified here.
   GPU holds ~18 GB)" (`docs/DETAILS.md`): source-checked as setup's own heuristic (VRAM - 5 GB at 32K; the
   engine sizes the copy from `MemAvailable` minus 4 GiB), hypothesis for this machine, where the computed
   budget only fits Q2_0 at 32K and the Coder at any depth.
-  Details in [`docs/models/strata-flash-next.md`](models/strata-flash-next.md#review-2026-10-08-releases-amd-notes-and-ram-budget).
+  Details in [`docs/models/strata-qwen-flash-next.md`](models/strata-qwen-flash-next.md#review-2026-10-08-releases-amd-notes-and-ram-budget).
 - **Update 2026-10-24 (upstream v0.2.4.2, Coder shard 1 replaced 2026-10-19)**: the new Coder claims SWE-bench
   Verified 75.60 to 79.20 (card, source-checked, not reproduced); Strata setup still pins the old shard (re-pin:
   open PR #3445), but accepts the new one through `--gguf-dir` (locally verified). Details in
-  [`docs/models/strata-flash-next.md`](models/strata-flash-next.md#review-2026-10-24-v0242-the-2026-10-19-coder-and-the-27b).
+  [`docs/models/strata-qwen-flash-next.md`](models/strata-qwen-flash-next.md#review-2026-10-24-v0242-the-2026-10-19-coder-and-the-27b).
 - **[sybil-solutions/glm53-flash-offload](https://github.com/sybil-solutions/glm53-flash-offload)
   (checked 2026-10-08, README only)**: GLM-5.3-Flash EXL3 3.05 bpw (125 GB; 42 MoE layers x 288
   experts, 8 active, 9.4 MB per expert) on one 24 GB RTX 3090, built on exllamav3 + an SGLang

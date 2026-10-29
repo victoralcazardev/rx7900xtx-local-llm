@@ -94,7 +94,7 @@ Sampling is the Qwen3.8-27B card's own; `--min-p 0.0` is set explicitly because 
   [ENGINES-EXPERIMENTS.md](ENGINES-EXPERIMENTS.md#kvmem-trial-round-2-and-final-round-2026-09-30-not-adopted).
 - **Qwen3.8-Flash-Next Coder via Strata**: reinstalled 2026-10-24 (v0.2.4.2, 2026-10-19 Coder); speed,
   retrieval and coding quality not yet measured on it —
-  [owner](models/strata-flash-next.md#review-2026-10-24-v0242-the-2026-10-19-coder-and-the-27b).
+  [owner](models/strata-qwen-flash-next.md#review-2026-10-24-v0242-the-2026-10-19-coder-and-the-27b).
 
 ## Next steps
 

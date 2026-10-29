@@ -2,7 +2,7 @@
 
 **What.** The first on-hardware run of Strata with the ISTA-DASLab Coder IQ1_M. Three configurations: context ×
 KV type, short and deep coding requests. It is a setup smoke test, not the decision criterion's quality run
-([`docs/models/strata-flash-next.md`](../../docs/models/strata-flash-next.md#decision-criterion-for-an-on-hardware-trial)).
+([`docs/models/strata-qwen-flash-next.md`](../../docs/models/strata-qwen-flash-next.md#decision-criterion-for-an-on-hardware-trial)).
 
 **Versions.** Strata `v0.1.44.1` (`296b59d2`, `main`), engine compiled by `./setup.sh --backend hip` against
 the system ROCm 7.2.4 (hipcc + hipBLAS, no hipBLASLt → plain hipBLAS prefill, no tuning table). llama.cpp

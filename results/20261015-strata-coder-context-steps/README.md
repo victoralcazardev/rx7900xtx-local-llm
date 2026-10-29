@@ -1,7 +1,7 @@
 # Strata Coder IQ1_M: 128K, 200K and 262K context with KV int8 on 31 GiB RAM (2026-10-15)
 
 **What.** "Next iteration" steps 1-2 of
-[`strata-flash-next.md`](../../docs/models/strata-flash-next.md#next-iteration-goal-the-longest-context-that-keeps-quality):
+[`strata-qwen-flash-next.md`](../../docs/models/strata-qwen-flash-next.md#next-iteration-goal-the-longest-context-that-keeps-quality):
 the same configuration at three context sizes, each with a deep coding prompt, with RAM freed first. It
 re-tests the 262K int8 failure of [`20261015-strata-coder-first-run/`](../20261015-strata-coder-first-run/README.md),
 which ran with 8 GiB of `/tmp` (tmpfs) renders in RAM ([`20261015-strata-coder-idle-oom/`](../20261015-strata-coder-idle-oom/README.md)).
