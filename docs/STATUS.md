@@ -92,9 +92,9 @@ Sampling is the Qwen3.8-27B card's own; `--min-p 0.0` is set explicitly because 
   [agent-traffic.md](measurements/agent-traffic.md#open-ab-tests).
 - **KVMem**: not adopted until a real agent run —
   [ENGINES-EXPERIMENTS.md](ENGINES-EXPERIMENTS.md#kvmem-trial-round-2-and-final-round-2026-09-30-not-adopted).
-- **Qwen3.8-Flash-Next Coder via Strata**: reinstalled 2026-10-24 (v0.2.4.2, 2026-10-19 Coder); speed,
-  retrieval and coding quality not yet measured on it —
-  [owner](models/strata-qwen-flash-next.md#review-2026-10-24-v0242-the-2026-10-19-coder-and-the-27b).
+- **Qwen3.8-Flash-Next via Strata**: Coder removed 2026-10-30 for a full-expert size (IQ2_XS next); neither
+  IQ2_XS nor IQ3_XXS fits without SSD reads on 32 GB —
+  [owner](models/strata-qwen-flash-next.md#fit-check-2026-10-30-iq2_xs-and-iq3_xxs-without-ssd-reads).
 
 ## Next steps
 

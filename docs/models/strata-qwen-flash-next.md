@@ -1,21 +1,23 @@
 # Qwen3.8-Flash-Next via Strata
 
-## Current state (2026-10-29)
+## Current state (2026-10-30)
 
 - **Role**: optional second engine on `:8080`, never the default; one of the repository's focus models with
   the 27B and Qwen4 ([`DECISIONS.md`](../DECISIONS.md), 2026-10-29).
-- **Installed**: Strata v0.2.4.2 with the 2026-10-19 Coder IQ1_M shard, 262K, KV int8; settings in
-  `models.toml` `[strata.coder-iq1_m]`, procedure [`../sop/strata.md`](../sop/strata.md)
-  ([install notes](#review-2026-10-24-v0242-the-2026-10-19-coder-and-the-27b)).
-- **Last measured** (older Strata build and the old shard, 2026-10-16): 52-57 tok/s from short prompts to a ~250K
-  context, retrieval 20/20 at 240K, with `--vram-reserve-mib 3072`
-  ([results](../../results/20261016-strata-coder-vram-reserve/README.md)).
-- **Not measured on v0.2.4.2**: speed, retrieval, coding quality. Next: the
-  [tuning plan](#tuning-plan-2026-10-16-not-run)'s F2, then 240K retrieval, then the coding suite (plan step B2).
+- **Installed**: Strata v0.2.4.2 only. The Coder IQ1_M shard 1 and its pack were deleted on 2026-10-30 to make
+  room for a full-expert size; shard 2 (the same file for every size) and the MTP layer are kept. Settings for the
+  Coder stay in `models.toml` `[strata.coder-iq1_m]`, procedure [`../sop/strata.md`](../sop/strata.md).
+- **Next model**: IQ2_XS (chosen 2026-10-30, not started); IQ3_XXS later. Plan and fit evidence:
+  [fit check](#fit-check-2026-10-30-iq2_xs-and-iq3_xxs-without-ssd-reads).
+- **Last measured** (Coder, older Strata build and the old shard, 2026-10-16): 52-57 tok/s from short prompts to
+  a ~250K context, retrieval 20/20 at 240K, with `--vram-reserve-mib 3072`
+  ([results](../../results/20261016-strata-coder-vram-reserve/README.md)); the Coder was never measured on v0.2.4.2.
+- **Next**: the [tuning plan](#tuning-plan-2026-10-16-not-run)'s F0 (update, re-check flags), install IQ2_XS,
+  then speed, 240K retrieval and the coding suite (plan step B2) on it; F2 and F4 re-base on that model.
 - **Limit on this machine**: RAM (31.25 GiB usable), not VRAM.
 
 The sections below are dated history, oldest first: a desk review (2026-09-29 to 2026-10-08), the first run
-(2026-10-15), the tuning plan (2026-10-16) and the 2026-10-24 review.
+(2026-10-15), the tuning plan (2026-10-16), the 2026-10-24 review and the 2026-10-30 config review and fit check.
 
 ## Parked state (2026-10-21, ended 2026-10-24)
 
@@ -115,6 +117,13 @@ experts to the CPU (see [`SOURCES.md`](../SOURCES.md#ideas-for-future-moe-models
 flags seen in b11146's `--help`, re-check on the pinned engine). That path fits this repository's
 existing launcher with no new engine, but has no adaptive expert cache or KV streaming, so it is
 expected to be slower than Strata. Unmeasured either way; if a trial happens, measure both.
+
+Update 2026-10-30 (scouted, PR source-checked): the GPU cache for host experts, `--moe-cache-mib`, merged on
+2026-10-07 ([PR #29887](https://github.com/ggml-org/llama.cpp/pull/29887)) and our b11846 has it, so the "no
+adaptive expert cache" point above is outdated. Measured in that PR: Flash-Next Q4_0 RTX 4090 25.0 -> 40.7 tok/s,
+RTX 5090 67.8; on AMD (R9700 32 GB, 32 GB RAM, Coder, Windows HIP) 27.6 tok/s warm but 14.2 after a 4.5K prompt.
+Field: RTX 3090 Ti 15 tok/s at a 30K prompt (Unsloth discussion, not verified). Still below Strata's 32 GB figures;
+early builds aborted with quantized KV on this model (PR #27742 comments, fix status not checked). Strata stays.
 
 ## Relevance to the current Qwen3.8-27B profile
 
@@ -345,6 +354,14 @@ phase starts from the previous phase's adopted config. A candidate that misses i
 [`TRIED.md`](../TRIED.md). Paths: `<S>` = the Strata clone (`~/IA/Motores/Strata`), `<D>` = `~/IA/Motores/Strata-data`,
 `<cfg>` = `<S>/strata-coder-iq1_m.json`.
 
+**F0: refresh before running (every time this plan is picked up).** The plan outlives Strata releases, models
+and quants. Before P0: `python3 scripts/strata.py status`; if upstream is ahead, `python3 scripts/strata.py
+update` and record the new `describe`. Then re-check every flag and env var used below against that version's
+`docs/DETAILS.md` (and `engine/strata --help`): drop a phase whose option was removed or became the default, and
+note renamed ones here. If a new Qwen model or quant is the reason for picking this up, run it through
+[`../sop/new-model.md`](../sop/new-model.md) (plan step C1) first; this plan then applies only if Strata stays in
+use, re-based on that model's config.
+
 **P0: preconditions (every phase).**
 
 1. Record `git -C <S> describe --tags` and do not run `./update.sh` or `./setup.sh` until the plan ends: the bench
@@ -411,6 +428,20 @@ is harmless either way, because a request's own values win.
    `experts in RAM` start line. Keep the shipped profile; after any Strata update, go back to it and re-learn
    (the pack or profile format can change). Risk: the profile is biased toward the traffic it learned from.
 
+**F4: community-config candidates (speed, after F2; from the
+[2026-10-30 review](#review-2026-10-30-a-community-windows-iq3_xxs-run-config)).** One arm per row, each an
+interleaved A/arm pair on the adopted config with F2's bench, temperature 0, SHA per request:
+
+| Arm | Change | Adopt if |
+|---|---|---|
+| F4a | `--spec-min-p 0.70` in `user_args` (now 0.5) | F2's speed rule (≥ 5% at ~120K and ~250K, 2 of 3 pairs, no stall); a draft-acceptance option, so text must match A or pass 8/8 retrieval at 190K |
+| F4b | `--prefill auto:16384` in `user_args` (now `auto`) | Prefill tok/s ≥ 5% at ~120K with gen tok/s not below A, no stall, min `MemAvailable` > 5 GiB |
+| F4c | `STRATA_PF_FUSED`, `STRATA_PREFILL_MMQ`, `STRATA_GDN_CHUNKED`, `STRATA_SPLIT_OVERLAP` = `1` in `env`, one per arm | Skip any that the start log or `DETAILS.md` shows already on by default on HIP; else F4b's rule plus the same SHA as A |
+| F4d | `STRATA_RAM_ADAPT=1` in `env` with `--adapt-every` (mapped mode only: the RAM copy follows the conversation) | F2's speed rule plus a lower `blob reads from the file` count; upstream numbers are CUDA (RTX 3060), so HIP support is unverified |
+
+Adopted values go to `models.toml` `[strata.coder-iq1_m]` and `scripts/strata.py apply`; losers to
+[`TRIED.md`](../TRIED.md). Then the coding suite once on the final config (plan step C2's gate).
+
 **Out of scope, with reason:** `--conversation-cache-mib` (costs RAM, the binding limit here); the hipBLASLt
 table (needs another ROCm install, ~10 GB); `--kv-grow` (needs every expert in RAM, not the resident mode);
 `STRATA_HIP_WMMA` (RDNA4 only); `--vram-reserve-later-mib` (layer-split later cards only).
@@ -475,3 +506,122 @@ the resident mode). Smoke: two short coding requests ended `finish_reason: stop`
 they gave different text, so the tracked `sampling` block is in use. Speed, retrieval and the coding suite were
 **not** measured on this version: the tuning plan's F2 A/B/C was stopped in its first run (user needed the GPU),
 no numbers. Next: F2, then 240K retrieval, then the coding suite (plan step B2).
+
+## Review 2026-10-30: a community Windows IQ3_XXS run config
+
+Desk review of a Strata run config (Windows, IQ3_XXS, 1 GPU, 256K) a user shared, against this setup; nothing
+run. Local clone `v0.2.4.2-6-g7dd5cf18`, upstream `v0.2.8` (727 commits ahead, `scripts/strata.py status`).
+Every flag and `STRATA_*` variable in it exists in both versions (`git grep`, code outside `*.md`); whether their
+meaning changed between the two was not checked.
+
+**Not transferable:**
+
+- **IQ3_XXS with `--mmap-experts --resident-budget-gib 22`**: upstream `DETAILS.md` says IQ3_XXS stays mapped
+  on 32 GB, and the budget leaves 4 GiB of headroom on top; 31.25 GiB usable here (see the RAM-budget review).
+- **`--kv k8v4`, `--vram-reserve-mib 1400`**: both already lost here (2026-10-15 OOM kill; 2026-10-16 reserve
+  3072 after a Slack launch ended the KDE session; [`DECISIONS.md`](../DECISIONS.md)).
+- **`--control-vector-scaled ...experimental-speed-projection.gguf:1.0`** (layers 4-44, `--cvec-mode project`):
+  not a speed option. Upstream's own result (`bench/results/2026-09-27-esp/README.md`, source-checked) calls it
+  a refusal-direction projection; on the same tokens it is 0.2-0.4% slower, code perplexity 2.594 -> 2.982,
+  same top-1 92.8% on code. Its faster served tok/s came from different (more copied) text. Rejected for coding.
+- **`--vision` with an elastic encoder**: per `DETAILS.md` the elastic encoder turns `--kv-grow` off, so the
+  config contradicts itself; vision is unused here.
+- **`HIP_PATH`/`ROCM_PATH` probe paths, `lib_dirs`, a Windows `STRATA_HIPBLASLT_TUNING` file**: Windows-only.
+- **`--kv-grow`, `STRATA_HIP_WMMA`, the hipBLASLt table**: already out of scope in the
+  [tuning plan](#tuning-plan-2026-10-16-not-run).
+
+**Candidates, queued as the tuning plan's F4** (after F2): `--spec-min-p 0.70` (here 0.5), `--prefill
+auto:16384` (here `auto`), and the env switches `STRATA_PF_FUSED`, `STRATA_PREFILL_MMQ`, `STRATA_GDN_CHUNKED`,
+`STRATA_SPLIT_OVERLAP` (unverified whether Linux setup already sets them by default). `--adapt-async 1` is
+already F2's arm B. Status: open.
+
+## Fit check 2026-10-30: IQ2_XS and IQ3_XXS without SSD reads
+
+Question: can either full-expert size keep every expert in VRAM or RAM, so no expert is read from the SSD (the
+shard-2 lookup table is always read from the SSD, a few rows per token)? Arithmetic only, nothing run.
+
+**Measured inputs** (Coder start log, 2026-10-24, 262K, KV int8, `--vram-reserve-mib 3072`): `23.4 GiB experts,
+11.8 GiB in the GPU caches, 15.1 GiB RAM copy (1793 lend slots kept), file tier 0.0 GiB`; the prompt path borrows
+1793 GPU slots (3.40 GiB), whose experts must also sit in RAM, so RAM copy = experts - GPU cache + lend
+(23.42 - 11.76 + 3.40 = 15.06, matches). Memory guard at start with a cleaned desktop: 6.9 GiB in use,
+`MemAvailable` 24.3 GiB; Strata keeps `STRATA_RESIDENT_HEADROOM_GIB` free (default 4, here 6).
+
+**Expert sizes**: upstream `MODELS.md` "Experts in shard 1" (IQ2_XS 35.5, IQ3_XXS 43, Coder 23) as the upper
+bound; shard 1 size minus the Coder's non-expert part (27.58 - 23.42 = 4.16 GiB) as the lower bound (HF sizes:
+IQ2_XS 39.23 GB, IQ3_XXS 47.04 GB). Assumes the same VRAM budget for the expert cache as the Coder.
+
+| Size | Experts (GiB) | RAM copy for zero file reads (GiB) | RAM copy that fits (24.3 - 4 headroom) | Read from the SSD |
+|---|---:|---:|---:|---:|
+| IQ2_XS | 32.4-35.5 | 24.0-27.1 | 20.3 | ~3.7-6.8 GiB |
+| IQ3_XXS | 39.7-43.0 | 31.3-34.6 | 20.3 | ~11-14 GiB |
+
+- **IQ3_XXS**: no. Its RAM copy alone is as large as the whole 31.25 GiB of RAM.
+- **IQ2_XS**: no, by a few GiB. Levers and their limits: `--vram-reserve-mib 1400` gives ~1.6 GiB more GPU cache
+  (the 3072 reserve exists because a Slack launch ended the KDE session); headroom 0.1 GiB (the community config's
+  value) gives ~4 GiB, against the 2026-10-15 OOM kill of the desktop. Both together reach the low end only with
+  an empty desktop. Not safe as a daily setup.
+- Upstream supports this mapped mode for IQ2_XS on 32 GB + 24 GB GPU (`MODELS.md`), not for IQ3_XXS.
+- Check on the first start: the `prefill plan inputs` line's `file tier` is the measured SSD share, and
+  `resident RAM: ... blob reads from the file` counts reads per request.
+
+Disk after deleting the Coder: 90 GiB free on `/home` at first, 106 GiB minutes later (btrfs released the space
+late), 114 GiB after removing old engines, sources and caches (2026-10-30). IQ2_XS needs ~67 GiB (shard 1 36.5 +
+pack ~31, pack estimated at the Coder's 85% of shard 1); IQ3_XXS ~81 GiB.
+
+**Field evidence (scouted and source-checked 2026-10-30): SSD reads cost less than feared.**
+
+- Upstream `DETAILS.md` (0.2.1 row, #3060; author-measured, not reproduced here): RTX 3060 12 GB, 32 GB RAM,
+  Linux NVMe, 20.5 GiB of experts in RAM, both sizes read in place, 120 ShareGPT requests: IQ2_XS decode 48.71 ->
+  51.40 tok/s, IQ3_XXS 33.07 -> 38.71 tok/s, without -> with `STRATA_RAM_ADAPT`; storage reads 408 -> 308 GB
+  (IQ2_XS) and 1105 -> 717 GB (IQ3_XXS). A 24 GB card holds about twice the GPU experts, so both should read less
+  from the SSD here (inference).
+- `bench/results/2026-10-08-community-rtx4070-iq2-xs`: RTX 4070 12 GB, 32 GB DDR4, IQ2_XS, 20 GiB RAM copy,
+  ~48 accepted tok/s at a 28,912-token prompt (modified engine, Windows).
+- [#4167](https://github.com/Niko1221/Strata/issues/4167) (field, not a controlled A/B): RTX 5090, UD-IQ4_XS with
+  parallel slots, 4.7 GiB file tier decoded 19-39 tok/s against 100-144 at 0.6 GiB. Keep `--parallel 1`.
+- No RX 7900 XTX run on 32 GB RAM in mapped mode was found.
+- SSD wear is not a cost of the mapped mode: decoding only reads the expert files, and swap here is zram (no disk
+  swap). Writes happen once per install (~91 GB for IQ3_XXS: shard 1 47 + `experts.bin` ~44), about 0.03% of the
+  `/home` drive's rating (Kingston A2000 500 GB, 350 TBW per
+  [Kingston](https://www.kingston.com/en/company/press/article/56606)). The cost is speed: upstream's 32 GB run
+  read 6-9 GB per request with IQ3_XXS against 2.5-3.5 GB with IQ2_XS. Sustained reads may heat the drive and
+  slow it (no heatsink; not measured). Current wear: `sudo smartctl -a /dev/nvme1n1`, "Percentage Used".
+- Quality: no SWE-bench, LiveCodeBench or HumanEval number exists for any full-expert size; upstream `GYRO.md`
+  puts Gyro-M "against IQ3_XXS | KL 0.157, level". The Coder keeps half the experts "stored at 3.5 bpw" (ISTA card).
+- v0.2.8 notes change nothing for the mapped mode (only the expert-cache reserve fix #4474 and a 16-row HIP batch
+  window). gfx1100 risks: [#4556](https://github.com/Niko1221/Strata/issues/4556) (IQ3_S decode 60+ tok/s on
+  0.1.3x vs. 34.8 on the 0.1.48 default engine; maintainer: "on our list for the next update") and
+  [#3463](https://github.com/Niko1221/Strata/issues/3463) (machine restarts while serving; the reporter's fix is a
+  ≤ 2000 MHz clock cap). Compare engine versions before blaming a model.
+
+Effect: IQ3_XXS is a real candidate despite the SSD share; IQ2_XS is the one Strata's check keeps out of the SSD
+(below). **Chosen 2026-10-30 (user): IQ2_XS next, not started yet**; IQ3_XXS stays the later quality option.
+
+**Install plan for IQ2_XS (not started):**
+
+1. Copy `<S>/engine/` aside (`scripts/strata.py update` backs up only configs), then `python3 scripts/strata.py
+   update` to the current upstream; re-run `./setup.sh --check --backend hip` and re-check the F0 flag list.
+2. Download shard 1 (39.23 GB, LFS sha256 `92cee27a…`) yourself, check the hash, and pass its folder plus the existing
+   shard 2 with `--gguf-dir` (as for the Coder in [`../sop/strata.md`](../sop/strata.md)); `--vision no`; keep
+   262K, KV int8, `--vram-reserve-mib 3072` and `STRATA_RESIDENT_HEADROOM_GIB` from `models.toml`.
+3. First start, from the log: `file tier` (0 GiB = no SSD reads), `resident RAM: ... blob reads from the file`,
+   `VRAM free with everything loaded` ≥ 3 GiB (the dense part differs from the Coder's), min `MemAvailable`.
+   Also confirm `tool_call_recovery` is on (default from v0.2.8; upstream: 98.3% of 1,462 agent turns read as
+   intended with it, 92.9% without) and count valid tool calls in the first real harness session: the worst
+   report, [#2685](https://github.com/Niko1221/Strata/issues/2685) (IQ3_S, pre-0.2.8), completed 0/10 tasks.
+4. Short-context smoke and decode, then speed at ~120K/~240K, 240K retrieval, the coding suite as a regression gate
+   (six tasks cannot rank quants finely; Astra review 2026-10-30). If decode disappoints, A/B the saved engine
+   against the new one on the same model before blaming the quant (#4556).
+5. Then a `[strata.iq2_xs]` entry in `models.toml`, the tuning plan's F2/F4 re-based on it, and the docs
+   (`DECISIONS.md`, STATUS, README, CHANGELOG).
+
+Qwen4 (C1) pre-empts this plan if it ships: officially "in training" with no date (Alibaba, 2026-09-22, page not
+opened); a "next week" date from 2026-10-29 is an unconfirmed attendee report.
+
+**Strata's own check on this PC** (`./setup.sh --check --backend hip`, v0.2.4.2, 2026-10-30, read-only): IQ2_XS
+"fits in the low-RAM mode (the GPU holds ~51% of its experts, the rest stays in RAM)"; IQ3_XXS "(the GPU holds
+~42% ..., the rest is read from the SSD as needed)"; Gyro-M ~56% and Q2_0 ~53%, rest in RAM; IQ3_S does not fit.
+Its GPU share is larger than the Coder's measured 11.8 GiB cache at 262K + 3 GiB reserve would give, so the arithmetic
+above is the conservative bound; the first start's `file tier` settles it. Disk by `setup.py`'s own rule (missing
+files + `experts.bin` of `arena_gb` + 1 + margin 2; shard 2 already present, `--vision no`): IQ3_XXS ~93 GB,
+IQ2_XS ~78 GB, against ~96 GB free. `strata launch --plan` printed no RAM or disk figures and counts shard 2 again.

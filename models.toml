@@ -75,7 +75,8 @@ flags = ["-ub", "256", "--reasoning-effort", "medium", "--cache-ram", "12288"]
 # `python3 scripts/strata.py apply` writes each key below into <strata_dir>/<config> (local.toml has
 # strata_dir): keys replace the run config's, `env` is merged. `user_args` is Strata's list of hand-set
 # engine options, applied by every setup run and start on top of setup's generated `args`.
-# Qwen3.8-Flash-Next Coder IQ1_M, shard 1 at ISTA-DASLab revision bba88856 (2026-10-19).
+# Qwen3.8-Flash-Next Coder IQ1_M, shard 1 at ISTA-DASLab revision bba88856 (2026-10-19). Shard 1 and its pack
+# were deleted on 2026-10-30 (shard 2 kept); re-download shard 1 before using this entry.
 [strata.coder-iq1_m]
 config = "strata-coder-iq1_m.json"
 # 262K, KV int8, 3 GiB VRAM left for the desktop (2026-10-16, results/20261016-strata-coder-vram-reserve/).

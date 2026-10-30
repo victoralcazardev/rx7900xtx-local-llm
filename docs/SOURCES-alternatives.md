@@ -86,6 +86,14 @@ All claims below are the authors' own and are unverified here.
   Verified 75.60 to 79.20 (card, source-checked, not reproduced); Strata setup still pins the old shard (re-pin:
   open PR #3445), but accepts the new one through `--gguf-dir` (locally verified). Details in
   [`docs/models/strata-qwen-flash-next.md`](models/strata-qwen-flash-next.md#review-2026-10-24-v0242-the-2026-10-19-coder-and-the-27b).
+- **Update 2026-10-30 (upstream v0.2.8)**: a community Windows IQ3_XXS run config reviewed; its
+  "experimental-speed-projection" control vector is a refusal-direction projection, not a speed gain (upstream
+  result, source-checked); only `--spec-min-p 0.70`, `--prefill auto:16384` and a few env switches are candidates.
+  Details in [`docs/models/strata-qwen-flash-next.md`](models/strata-qwen-flash-next.md#review-2026-10-30-a-community-windows-iq3_xxs-run-config).
+- **Update 2026-10-30 (field, 32 GB RAM)**: upstream measured IQ2_XS at 48.7-51.4 tok/s and IQ3_XXS at 33.1-38.7
+  tok/s on an RTX 3060 12 GB with 32 GB RAM in mapped mode (author-measured, source-checked, not reproduced);
+  gfx1100 decode regression #4556 and restart report #3463 are open risks. Details in
+  [`docs/models/strata-qwen-flash-next.md`](models/strata-qwen-flash-next.md#fit-check-2026-10-30-iq2_xs-and-iq3_xxs-without-ssd-reads).
 - **[sybil-solutions/glm53-flash-offload](https://github.com/sybil-solutions/glm53-flash-offload)
   (checked 2026-10-08, README only)**: GLM-5.3-Flash EXL3 3.05 bpw (125 GB; 42 MoE layers x 288
   experts, 8 active, 9.4 MB per expert) on one 24 GB RTX 3090, built on exllamav3 + an SGLang
