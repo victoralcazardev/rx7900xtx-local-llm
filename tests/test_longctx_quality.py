@@ -70,6 +70,20 @@ class TestParsePort(unittest.TestCase):
             longctx_quality._parse_port("http://127.0.0.1")
 
 
+class TestDetectLoop(unittest.TestCase):
+    def test_short_period_loop_is_detected_at_any_offset(self):
+        # A 7-word phrase never lines up with 8/12/16-token aligned chunks within 105 words.
+        self.assertTrue(longctx_quality.detect_loop("one two three four five six seven " * 15))
+
+    def test_text_without_repeats_is_not_a_loop(self):
+        self.assertFalse(longctx_quality.detect_loop(" ".join(f"w{i}" for i in range(200))))
+
+    def test_three_repeats_are_not_a_loop(self):
+        block = " ".join(f"r{i}" for i in range(16))
+        filler = " ".join(f"f{i}" for i in range(60))
+        self.assertFalse(longctx_quality.detect_loop(f"{block} {filler} {block} {block}"))
+
+
 class TestRunMatrixCompleteness(unittest.TestCase):
     def test_complete_quality_miss_is_a_successful_measurement(self):
         rows = [{"variant": "q8q8-mtp0", "depth": 32_000, "exact_match": False,

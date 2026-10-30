@@ -22,10 +22,9 @@ import shutil
 import subprocess
 import sys
 import time
-import tomllib
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-from manifest import REPO, ManifestError, _manifest_path, local_manifest_path  # noqa: E402
+from manifest import ManifestError, local_manifest_path, models_manifest_path, read_toml  # noqa: E402
 
 
 def overlay(cfg: dict, tracked: dict) -> dict:
@@ -57,13 +56,9 @@ def changes(old: dict, new: dict) -> list[str]:
 
 def load_settings(models: pathlib.Path | None = None, local: pathlib.Path | None = None) -> tuple[pathlib.Path, dict]:
     """(strata_dir, {model: tracked table}) from local.toml and models.toml."""
-    models_path = _manifest_path("MODELS_MANIFEST", REPO / "models.toml", models)
     local_path = local_manifest_path(local)
-    try:
-        tables = tomllib.loads(models_path.read_text()).get("strata", {})
-        loc = tomllib.loads(local_path.read_text())
-    except (OSError, tomllib.TOMLDecodeError) as e:
-        raise ManifestError(f"cannot read {models_path} or {local_path}: {e}") from e
+    tables = read_toml(models_manifest_path(models), "models manifest").get("strata", {})
+    loc = read_toml(local_path, "machine config")
     if not loc.get("strata_dir"):
         raise ManifestError(f"{local_path} has no strata_dir (see local.example.toml)")
     for name, t in tables.items():

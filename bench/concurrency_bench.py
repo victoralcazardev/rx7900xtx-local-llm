@@ -95,25 +95,6 @@ def collect_slot_results(futures_by_slot):
     return results
 
 
-def peak_usage(telemetry_path):
-    """Scans a Monitor's telemetry.jsonl for the run's peak VRAM/GTT/evicted/thermal readings.
-    Unlike summarize.py's per-phase breakdown, concurrent slots overlap the same Monitor phase
-    field, so this only tracks one whole-run peak."""
-    peak = {"vram": 0, "gtt": 0, "evicted": 0, "edge": 0, "hotspot": 0}
-    if not telemetry_path.exists():
-        return peak
-    with telemetry_path.open() as telemetry:
-        for line in telemetry:
-            row = json.loads(line)
-            m, s = row["process"]["bytes_by_metric"], row["safety"]
-            peak["vram"] = max(peak["vram"], m.get("drm-memory-vram", 0))
-            peak["gtt"] = max(peak["gtt"], m.get("drm-memory-gtt", 0))
-            peak["evicted"] = max(peak["evicted"], m.get("amd-evicted-vram", 0))
-            peak["edge"] = max(peak["edge"], s.get("edge_c") or 0)
-            peak["hotspot"] = max(peak["hotspot"], s.get("hotspot_c") or 0)
-    return peak
-
-
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     g = ap.add_mutually_exclusive_group(required=True)
@@ -225,7 +206,8 @@ def main():
 
     failures = [r for r in results if "failure" in r]
     total_predicted = sum(r.get("predicted_n") or 0 for r in results)
-    peak = peak_usage(out / "telemetry.jsonl")
+    # Concurrent slots share the Monitor's phase field, so only the whole-run peak is meaningful.
+    peak = b.overall_peak(b.telemetry_peaks(out / "telemetry.jsonl"))
     summary = {"cooldown_s": cooldown_s, "slots": args.slots, "aggregate_wall_s": aggregate_wall_s,
                "total_predicted_tokens": total_predicted,
                "aggregate_tok_s": total_predicted / aggregate_wall_s if aggregate_wall_s else None,

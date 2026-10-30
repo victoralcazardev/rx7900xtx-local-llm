@@ -1,21 +1,17 @@
 """Unit tests for bench/concurrency_bench.py (stdlib unittest only).
 
-Covers `rotate_wiki` (distinct-enough per-slot synthetic content), `peak_usage` (telemetry.jsonl
-scan for peak VRAM/GTT/evicted/thermal), `required_help_flags`/`missing_help_flags` (the
---help preflight, built from flags this run's argv actually uses and matched as whole tokens),
-and `collect_slot_results` (one slot's failure must not drop another slot's result). Pure
-functions: no server, no GPU, no network.
+Covers `rotate_wiki` (distinct-enough per-slot synthetic content), `required_help_flags`/
+`missing_help_flags` (the --help preflight, built from flags this run's argv actually uses and
+matched as whole tokens), and `collect_slot_results` (one slot's failure must not drop another
+slot's result). Pure functions: no server, no GPU, no network.
 """
 from __future__ import annotations
 
 import concurrent.futures
-import json
 import pathlib
 import sys
-import tempfile
 import types
 import unittest
-from unittest import mock
 
 BENCH_DIR = pathlib.Path(__file__).resolve().parent.parent / "bench"
 sys.path.insert(0, str(BENCH_DIR))
@@ -56,46 +52,6 @@ class TestRotateWiki(unittest.TestCase):
         self.assertNotEqual(
             concurrency_bench.rotate_wiki(wiki, 1), concurrency_bench.rotate_wiki(wiki, 2)
         )
-
-
-class TestPeakUsage(unittest.TestCase):
-    def test_missing_file_returns_zeros(self):
-        peak = concurrency_bench.peak_usage(pathlib.Path("/nonexistent/telemetry.jsonl"))
-        self.assertEqual(peak, {"vram": 0, "gtt": 0, "evicted": 0, "edge": 0, "hotspot": 0})
-
-    def test_tracks_the_maximum_across_rows(self):
-        rows = [
-            {"process": {"bytes_by_metric": {"drm-memory-vram": 100, "drm-memory-gtt": 10,
-                                              "amd-evicted-vram": 0}},
-             "safety": {"edge_c": 40.0, "hotspot_c": 50.0}},
-            {"process": {"bytes_by_metric": {"drm-memory-vram": 300, "drm-memory-gtt": 5,
-                                              "amd-evicted-vram": 20}},
-             "safety": {"edge_c": 60.0, "hotspot_c": None}},
-        ]
-        with tempfile.TemporaryDirectory() as tmp:
-            path = pathlib.Path(tmp) / "telemetry.jsonl"
-            path.write_text("\n".join(json.dumps(r) for r in rows) + "\n")
-            peak = concurrency_bench.peak_usage(path)
-        self.assertEqual(peak, {"vram": 300, "gtt": 10, "evicted": 20, "edge": 60.0, "hotspot": 50.0})
-
-    def test_closes_telemetry_file_after_scanning(self):
-        row = {"process": {"bytes_by_metric": {}}, "safety": {}}
-        with tempfile.TemporaryDirectory() as tmp:
-            path = pathlib.Path(tmp) / "telemetry.jsonl"
-            path.write_text(json.dumps(row) + "\n")
-            opened = []
-            original_open = pathlib.Path.open
-
-            def track_open(file_path, *args, **kwargs):
-                handle = original_open(file_path, *args, **kwargs)
-                opened.append(handle)
-                return handle
-
-            with mock.patch.object(pathlib.Path, "open", new=track_open):
-                concurrency_bench.peak_usage(path)
-
-        self.assertEqual(len(opened), 1)
-        self.assertTrue(opened[0].closed)
 
 
 class TestRequiredHelpFlags(unittest.TestCase):

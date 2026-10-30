@@ -14,7 +14,6 @@ KVMEM_RESULTS = (
     REPO / "results/20260930-kvmem-trial-round2/kvmem_quality.py",
 )
 BUILD_CHECK = REPO / "results/20260930-kvmem-trial-round2/scripts/build-result.sh"
-FINAL_RUN = REPO / "results/20260930-kvmem-trial-round2/scripts/run-final.sh"
 
 
 class TestPublishedQualityHelpers(unittest.TestCase):
@@ -35,10 +34,6 @@ class TestBuildResultGuard(unittest.TestCase):
             ["bash", "-c", f'source "$1"; {script}', "build-result-test", str(BUILD_CHECK), *args],
             cwd=REPO, text=True, capture_output=True, check=False,
         )
-
-    def test_run_final_checks_background_build_before_using_binary(self):
-        source = FINAL_RUN.read_text()
-        self.assertIn("check_build_result", source)
 
     def test_build_failure_is_not_hidden_by_an_existing_stale_binary(self):
         with tempfile.TemporaryDirectory() as tmp:

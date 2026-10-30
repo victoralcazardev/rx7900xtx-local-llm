@@ -85,7 +85,7 @@ def main() -> int:
         print(f"ERROR: {e}", file=sys.stderr)
         return 1
 
-    argv = build_argv(m, model, profile_name, profile, backend, port=m.default_port)
+    argv = build_argv(m, model, profile)
     entry = harness_entry(profile["context"]) or (
         "none (no harness entry wired for this context; only local-262k/262144 is wired)"
     )

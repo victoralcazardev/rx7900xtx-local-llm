@@ -20,11 +20,11 @@ from __future__ import annotations
 import json
 import pathlib
 import sys
-import tomllib
 from urllib.parse import urlsplit
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-from manifest import LOCAL_262K_CONTEXT, ManifestError, backend_for, load, local_manifest_path, validate  # noqa: E402
+from manifest import (LOCAL_262K_CONTEXT, ManifestError, backend_for, load, local_manifest_path,  # noqa: E402
+                      read_toml, validate)
 
 EXPECTED_ENTRIES = {
     "local-262k": LOCAL_262K_CONTEXT,
@@ -159,11 +159,7 @@ def _harness_targets() -> list[dict] | None:
     local_path = local_manifest_path(None)
     if not local_path.exists():
         return None
-    try:
-        with open(local_path, "rb") as f:
-            data = tomllib.load(f)
-    except (OSError, tomllib.TOMLDecodeError) as e:
-        raise ManifestError(f"failed to read harness config {local_path}: {e}") from e
+    data = read_toml(local_path, "harness config")
     harness = data.get("harness") or {}
     if not harness.get("enabled"):
         return None

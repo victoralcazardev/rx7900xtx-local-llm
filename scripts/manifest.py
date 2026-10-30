@@ -8,7 +8,7 @@ Use as a library:
     from manifest import load, resolve, build_argv, harness_entry
     m = load()
     model, profile_name, profile = resolve(m, "qwen38-iq3s-mtp", "262k-q8q51-mtp")
-    argv = build_argv(m, model, profile_name, profile, backend="vulkan")
+    argv = build_argv(m, model, profile)
 
 Environment variables:
     MODELS_MANIFEST  alternate path to models.toml
@@ -68,11 +68,20 @@ class Manifest:
     default_profile: str | None = None
 
 
-def _manifest_path(env_name: str, default: pathlib.Path, override: pathlib.Path | None) -> pathlib.Path:
+def models_manifest_path(override: pathlib.Path | None = None) -> pathlib.Path:
     if override:
         return override
-    env = os.environ.get(env_name)
-    return pathlib.Path(env) if env else default
+    env = os.environ.get("MODELS_MANIFEST")
+    return pathlib.Path(env) if env else REPO / "models.toml"
+
+
+def read_toml(path: pathlib.Path, what: str) -> dict:
+    """Parses one TOML file; any read or parse failure becomes a ManifestError naming `what`."""
+    try:
+        with open(path, "rb") as f:
+            return tomllib.load(f)
+    except (OSError, tomllib.TOMLDecodeError) as e:
+        raise ManifestError(f"failed to read {what} {path}: {e}") from e
 
 
 def local_manifest_path(override: pathlib.Path | None) -> pathlib.Path:
@@ -99,22 +108,16 @@ def local_manifest_path(override: pathlib.Path | None) -> pathlib.Path:
 
 
 def load(manifest: pathlib.Path | None = None, local: pathlib.Path | None = None) -> Manifest:
-    models_path = _manifest_path("MODELS_MANIFEST", REPO / "models.toml", manifest)
+    models_path = models_manifest_path(manifest)
     local_path = local_manifest_path(local)
 
-    try:
-        with open(models_path, "rb") as f:
-            data = tomllib.load(f)
-    except (OSError, tomllib.TOMLDecodeError) as e:
-        raise ManifestError(f"failed to read models manifest {models_path}: {e}") from e
+    data = read_toml(models_path, "models manifest")
     if not local_path.exists():
         raise ManifestError(
             f"{local_path} does not exist. Copy local.example.toml to local.toml and adjust the paths."
         )
+    loc = read_toml(local_path, "machine config")
     try:
-        with open(local_path, "rb") as f:
-            loc = tomllib.load(f)
-
         root = pathlib.Path(loc["models_root"])
         engines = {k: pathlib.Path(v) for k, v in loc["engines"].items() if v}
 
@@ -153,7 +156,7 @@ def load(manifest: pathlib.Path | None = None, local: pathlib.Path | None = None
         return manifest
     except ManifestError:
         raise
-    except (OSError, tomllib.TOMLDecodeError, KeyError, TypeError, ValueError, AttributeError) as e:
+    except (KeyError, TypeError, ValueError, AttributeError) as e:
         raise ManifestError(f"invalid manifest configuration ({local_path} or {models_path}): {e}") from e
 
 
@@ -244,12 +247,11 @@ def validate(m: Manifest, model: Model, profile_name: str, profile: dict, backen
             )
 
 
-def build_argv(m: Manifest, model: Model, profile_name: str, profile: dict,
-                backend: str, port: int | None = None) -> list[str]:
+def build_argv(m: Manifest, model: Model, profile: dict) -> list[str]:
     k_type, v_type = profile["kv"]
     argv = [
         "-m", str(model.gguf),
-        "--port", str(port or m.default_port),
+        "--port", str(m.default_port),
         "-c", str(profile["context"]),
         "-ctk", k_type,
         "-ctv", v_type,

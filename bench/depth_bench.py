@@ -14,6 +14,7 @@ Configure via environment variables before running:
 """
 import argparse
 import datetime as dt
+import functools
 import hashlib
 import itertools
 import json
@@ -48,11 +49,12 @@ def resolve_max_hotspot_c(env):
     to 104 -- below the project's ~105°C unattended-run policy (docs/measurements/thermals-power.md),
     with a small margin. Pure function of the given environment mapping.
 
-    A non-numeric value is a clear operator mistake and aborts (`float()` can't parse it either
-    way). A numeric but non-finite value ('nan', 'inf', '-inf') is different: `float()` parses it
-    fine, but the Monitor's `hotspot >= MAX_HOTSPOT_C` comparison is always False against NaN,
-    which would silently disable the hotspot abort guard instead of raising. Reject it and fall
-    back to the safe default with a warning instead."""
+    A non-numeric or non-positive value is a clear operator mistake and aborts (a threshold
+    <= 0 would trip the abort on the first reading). A numeric but non-finite value ('nan',
+    'inf', '-inf') is different: `float()` parses it fine, but the Monitor's
+    `hotspot >= MAX_HOTSPOT_C` comparison is always False against NaN, which would silently
+    disable the hotspot abort guard instead of raising. Reject it and fall back to the safe
+    default with a warning instead."""
     raw = env.get("BENCH_MAX_HOTSPOT_C")
     if not raw:
         return 104.0
@@ -64,6 +66,8 @@ def resolve_max_hotspot_c(env):
         print(f"warning: BENCH_MAX_HOTSPOT_C={raw!r} is not a finite number (would silently "
               "disable the hotspot abort guard); using the default 104 instead", file=sys.stderr)
         return 104.0
+    if value <= 0:
+        raise SystemExit(f"invalid BENCH_MAX_HOTSPOT_C: {raw!r} (must be above 0)")
     return value
 
 
@@ -312,6 +316,36 @@ class Monitor:
     def stop(self):
         self.running = False; self.thread.join(timeout=3)
         if self.error: raise RuntimeError(f"GPU monitor stopped: {self.error}")
+
+
+EMPTY_PEAK = {"vram": 0, "gtt": 0, "evicted": 0, "edge": None, "hotspot": None}
+
+
+def _fold_peak(a, b):
+    return {k: b[k] if a[k] is None else a[k] if b[k] is None else max(a[k], b[k]) for k in a}
+
+
+def telemetry_peaks(path):
+    """Per-phase peaks from a Monitor telemetry.jsonl: process VRAM/GTT/evicted bytes and
+    edge/hotspot °C. A thermal peak stays None when no row had a sensor reading, so a missing
+    sensor never reads as a cool 0 °C. A missing file yields no phases."""
+    phases = {}
+    if not path.exists():
+        return phases
+    with path.open() as f:
+        for line in f:
+            row = json.loads(line)
+            m, s = row["process"]["bytes_by_metric"], row["safety"]
+            sample = {"vram": m.get("drm-memory-vram", 0), "gtt": m.get("drm-memory-gtt", 0),
+                      "evicted": m.get("amd-evicted-vram", 0),
+                      "edge": s.get("edge_c"), "hotspot": s.get("hotspot_c")}
+            phases[row["phase"]] = _fold_peak(phases.get(row["phase"], EMPTY_PEAK), sample)
+    return phases
+
+
+def overall_peak(phases):
+    """Whole-run peak across the per-phase peaks returned by telemetry_peaks."""
+    return functools.reduce(_fold_peak, phases.values(), EMPTY_PEAK)
 
 
 def build_prompt(wiki, target):

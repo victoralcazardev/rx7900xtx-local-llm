@@ -13,12 +13,12 @@ sys.path.insert(0, str(REPO_ROOT / "scripts"))
 import gpu_watch  # noqa: E402
 
 
-def _fake_device(root: pathlib.Path, hwmon: dict[str, str]) -> pathlib.Path:
+def _fake_device(root: pathlib.Path, hwmon: dict[str, str], used_gib: float = 20) -> pathlib.Path:
     dev = root / "device"
     hw = dev / "hwmon" / "hwmon3"
     hw.mkdir(parents=True)
     (dev / "mem_info_vram_total").write_text(str(24 * 2**30))
-    (dev / "mem_info_vram_used").write_text(str(20 * 2**30))
+    (dev / "mem_info_vram_used").write_text(str(int(used_gib * 2**30)))
     (dev / "gpu_busy_percent").write_text("97")
     for name, value in {"temp1_label": "edge", "temp1_input": "55000", "power1_average": "272000000",
                         **hwmon}.items():
@@ -42,6 +42,20 @@ class TestSample(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp, mock.patch.object(gpu_watch, "processing", return_value=""):
             row = gpu_watch.sample(_fake_device(pathlib.Path(tmp), {}), 8080)
         self.assertEqual((row["sclk_mhz"], row["mclk_mhz"], row["vddgfx_mv"]), (None, None, None))
+
+    def test_flags_trip_only_above_the_limits(self):
+        sensors = {"temp2_label": "junction", "temp3_label": "mem", "temp3_input": "90000"}
+        cases = (  # (junction millidegrees, VRAM used GiB, expected flag)
+            ("104000", 20, ""),                      # at the junction limit, 4 GiB free
+            ("104100", 20, "HOT"),
+            ("90000", 24 - 300 / 1024, ""),          # exactly 300 MiB free
+            ("104100", 24 - 299 / 1024, "HOT+VRAM"),
+        )
+        for temp, used, flag in cases:
+            with self.subTest(temp=temp, used=used), tempfile.TemporaryDirectory() as tmp, \
+                    mock.patch.object(gpu_watch, "processing", return_value=""):
+                dev = _fake_device(pathlib.Path(tmp), {**sensors, "temp2_input": temp}, used_gib=used)
+                self.assertEqual(gpu_watch.sample(dev, 8080)["flag"], flag)
 
 
 if __name__ == "__main__":

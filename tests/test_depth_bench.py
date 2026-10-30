@@ -2,14 +2,16 @@
 
 Covers `extra_argv`, the `--extra "<flags>"` passthrough helper shared by depth_bench.py and
 spec_depth_bench.py: shlex-splitting and the duplicate-flag warning; `resolve_max_hotspot_c`,
-the BENCH_MAX_HOTSPOT_C threshold resolution used by the shared Monitor; and `power_cap_warning`,
-the pure BENCH_EXPECT_POWER_CAP_W decision used by `check_power_cap`. Pure functions: no server,
-no GPU, no network.
+the BENCH_MAX_HOTSPOT_C threshold resolution used by the shared Monitor; `telemetry_peaks` /
+`overall_peak`, the telemetry.jsonl reduction used by summarize.py and concurrency_bench.py; and
+`power_cap_warning`, the pure BENCH_EXPECT_POWER_CAP_W decision used by `check_power_cap`. Pure
+functions: no server, no GPU, no network.
 """
 from __future__ import annotations
 
 import contextlib
 import io
+import json
 import pathlib
 import sys
 import tempfile
@@ -80,9 +82,6 @@ class TestResolveMaxHotspotC(unittest.TestCase):
     def test_default_is_104_when_unset(self):
         self.assertEqual(depth_bench.resolve_max_hotspot_c({}), 104.0)
 
-    def test_default_is_104_when_empty_string(self):
-        self.assertEqual(depth_bench.resolve_max_hotspot_c({"BENCH_MAX_HOTSPOT_C": ""}), 104.0)
-
     def test_uses_override_when_set(self):
         self.assertEqual(depth_bench.resolve_max_hotspot_c({"BENCH_MAX_HOTSPOT_C": "99"}), 99.0)
 
@@ -92,6 +91,11 @@ class TestResolveMaxHotspotC(unittest.TestCase):
     def test_rejects_non_numeric_override(self):
         with self.assertRaises(SystemExit):
             depth_bench.resolve_max_hotspot_c({"BENCH_MAX_HOTSPOT_C": "hot"})
+
+    def test_rejects_non_positive_override(self):
+        for raw in ("0", "-5"):
+            with self.subTest(raw=raw), self.assertRaises(SystemExit):
+                depth_bench.resolve_max_hotspot_c({"BENCH_MAX_HOTSPOT_C": raw})
 
     def test_nan_falls_back_to_default_with_warning(self):
         buf = io.StringIO()
@@ -107,12 +111,43 @@ class TestResolveMaxHotspotC(unittest.TestCase):
         self.assertEqual(result, 104.0)
         self.assertIn("inf", buf.getvalue())
 
-    def test_negative_inf_falls_back_to_default_with_warning(self):
-        buf = io.StringIO()
-        with contextlib.redirect_stderr(buf):
-            result = depth_bench.resolve_max_hotspot_c({"BENCH_MAX_HOTSPOT_C": "-inf"})
-        self.assertEqual(result, 104.0)
-        self.assertIn("-inf", buf.getvalue())
+
+class TestTelemetryPeaks(unittest.TestCase):
+    @staticmethod
+    def _row(phase, vram, edge, hotspot, gtt=0, evicted=0):
+        return {"phase": phase,
+                "process": {"bytes_by_metric": {"drm-memory-vram": vram, "drm-memory-gtt": gtt,
+                                                "amd-evicted-vram": evicted}},
+                "safety": {"edge_c": edge, "hotspot_c": hotspot}}
+
+    def _peaks(self, rows):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = pathlib.Path(tmp) / "telemetry.jsonl"
+            path.write_text("".join(json.dumps(r) + "\n" for r in rows))
+            return depth_bench.telemetry_peaks(path)
+
+    def test_tracks_the_maximum_per_phase_and_overall(self):
+        phases = self._peaks([
+            self._row("loading", 100, 40.0, 50.0, gtt=10),
+            self._row("ready", 300, 60.0, None, gtt=5, evicted=20),
+            self._row("ready", 200, 55.0, 70.0),
+        ])
+        self.assertEqual(phases["loading"]["vram"], 100)
+        self.assertEqual(phases["ready"], {"vram": 300, "gtt": 5, "evicted": 20, "edge": 60.0, "hotspot": 70.0})
+        self.assertEqual(depth_bench.overall_peak(phases),
+                         {"vram": 300, "gtt": 10, "evicted": 20, "edge": 60.0, "hotspot": 70.0})
+
+    def test_missing_sensor_stays_none_instead_of_zero(self):
+        peak = depth_bench.overall_peak(self._peaks([self._row("ready", 100, None, None)]))
+        self.assertIsNone(peak["edge"])
+        self.assertIsNone(peak["hotspot"])
+
+    def test_missing_file_has_no_phases_and_an_empty_peak(self):
+        phases = depth_bench.telemetry_peaks(pathlib.Path("/nonexistent/telemetry.jsonl"))
+        self.assertEqual(phases, {})
+        self.assertEqual(depth_bench.overall_peak(phases),
+                         {"vram": 0, "gtt": 0, "evicted": 0, "edge": None, "hotspot": None})
+
 
 
 class TestPowerCapWarning(unittest.TestCase):

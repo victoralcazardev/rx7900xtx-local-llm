@@ -234,11 +234,16 @@ def detect_loop(s: str) -> bool:
     words = re.findall(r"\w+|[^\w\s]", s.lower())
     if len(words) < 80:
         return False
-    # Conservative signal: the same 12-token block repeated at least 4 times.
+    # Conservative signal: the same 8/12/16-token block seen at least 4 times without overlap,
+    # at any offset (aligned chunks missed loops whose period does not divide the block size).
     for n in (8, 12, 16):
+        last: dict[tuple[str, ...], int] = {}
         seen: dict[tuple[str, ...], int] = {}
-        for i in range(0, len(words) - n + 1, n):
+        for i in range(len(words) - n + 1):
             k = tuple(words[i:i+n])
+            if i < last.get(k, -n) + n:
+                continue
+            last[k] = i
             seen[k] = seen.get(k, 0) + 1
             if seen[k] >= 4:
                 return True

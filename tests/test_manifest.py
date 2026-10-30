@@ -479,7 +479,7 @@ class TestBuildArgv(unittest.TestCase):
     def test_basic_argv_assembly(self):
         m, model = self._manifest_and_model()
         profile = {"context": 131072, "kv": ["q8_0", "q8_0"]}
-        argv = manifest.build_argv(m, model, "p", profile, backend="hip")
+        argv = manifest.build_argv(m, model, profile)
         self.assertEqual(argv[:6], ["-m", str(model.gguf), "--port", "8080", "-c", "131072"])
         self.assertIn("-ctk", argv)
         self.assertIn("q8_0", argv)
@@ -489,17 +489,10 @@ class TestBuildArgv(unittest.TestCase):
         self.assertNotIn("--top-p", argv)
         self.assertIn("-fa", argv)
 
-    def test_port_override(self):
-        m, model = self._manifest_and_model()
-        profile = {"context": 131072, "kv": ["q8_0", "q8_0"]}
-        argv = manifest.build_argv(m, model, "p", profile, backend="hip", port=9999)
-        self.assertIn("9999", argv)
-        self.assertNotIn("8080", argv)
-
     def test_spec_n_max_adds_mtp_flags(self):
         m, model = self._manifest_and_model()
         profile = {"context": 131072, "kv": ["q8_0", "q8_0"], "spec_n_max": 2}
-        argv = manifest.build_argv(m, model, "p", profile, backend="hip")
+        argv = manifest.build_argv(m, model, profile)
         self.assertIn("--spec-type", argv)
         self.assertIn("draft-mtp", argv)
         self.assertIn("--spec-draft-n-max", argv)
@@ -509,21 +502,21 @@ class TestBuildArgv(unittest.TestCase):
         m, model = self._manifest_and_model()
         profile = {"context": 131072, "kv": ["q8_0", "q8_0"], "spec_n_max": 3,
                    "spec_type": "draft-mtp,ngram-map-k4v"}
-        argv = manifest.build_argv(m, model, "p", profile, backend="hip")
+        argv = manifest.build_argv(m, model, profile)
         i = argv.index("--spec-type")
         self.assertEqual(argv[i:i + 4], ["--spec-type", "draft-mtp,ngram-map-k4v", "--spec-draft-n-max", "3"])
 
     def test_profile_flags_appended(self):
         m, model = self._manifest_and_model()
         profile = {"context": 131072, "kv": ["q8_0", "q8_0"], "flags": ["--extra", "1"]}
-        argv = manifest.build_argv(m, model, "p", profile, backend="hip")
+        argv = manifest.build_argv(m, model, profile)
         self.assertEqual(argv[-2:], ["--extra", "1"])
 
     def test_mmproj_included_when_vision_used(self):
         m, model = self._manifest_and_model()
         model.mmproj = pathlib.Path("/root/mmproj.gguf")
         profile = {"context": 131072, "kv": ["q8_0", "q8_0"]}
-        argv = manifest.build_argv(m, model, "p", profile, backend="hip")
+        argv = manifest.build_argv(m, model, profile)
         self.assertIn("--mmproj", argv)
         self.assertIn(str(model.mmproj), argv)
 

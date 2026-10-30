@@ -32,12 +32,12 @@ import json
 import os
 import pathlib
 import sys
-import tomllib
 import urllib.error
 import urllib.request
 from datetime import datetime
 
-REPO = pathlib.Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from manifest import models_manifest_path, read_toml  # noqa: E402
 
 # Ledger key -> Prometheus metric name (see module docstring).
 METRIC_NAMES = {
@@ -54,11 +54,8 @@ def _zero_totals() -> dict[str, int]:
 
 
 def get_port(models_toml: pathlib.Path | None = None) -> int:
-    """Port from `models.toml` `[defaults] port` (default: 8080)."""
-    path = models_toml or (REPO / "models.toml")
-    with open(path, "rb") as f:
-        data = tomllib.load(f)
-    return data.get("defaults", {}).get("port", 8080)
+    """Port from `models.toml` `[defaults] port` (default: 8080); honors MODELS_MANIFEST."""
+    return read_toml(models_manifest_path(models_toml), "models manifest").get("defaults", {}).get("port", 8080)
 
 
 def fetch_metrics(port: int, timeout: float = FETCH_TIMEOUT_S) -> str | None:

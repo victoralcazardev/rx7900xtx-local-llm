@@ -130,6 +130,13 @@ All notable changes to this project are documented here. Format follows
   limit in HIP's quantized-KV FlashAttention (~24% of peak); Vulkan depth screen inconclusive
   (`docs/measurements/depth.md`, `docs/DECISIONS.md`).
 
+### Fixed
+
+- `bench/summarize.py` and `bench/concurrency_bench.py` report a missing thermal reading as `-`/`null` instead of 0 °C; both now share `depth_bench.telemetry_peaks`/`overall_peak`.
+- `bench/longctx_quality.py` `detect_loop` finds a repeated block at any offset, so short-period loops are flagged; new runs may record `loop_detected` where older runs did not.
+- `BENCH_MAX_HOTSPOT_C` at or below 0 now aborts instead of tripping the thermal guard on the first reading.
+- `scripts/token_ledger.py collect` honors `MODELS_MANIFEST` for the port. TOML reads share `manifest.read_toml`; `manifest.build_argv` drops its unused `profile_name`, `backend` and `port` parameters.
+
 ## [2026-09-26]
 
 ### Changed

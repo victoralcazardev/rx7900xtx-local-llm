@@ -45,7 +45,7 @@ def run_case(m, backend, spec, vram):
     model = Model(alias=folder, gguf=d / f"{folder}.gguf", backend=backend, mtp=bool(int(n)),
                   sampling=m.models["qwen38-iq3s-mtp"].sampling,  # official Qwen3.8-27B card
                   mmproj=None if "nomm" in extra else d / MMPROJ, profiles={})
-    argv = build_argv(m, model, spec, profile, backend)
+    argv = build_argv(m, model, profile)
     exe = server_executable(m, backend)
     log = AQUI / "res" / f"{backend}-{spec.replace('/', '_').replace(':', '-')}.log"
     vram_before = int(vram.read_text())

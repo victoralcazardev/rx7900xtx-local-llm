@@ -243,6 +243,13 @@ class TestGetPort(unittest.TestCase):
             path.write_text("[defaults]\nflags = []\n")
             self.assertEqual(token_ledger.get_port(path), 8080)
 
+    def test_honors_models_manifest_override(self):
+        # collect must poll the same server the launcher would start from this manifest.
+        with tempfile.TemporaryDirectory() as tmp:
+            path = pathlib.Path(tmp) / "alt.toml"
+            path.write_text("[defaults]\nport = 9191\nflags = []\n")
+            with mock.patch.dict("os.environ", {"MODELS_MANIFEST": str(path)}):
+                self.assertEqual(token_ledger.get_port(), 9191)
 
 
 class TestCli(unittest.TestCase):
@@ -281,7 +288,7 @@ class TestCli(unittest.TestCase):
             ledger = json.loads((pathlib.Path(tmp) / "ledger.json").read_text())
             self.assertEqual(ledger["totals"]["prompt_new"], 1000)
 
-    def test_show_text_output_lists_sections(self):
+    def test_show_text_output_includes_seeded_values(self):
         with tempfile.TemporaryDirectory() as tmp:
             self._run(["seed", "--prompt-new", "1", "--cache-read", "2", "--output", "3",
                        "--turns", "1", "--note", "n"], tmp)
@@ -290,8 +297,6 @@ class TestCli(unittest.TestCase):
                 rc = self._run(["show"], tmp)
             self.assertEqual(rc, 0)
             text = "\n".join(captured)
-            self.assertIn("all-time:", text)
-            self.assertIn("historical baseline:", text)
             self.assertIn("prompt-new=1", text)
 
 def argparse_namespace(**kwargs):

@@ -100,7 +100,7 @@ def main() -> int:
         print(f"ABORTED: llama-server is already alive (PID {alive}). Stop it first.")
         return 2
 
-    argv = build_argv(m, model, profile_name, profile, backend, port=m.default_port)
+    argv = build_argv(m, model, profile)
     print(f">> {args.alias}/{profile_name} (:{m.default_port}, backend={backend}) ...")
     print("command:", shlex.join(["llama-server"] + argv))
 
