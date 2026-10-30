@@ -86,3 +86,20 @@ env = { STRATA_RESIDENT_HEADROOM_GIB = "6" }
 # Qwen3.8-Flash-Next card, thinking mode (https://huggingface.co/Qwen/Qwen3.8-Flash-Next); the Coder
 # card sets none. Explicit, so a change of Strata's own defaults cannot change it silently.
 sampling = { temperature = 1.0, top_p = 0.95, top_k = 20, min_p = 0.0 }
+
+# Qwen3.8-Flash-Next IQ2_XS (ISTA-DASLab GSQ-RCO-GGUF revision ed59f920; shard 1 sha256 92cee27a…, shard 2 is the
+# Coder's file, hardlinked), installed 2026-10-30 on Strata v0.2.8 with `--gguf-dir`; setup chose the resident RAM mode.
+[strata.iq2_xs]
+config = "strata-iq2_xs.json"
+# Same choices as the Coder: 262K, KV int8, 3 GiB VRAM left for the desktop. Mapped mode (setup `--low-ram mmap`, no
+# RAM copy): the resident copy (18.53 GiB automatic, or 14 GiB with --resident-budget-gib) stalled deep prompts
+# (zram swap storm, amdgpu SVM restores, engine restarted by its watchdog; 2026-10-30, results/20261030-strata-iq2xs-baseline/).
+user_args = ["--max-context", "262144", "--kv", "int8", "--vram-reserve-mib", "3072"]
+# GPU_PINNED_MIN_XFER_SIZE (MiB): ROCclr locks a pageable copy source of >= 1 MiB as a GPU userptr; expert blobs are
+# 1.1-1.5 MB, so every copy from experts.bin (or the pageable RAM copy) pinned it and page reclaim suspended the GPU
+# queues (kernel: svm_range_restore_work -> filemap_fault). Upstream workaround (docs/AMD_HIP.md "Linux: verify
+# timeouts while the kernel reclaims host memory", #920); the engine sets it itself only with STRATA_ARENA_MMAP=1.
+env = { STRATA_RESIDENT_HEADROOM_GIB = "6", GPU_PINNED_MIN_XFER_SIZE = "1048576" }
+# Qwen3.8-Flash-Next card, thinking mode (https://huggingface.co/Qwen/Qwen3.8-Flash-Next, checked 2026-10-30);
+# the ISTA card sets none.
+sampling = { temperature = 1.0, top_p = 0.95, top_k = 20, min_p = 0.0 }

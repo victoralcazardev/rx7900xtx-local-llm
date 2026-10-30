@@ -1,0 +1,1 @@
+{"label": "B-budget14", "request": "short#1", "prompt_new": 82, "prompt_cached": 0, "prefill_tps": 15.9, "gen_n": 800, "gen_tps": 45.9, "drafts": [421, 542], "finish": "length", "wall_s": 22.6, "sha": "36237a72112ef642", "min_mem_avail_gib": 12.36, "max_swap_used_gib": 2.65, "pswpin_delta": 129927, "max_vram_used_gib": 22.13, "max_gtt_used_gib": 0.34}

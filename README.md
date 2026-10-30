@@ -24,7 +24,7 @@ number reproducible. Not a multi-GPU, NVIDIA/CUDA, vLLM/Ollama or harness-wiring
 | Model | Engine | Status | Setup |
 |---|---|---|---|
 | Qwen3.8-27B GSQ-RCO `IQ3_S-mtp` | llama.cpp `hip-kvmix` (ROCm) | **Default**, numbers below | [`STATUS.md`](docs/STATUS.md) |
-| Qwen3.8-Flash-Next (IQ2_XS next; Coder IQ1_M removed 2026-10-30) | Strata | Optional second engine, no model installed | [`strata-qwen-flash-next.md`](docs/models/strata-qwen-flash-next.md#current-state-2026-10-30) |
+| Qwen3.8-Flash-Next IQ2_XS (Coder IQ1_M before 2026-10-30) | Strata v0.2.8 | Optional second engine; installed, coding quality not measured yet | [`strata-qwen-flash-next.md`](docs/models/strata-qwen-flash-next.md#current-state-2026-10-30) |
 | Qwen4 | — | Planned when released; 27B tuning paused until then | [`DECISIONS.md`](docs/DECISIONS.md) |
 
 Only one engine serves `:8080` at a time; each needs nearly all of the 24 GB.

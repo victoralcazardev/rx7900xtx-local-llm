@@ -1,6 +1,6 @@
-# SOP: Strata with the Qwen3.8-Flash-Next Coder
+# SOP: Strata with Qwen3.8-Flash-Next (IQ2_XS; formerly the Coder)
 
-Run [Strata](https://github.com/Niko1221/Strata) with the ISTA-DASLab Coder IQ1_M as an alternative to the
+Run [Strata](https://github.com/Niko1221/Strata) with Qwen3.8-Flash-Next IQ2_XS (since 2026-10-30; the ISTA-DASLab Coder IQ1_M before) as an alternative to the
 default llama.cpp profile, on the same port. Background, upstream claims and measurements:
 [`../models/strata-qwen-flash-next.md`](../models/strata-qwen-flash-next.md). Settings this repo tracks:
 `[strata.*]` in [`../../models.toml`](../../models.toml), applied with `scripts/strata.py`.
@@ -40,7 +40,31 @@ files only get a whole-file check, so an unmodified `setup.py` accepts them (ver
 clone's tracked files; `update.sh` refuses to pull over them.
 
 Setup keeps `user_args`, `env` and `sampling` when it rewrites the run config (verified 2026-10-24); it may
-reorder `args`.
+reorder `args`. It also copies the current `user_args` into `args`, so an option later removed from `user_args`
+stays in `args` until deleted by hand (seen 2026-10-30 with `--resident-budget-gib`): after every `./setup.sh` run,
+compare `args` with what you intend and check the live command line with `pgrep -af engine/strata`.
+
+Setup builds the engine only when its source hash changes. Installing a library afterwards (e.g. `pacman -S
+hipblaslt`) does not trigger a rebuild, and CMake keeps `hipblaslt_DIR-NOTFOUND` in `build-hip/CMakeCache.txt`:
+setup still writes `STRATA_HIPBLASLT_TUNING` into `env`, but an engine without hipBLASLt ignores it. Check with
+`ldd engine/strata | grep hipblaslt` (verified 2026-10-30).
+
+**AMD stall with experts read from host memory (`GPU_PINNED_MIN_XFER_SIZE`).** ROCclr copies a pageable source of
+1 MiB or more by locking its pages as a GPU userptr; expert blobs are 1.1-1.5 MB. When the kernel reclaims those
+pages (page cache of `experts.bin`, or a pageable RAM copy under zram swap), the GPU queues are suspended
+(`journalctl -k`: `svm_range_restore_work` -> `filemap_fault`, `page allocation stall`) and the engine's watchdog
+kills a long prompt ("no progress for 60 s"). Upstream documents it (Strata `docs/AMD_HIP.md`, "Linux: verify
+timeouts while the kernel reclaims host memory") and the engine sets the fix itself only with
+`STRATA_ARENA_MMAP=1`. Set `GPU_PINNED_MIN_XFER_SIZE = "1048576"` in the model's `env`. On 2026-10-30, without it, a
+121,709-token prompt stalled in all three memory modes (resident 18.53 GiB, resident 14 GiB, mapped); with it, mapped
+mode passed 120K four times and 240K once with no stall (transient order-0 `page allocation failure` lines appeared
+twice, without a stall). This host runs `vm.swappiness=150` with zram, which pushes anonymous memory out early.
+Status: validated for IQ2_XS in mapped mode; the resident mode with the fix is untested
+([`results/20261030-strata-iq2xs-baseline/`](../../results/20261030-strata-iq2xs-baseline/README.md)).
+
+IQ2_XS on 32 GB: install with `--low-ram mmap` (setup's arithmetic picks the resident mode, but the engine cannot
+fit the 20.67 GiB complement and the copy leaves ~6 GiB free). Do not link hipBLASLt for it: the gfx1100 table makes
+prefill faster but decode at depth 16-25% slower (same results folder).
 
 Why these values: `--kv` offers `int8|q4_0|k8v4`; int8 is the 8-bit one. Shrinking the KV does not free VRAM
 in Strata, because the expert cache takes whatever is left; only `--vram-reserve-mib` keeps VRAM free. 3072
@@ -70,7 +94,9 @@ stops it. Its logic, so it can be rebuilt:
 3. Refuse to start below 21 GiB of `MemAvailable` (15.03 GiB of experts in RAM at 262K with the reserve + 6 GiB
    headroom) and list the biggest processes; `--force` overrides both checks. Below it the engine cuts the copy
    and reads the rest from the SSD, and a long prompt once OOM-killed the desktop.
-4. Start `run-coder-iq1_m.sh` detached and poll `http://127.0.0.1:8080/v1/models` until it answers (~35-45 s).
+4. Start `run-${QWEN_FLASH_MODEL:-iq2_xs}.sh` detached (log `strata-<model>.log`; the server's own output goes to
+   `strata-<model>.log.server.out`, which is where prompt progress, silence kills and engine exit codes appear) and
+   poll `http://127.0.0.1:8080/v1/models` until it answers (~35-60 s).
 5. Stop: `SIGTERM` to `serve/server.py`, which also ends the `engine/strata` child; `SIGKILL` after 30 s.
 
 ## Update Strata

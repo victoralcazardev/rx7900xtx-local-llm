@@ -1,0 +1,17 @@
+[
+  {
+    "variant": "strata-mtp0",
+    "depth": 128000,
+    "n": 8,
+    "expected": 8,
+    "completed": 8,
+    "complete": true,
+    "missing": 0,
+    "exact": 8,
+    "exact_rate": 1.0,
+    "field_accuracy": 1.0,
+    "loops": 0,
+    "truncated": 0,
+    "failures": 0
+  }
+]

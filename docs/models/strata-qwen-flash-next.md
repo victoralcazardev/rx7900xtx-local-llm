@@ -4,16 +4,19 @@
 
 - **Role**: optional second engine on `:8080`, never the default; one of the repository's focus models with
   the 27B and Qwen4 ([`DECISIONS.md`](../DECISIONS.md), 2026-10-29).
-- **Installed**: Strata v0.2.4.2 only. The Coder IQ1_M shard 1 and its pack were deleted on 2026-10-30 to make
-  room for a full-expert size; shard 2 (the same file for every size) and the MTP layer are kept. Settings for the
-  Coder stay in `models.toml` `[strata.coder-iq1_m]`, procedure [`../sop/strata.md`](../sop/strata.md).
-- **Next model**: IQ2_XS (chosen 2026-10-30, not started); IQ3_XXS later. Plan and fit evidence:
-  [fit check](#fit-check-2026-10-30-iq2_xs-and-iq3_xxs-without-ssd-reads).
-- **Last measured** (Coder, older Strata build and the old shard, 2026-10-16): 52-57 tok/s from short prompts to
+- **Installed (2026-10-30)**: Strata v0.2.8 (engine 0.1.54, built from source against ROCm 7.2.4) with
+  Qwen3.8-Flash-Next IQ2_XS in mapped mode, settings in `models.toml` `[strata.iq2_xs]`, procedure
+  [`../sop/strata.md`](../sop/strata.md). The Coder IQ1_M entry stays for a re-download only (shard 1 deleted).
+- **IQ2_XS measured (2026-10-30)**: warm short decode 59-65 tok/s; 121,709-token cold prompt 552-672 tok/s prefill,
+  43-45 tok/s decode; 245,002 tokens 159 tok/s prefill (26 min), 36.7 tok/s decode; 128K retrieval 8/8. Requires
+  `GPU_PINNED_MIN_XFER_SIZE=1048576`: without it every memory mode stalled on a 120K prompt. hipBLASLt table and
+  `--prefill 16384` rejected ([IQ2_XS on v0.2.8](#iq2_xs-on-v028-2026-10-30),
+  [results](../../results/20261030-strata-iq2xs-baseline/README.md)).
+- **Last measured Coder** (older Strata build and the old shard, 2026-10-16): 52-57 tok/s from short prompts to
   a ~250K context, retrieval 20/20 at 240K, with `--vram-reserve-mib 3072`
-  ([results](../../results/20261016-strata-coder-vram-reserve/README.md)); the Coder was never measured on v0.2.4.2.
-- **Next**: the [tuning plan](#tuning-plan-2026-10-16-not-run)'s F0 (update, re-check flags), install IQ2_XS,
-  then speed, 240K retrieval and the coding suite (plan step B2) on it; F2 and F4 re-base on that model.
+  ([results](../../results/20261016-strata-coder-vram-reserve/README.md)).
+- **Next**: a real harness session on `local-flash-262k` (tool calls, cache reuse), the coding suite (plan step B2),
+  240K retrieval; then `STRATA_PF_GEMM`/`STRATA_PF_FUSED` and `--calibrate` one at a time.
 - **Limit on this machine**: RAM (31.25 GiB usable), not VRAM.
 
 The sections below are dated history, oldest first: a desk review (2026-09-29 to 2026-10-08), the first run
@@ -625,3 +628,27 @@ Its GPU share is larger than the Coder's measured 11.8 GiB cache at 262K + 3 GiB
 above is the conservative bound; the first start's `file tier` settles it. Disk by `setup.py`'s own rule (missing
 files + `experts.bin` of `arena_gb` + 1 + margin 2; shard 2 already present, `--vision no`): IQ3_XXS ~93 GB,
 IQ2_XS ~78 GB, against ~96 GB free. `strata launch --plan` printed no RAM or disk figures and counts shard 2 again.
+
+## IQ2_XS on v0.2.8 (2026-10-30)
+
+Measured on this machine; raw data and commands:
+[`results/20261030-strata-iq2xs-baseline/`](../../results/20261030-strata-iq2xs-baseline/).
+
+- **Install**: shard 1 at ISTA revision `ed59f920` (sha256 `92cee27a…`, verified), shard 2 hardlinked from the Coder
+  folder (identical file). `experts.bin` 33.02 GiB; `/home` was left with 14 GB free.
+- **Fit**: setup's arithmetic picked the resident mode, but the engine found the 20.67 GiB complement did not fit
+  and copied 18.53 GiB (GPU cache 9224 slots, 12.35 GiB; 2.1 GiB file tier; 0 of 2823 lent prompt slots
+  covered). Setup does not subtract `--vram-reserve-mib` when it sizes the low-RAM mode (`setup.py:9576`,
+  source-checked).
+- **Stability**: a 121,709-token cold prompt failed with the automatic copy (stalled at 56,320 tokens, 8.6 GiB
+  of the engine in zram), with `--resident-budget-gib 14` (stalled at 18,432, watchdog exit -6) and in mapped mode
+  (stalled at 24,576, server silence kill). The cause is ROCclr's userptr lock on pageable copy sources
+  (SOP, `GPU_PINNED_MIN_XFER_SIZE`). With it, mapped mode read the prompt at 672 tok/s.
+- **v0.2.8 changes that matter here** (release notes, source-checked): `tool_call_recovery` on by default (a smoke
+  tool call returned a valid `tool_calls`); HIP batch window 16 rows; expert-cache reserve fix #4474. gfx1100 has no
+  architecture defaults (`src/core/arch_defaults.cpp`), so `STRATA_PF_GEMM`, `STRATA_PF_FUSED` and the hipBLASLt
+  table (`STRATA_HIPBLASLT_TABLE`, auto only on gfx1151) are opt-in; `--prefill auto` never picks a chunk above
+  8192 (#4683, open). T=0 text is not reproducible on this engine (#4673, open), so SHA equality is not a test.
+- **UI**: no install. The server already serves a chat page at `http://127.0.0.1:8080/` and the checkout's CLI
+  offers `strata monitor`. The desktop AppImage (v0.2.8) uses its own engine and model folders and binds only
+  127.0.0.1 (repo read, not run), so it would duplicate ~70 GB and add RAM use on a RAM-bound machine.

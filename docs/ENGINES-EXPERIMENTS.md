@@ -37,9 +37,9 @@ user's explicit go each time.
 | D2 | Workload items one at a time: T25 tool-output bounding, T02 compaction threshold, T24 probabilistic MTP (needs a non-greedy bench), T09 n-gram replay | B1c | The suite plus the item's own metric | Each needs its own result folder and DECISIONS row |
 | Parked | T26, T23, T07, T10-T18, KVMem (T01), TurboQuant KV ([SOURCES](SOURCES.md#tinygrad-qwen38-fork-verify-kernel-references-and-turboquant-kv-2026-10-18)) | new evidence | — | Revisit only with a logged trigger or a measured bottleneck |
 
-Order of work now: A1, B1 and D1 are done; the Strata Coder was removed 2026-10-30 and IQ2_XS is the chosen next
-Strata model, not installed yet ([install plan](models/strata-qwen-flash-next.md#fit-check-2026-10-30-iq2_xs-and-iq3_xxs-without-ssd-reads)):
-next C2's F0, the IQ2_XS install and first-start checks, then B2 on IQ2_XS instead of the Coder, then F2 and the rest of C2.
+Order of work now: A1, B1 and D1 are done; C2's F0 (Strata v0.2.8) and the IQ2_XS install are done and IQ2_XS is
+stable in mapped mode with `GPU_PINNED_MIN_XFER_SIZE` ([results](../results/20261030-strata-iq2xs-baseline/README.md)):
+next B2 on IQ2_XS instead of the Coder, then the rest of C2 (F2/F4 re-based on mapped mode; F4d `STRATA_RAM_ADAPT` applies).
 A2 whenever a real session happens. C1 pre-empts everything except a running measurement once Qwen4
 ships. [Next batch](#next-batch-2026-10-23) lists the GPU runs that remain worth doing before then.
 
