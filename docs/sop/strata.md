@@ -68,6 +68,14 @@ prefill faster but decode at depth 16-25% slower (same results folder). Once the
 `STRATA_HIPBLASLT_TUNING` path loads the table whatever `STRATA_HIPBLASLT_TABLE` says, so `[strata.iq2_xs]` sets the
 path to `""` and the switch to `off`. The local `build-hip` now finds hipBLASLt, so the next rebuild links it.
 
+Residual memory pressure (2026-10-30, `journalctl -k`): 17 order-0 `page allocation failure` lines (mode
+`GFP_KERNEL|__GFP_HIGH|__GFP_NOMEMALLOC`, from plasmashell, kswapd0 and the engine's pool threads), 14 of them during
+the stalled arms and 3 with the fix (no stall); zone Normal fell to 3-29 MiB free against a 60 MiB `min`, with
+`vm.min_free_kbytes=67584` and `vm.watermark_scale_factor=10`. Candidate, not tested: make kswapd reclaim earlier with
+`vm.watermark_scale_factor=125` and `vm.min_free_kbytes=262144` in `/etc/sysctl.d/` (needs sudo, reserves ~0.6 GiB
+more), and/or cap `--conversation-cache-mib` (mapped mode sizes it at 8192 MiB of anonymous memory). That zram is the
+allocating side is an inference from the flags.
+
 Why these values: `--kv` offers `int8|q4_0|k8v4`; int8 is the 8-bit one. Shrinking the KV does not free VRAM
 in Strata, because the expert cache takes whatever is left; only `--vram-reserve-mib` keeps VRAM free. 3072
 leaves ~1.4 GiB of the card free while loaded, enough for the desktop to open apps without the driver pushing
