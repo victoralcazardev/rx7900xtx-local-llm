@@ -99,7 +99,11 @@ user_args = ["--max-context", "262144", "--kv", "int8", "--vram-reserve-mib", "3
 # 1.1-1.5 MB, so every copy from experts.bin (or the pageable RAM copy) pinned it and page reclaim suspended the GPU
 # queues (kernel: svm_range_restore_work -> filemap_fault). Upstream workaround (docs/AMD_HIP.md "Linux: verify
 # timeouts while the kernel reclaims host memory", #920); the engine sets it itself only with STRATA_ARENA_MMAP=1.
-env = { STRATA_RESIDENT_HEADROOM_GIB = "6", GPU_PINNED_MIN_XFER_SIZE = "1048576" }
+# Table off on purpose: once the engine links hipBLASLt (build-hip now finds it, so the next source-change rebuild
+# will), setup's STRATA_HIPBLASLT_TUNING path loads the gfx1100 table regardless of STRATA_HIPBLASLT_TABLE
+# (src/prefill/gemm.cu create_hipblaslt_state); measured prefill +41-71% but decode at 120K -16-25%. An empty path
+# plus TABLE=off returns no table (plain hipBLAS), and scripts/strata.py apply re-sets both after every update.
+env = { STRATA_RESIDENT_HEADROOM_GIB = "6", GPU_PINNED_MIN_XFER_SIZE = "1048576", STRATA_HIPBLASLT_TUNING = "", STRATA_HIPBLASLT_TABLE = "off" }
 # Qwen3.8-Flash-Next card, thinking mode (https://huggingface.co/Qwen/Qwen3.8-Flash-Next, checked 2026-10-30);
 # the ISTA card sets none.
 sampling = { temperature = 1.0, top_p = 0.95, top_k = 20, min_p = 0.0 }

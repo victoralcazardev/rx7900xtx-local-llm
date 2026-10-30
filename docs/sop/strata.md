@@ -63,8 +63,10 @@ Status: validated for IQ2_XS in mapped mode; the resident mode with the fix is u
 ([`results/20261030-strata-iq2xs-baseline/`](../../results/20261030-strata-iq2xs-baseline/README.md)).
 
 IQ2_XS on 32 GB: install with `--low-ram mmap` (setup's arithmetic picks the resident mode, but the engine cannot
-fit the 20.67 GiB complement and the copy leaves ~6 GiB free). Do not link hipBLASLt for it: the gfx1100 table makes
-prefill faster but decode at depth 16-25% slower (same results folder).
+fit the 20.67 GiB complement and the copy leaves ~6 GiB free). Keep the hipBLASLt table off: on gfx1100 it makes
+prefill faster but decode at depth 16-25% slower (same results folder). Once the engine links hipBLASLt, setup's
+`STRATA_HIPBLASLT_TUNING` path loads the table whatever `STRATA_HIPBLASLT_TABLE` says, so `[strata.iq2_xs]` sets the
+path to `""` and the switch to `off`. The local `build-hip` now finds hipBLASLt, so the next rebuild links it.
 
 Why these values: `--kv` offers `int8|q4_0|k8v4`; int8 is the 8-bit one. Shrinking the KV does not free VRAM
 in Strata, because the expert cache takes whatever is left; only `--vram-reserve-mib` keeps VRAM free. 3072
