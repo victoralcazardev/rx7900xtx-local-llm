@@ -1,0 +1,15 @@
+diff --git a/markdown/util.py b/markdown/util.py
+index 3c70d1b..08f826a 100644
+--- a/markdown/util.py
++++ b/markdown/util.py
+@@ -154,6 +154,10 @@ def parseBoolValue(value: str | None, fail_on_errors: bool = True, preserve_none
+ 
+ def code_escape(text: str) -> str:
+     """HTML escape a string of code."""
++    if "&" in text:
++        # Ampersands in code are always escaped, even when they look like an
++        # entity, as the serializer's entity exception does not apply to code.
++        text = text.replace("&", "&amp;")
+     if "<" in text:
+         text = text.replace("<", "&lt;")
+     if ">" in text:

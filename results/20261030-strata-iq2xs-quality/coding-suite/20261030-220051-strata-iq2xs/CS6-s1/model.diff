@@ -1,0 +1,93 @@
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 8497266..d47ed88 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -1,5 +1,10 @@
+ # Changelog
+ 
++## Unreleased
++
++- Improved
++  - Error messages render TOML keys in TOML notation (like `[a.b]`), not as Python tuples
++
+ ## 2.5.0
+ 
+ - Added
+diff --git a/src/tomli/_parser.py b/src/tomli/_parser.py
+index 515ed72..8996e56 100644
+--- a/src/tomli/_parser.py
++++ b/src/tomli/_parser.py
+@@ -330,6 +330,19 @@ class Output:
+         self.flags = Flags()
+ 
+ 
++def format_key_part(part: str) -> str:
++    """Render a single key part as it would be written in TOML source."""
++    if BARE_KEY_CHARS.issuperset(part):
++        return part
++    escaped = part.replace("\\", "\\\\").replace('"', '\\"')
++    return f'"{escaped}"'
++
++
++def format_key(key: Key) -> str:
++    """Render a key path as it would be written in TOML source."""
++    return ".".join(format_key_part(part) for part in key)
++
++
+ def skip_chars(src: str, pos: Pos, chars: Iterable[str]) -> Pos:
+     try:
+         while src[pos] in chars:
+@@ -388,7 +401,9 @@ def create_dict_rule(src: str, pos: Pos, out: Output) -> tuple[Pos, Key]:
+     pos, key = parse_key(src, pos)
+ 
+     if out.flags.is_(key, Flags.EXPLICIT_NEST) or out.flags.is_(key, Flags.FROZEN):
+-        raise TOMLDecodeError(f"Cannot declare {key} twice", src, pos)
++        raise TOMLDecodeError(
++            f"Cannot declare table [{format_key(key)}] twice", src, pos
++        )
+     out.flags.set(key, Flags.EXPLICIT_NEST, recursive=False)
+     try:
+         out.data.get_or_create_nest(key)
+@@ -408,7 +423,9 @@ def create_list_rule(src: str, pos: Pos, out: Output) -> tuple[Pos, Key]:
+     pos, key = parse_key(src, pos)
+ 
+     if out.flags.is_(key, Flags.FROZEN):
+-        raise TOMLDecodeError(f"Cannot mutate immutable namespace {key}", src, pos)
++        raise TOMLDecodeError(
++            f"Cannot mutate immutable namespace {format_key(key)}", src, pos
++        )
+     # Free the namespace now that it points to another empty list item...
+     out.flags.unset_all(key)
+     # ...but this key precisely is still prohibited from table declaration
+@@ -436,14 +453,18 @@ def key_value_rule(
+     for cont_key in relative_path_cont_keys:
+         # Check that dotted key syntax does not redefine an existing table
+         if out.flags.is_(cont_key, Flags.EXPLICIT_NEST):
+-            raise TOMLDecodeError(f"Cannot redefine namespace {cont_key}", src, pos)
++            raise TOMLDecodeError(
++                f"Cannot redefine namespace {format_key(cont_key)}", src, pos
++            )
+         # Containers in the relative path can't be opened with the table syntax or
+         # dotted key/value syntax in following table sections.
+         out.flags.add_pending(cont_key, Flags.EXPLICIT_NEST)
+ 
+     if out.flags.is_(abs_key_parent, Flags.FROZEN):
+         raise TOMLDecodeError(
+-            f"Cannot mutate immutable namespace {abs_key_parent}", src, pos
++            f"Cannot mutate immutable namespace {format_key(abs_key_parent)}",
++            src,
++            pos,
+         )
+ 
+     try:
+@@ -558,7 +579,9 @@ def parse_inline_table(
+         pos, key, value = parse_key_value_pair(src, pos, parse_float, nest_lvl)
+         key_parent, key_stem = key[:-1], key[-1]
+         if flags.is_(key, Flags.FROZEN):
+-            raise TOMLDecodeError(f"Cannot mutate immutable namespace {key}", src, pos)
++            raise TOMLDecodeError(
++                f"Cannot mutate immutable namespace {format_key(key)}", src, pos
++            )
+         try:
+             nest = nested_dict.get_or_create_nest(key_parent, access_lists=False)
+         except KeyError:

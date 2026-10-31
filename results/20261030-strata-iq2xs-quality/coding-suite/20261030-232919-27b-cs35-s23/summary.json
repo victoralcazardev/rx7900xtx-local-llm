@@ -1,0 +1,55 @@
+{
+  "run": "20261030-232919-27b-cs35-s23",
+  "tasks": {
+    "CS3": {
+      "tests": 2,
+      "completed": 2,
+      "pass": 2,
+      "seeds": [
+        {
+          "seed": 2,
+          "tests": true,
+          "completed": true,
+          "pass": true,
+          "reason": null,
+          "turns": 15,
+          "wall_s": 74.7
+        },
+        {
+          "seed": 3,
+          "tests": true,
+          "completed": true,
+          "pass": true,
+          "reason": null,
+          "turns": 14,
+          "wall_s": 49.9
+        }
+      ]
+    },
+    "CS5": {
+      "tests": 2,
+      "completed": 2,
+      "pass": 2,
+      "seeds": [
+        {
+          "seed": 2,
+          "tests": true,
+          "completed": true,
+          "pass": true,
+          "reason": null,
+          "turns": 10,
+          "wall_s": 42.0
+        },
+        {
+          "seed": 3,
+          "tests": true,
+          "completed": true,
+          "pass": true,
+          "reason": null,
+          "turns": 33,
+          "wall_s": 75.9
+        }
+      ]
+    }
+  }
+}

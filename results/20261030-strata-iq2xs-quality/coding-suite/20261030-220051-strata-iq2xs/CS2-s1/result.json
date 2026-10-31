@@ -1,0 +1,20 @@
+{
+  "task": "CS2",
+  "seed": 1,
+  "completed": true,
+  "reason": null,
+  "turns": 25,
+  "wall_s": 1037.0,
+  "usage": {
+    "prompt_tokens": 1097682,
+    "completion_tokens": 8974
+  },
+  "tool_calls": {
+    "run_tests": 8,
+    "read_file": 20,
+    "edit_file": 5
+  },
+  "tests": true,
+  "score_rc": 0,
+  "pass": true
+}

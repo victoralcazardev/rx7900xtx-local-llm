@@ -92,9 +92,9 @@ Sampling is the Qwen3.8-27B card's own; `--min-p 0.0` is set explicitly because 
   [agent-traffic.md](measurements/agent-traffic.md#open-ab-tests).
 - **KVMem**: not adopted until a real agent run —
   [ENGINES-EXPERIMENTS.md](ENGINES-EXPERIMENTS.md#kvmem-trial-round-2-and-final-round-2026-09-30-not-adopted).
-- **Qwen3.8-Flash-Next via Strata**: IQ2_XS on v0.2.8 installed and stable in mapped mode with
-  `GPU_PINNED_MIN_XFER_SIZE` (59-65 tok/s short, 36.7 at 240K; 240K cold prefill ~26 min); coding quality and a
-  real harness session open — [owner](models/strata-qwen-flash-next.md#current-state-2026-10-30).
+- **Qwen3.8-Flash-Next via Strata**: IQ2_XS on v0.2.8 stable in mapped mode with
+  `GPU_PINNED_MIN_XFER_SIZE` (59-65 tok/s short, 36.7 at 240K); fails the coding suite against the 27B (invented
+  tool calls), 240K retrieval 12/12 on 3 of 5 documents (partial); speed arms open — [owner](models/strata-qwen-flash-next.md#current-state-2026-10-30).
 
 ## Next steps
 

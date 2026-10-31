@@ -1,0 +1,7 @@
+rc=0
+/tmp/coding-suite-CS4-s53pwx4x/wt/markdown/core.py:457: DeprecationWarning: codecs.open() is deprecated. Use open() instead.
+  output_file = codecs.open(output, "w",
+----------------------------------------------------------------------
+Ran 1126 tests in 0.625s
+
+OK (skipped=110)

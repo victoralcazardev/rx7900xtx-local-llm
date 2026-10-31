@@ -1,0 +1,63 @@
+rc=1
+atic_file(basename, root=root)
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/usr/lib/python3.14/unittest/case.py:615: ResourceWarning: unclosed file <_io.BufferedReader name='/tmp/coding-suite-CS3-dew9x8vd/wt/bottle.py'>
+  result = method()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/coding-suite-CS3-dew9x8vd/wt/test/test_sendfile.py:107: ResourceWarning: unclosed file <_io.BufferedReader name='/tmp/coding-suite-CS3-dew9x8vd/wt/test/test_sendfile.py'>
+  self.assertEqual(open(__file__,'rb').read(), static_file(basename, root=root).body.read())
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/coding-suite-CS3-dew9x8vd/wt/test/test_sendfile.py:112: ResourceWarning: unclosed file <_io.BufferedReader name='/tmp/coding-suite-CS3-dew9x8vd/wt/test/test_sendfile.py'>
+  self.assertEqual(open(__file__, 'rb').read(), static_file(basename, root=root).body.read())
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/coding-suite-CS3-dew9x8vd/wt/test/test_sendfile.py:81: ResourceWarning: unclosed file <_io.BufferedReader name='/tmp/coding-suite-CS3-dew9x8vd/wt/test/test_sendfile.py'>
+  f = static_file(basename, root=root, mimetype='some/type')
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/coding-suite-CS3-dew9x8vd/wt/test/test_sendfile.py:83: ResourceWarning: unclosed file <_io.BufferedReader name='/tmp/coding-suite-CS3-dew9x8vd/wt/test/test_sendfile.py'>
+  f = static_file(basename, root=root, mimetype='text/foo')
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/coding-suite-CS3-dew9x8vd/wt/test/test_sendfile.py:85: ResourceWarning: unclosed file <_io.BufferedReader name='/tmp/coding-suite-CS3-dew9x8vd/wt/test/test_sendfile.py'>
+  f = static_file(basename, root=root, mimetype='text/foo', charset='latin1')
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/usr/lib/python3.14/unittest/case.py:615: ResourceWarning: unclosed file <_io.BufferedReader name='/tmp/tmpp1_krbxc.txt.gz'>
+  result = method()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/usr/lib/python3.14/unittest/case.py:668: ResourceWarning: unclosed file <_io.BufferedReader name='/tmp/coding-suite-CS3-dew9x8vd/wt/test/test_sendfile.py'>
+  with outcome.testPartExecutor(self):
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/tmp/coding-suite-CS3-dew9x8vd/wt/test/test_sendfile.py:57: ResourceWarning: unclosed file <_io.BufferedReader name='/tmp/coding-suite-CS3-dew9x8vd/wt/test/test_sendfile.py'>
+  self.assertEqual(open(__file__,'rb').read(), out.body.read())
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+======================================================================
+FAIL: test_range (test.test_sendfile.TestSendFile.test_range)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/coding-suite-CS3-dew9x8vd/wt/test/test_sendfile.py", line 149, in test_range
+    self.assertEqual(c.read(16), tob('').join(f.body))
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: b'ttest\nfrom bottl' != b'ttest\nfrom bott'
+
+======================================================================
+FAIL: test_range_parser (test.test_sendfile.TestSendFile.test_range_parser)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/coding-suite-CS3-dew9x8vd/wt/test/test_sendfile.py", line 158, in test_range_parser
+    self.assertEqual([(5, 11)],  r('bytes=5-10'))
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Lists differ: [(5, 11)] != [(5, 10)]
+
+First differing element 0:
+(5, 11)
+(5, 10)
+
+- [(5, 11)]
+?       ^
+
++ [(5, 10)]
+?       ^
+
+
+----------------------------------------------------------------------
+Ran 377 tests in 1.819s
+
+FAILED (failures=2)

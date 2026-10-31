@@ -1,0 +1,103 @@
+diff --git a/docs/api.rst b/docs/api.rst
+index d4abb28..7b40a8e 100644
+--- a/docs/api.rst
++++ b/docs/api.rst
+@@ -170,6 +170,7 @@ These tools return summarized or aggregated data from an iterable.
+ .. function:: minmax(iterable, *[, key, default])
+ .. autofunction:: minmax(arg1, arg2, *args[, key])
+   :noindex:
++.. autofunction:: iequals
+ 
+ ----
+ 
+diff --git a/more_itertools/more.py b/more_itertools/more.py
+index 6e44539..7339cb7 100755
+--- a/more_itertools/more.py
++++ b/more_itertools/more.py
+@@ -101,6 +101,7 @@ __all__ = [
+     'groupby_transform',
+     'ichunked',
+     'idft',
++    'iequals',
+     'ilen',
+     'interleave',
+     'interleave_evenly',
+@@ -5356,6 +5357,58 @@ def argmax(iterable, *, key=None):
+     return max(enumerate(iterable), key=itemgetter(1))[0]
+ 
+ 
++def iequals(*iterables):
++    """Return ``True`` if all given *iterables* are equal to each other,
++    which means they yield the same elements in the same order and have
++    the same length.
++
++        >>> iequals('abc', iter('abc'), ['a', 'b', 'c'])
++        True
++        >>> iequals('abc', 'acb')
++        False
++        >>> iequals(range(3), [0, 1, 2])
++        True
++        >>> iequals([1, 2], [1, 2, None])
++        False
++
++    With zero or one iterable, everything is trivially equal:
++
++        >>> iequals()
++        True
++        >>> iequals('abc')
++        True
++
++    Differing lengths are reported as unequal, so ``None`` can't be used to
++    pad out a short iterable, and no fill value can be mistaken for a real
++    element:
++
++        >>> iequals([], [None])
++        False
++        >>> iequals([], [1, 2])
++        False
++
++    The iterables are consumed lazily, stopping at the first difference:
++
++        >>> from itertools import count
++        >>> iequals(count(), 'abc')  # 0 is not equal to 'a'
++        False
++
++    """
++    if len(iterables) < 2:
++        return True
++
++    # A private sentinel: no item from an iterable can be this object.
++    sentinel = object()
++
++    for group in zip_longest(*iterables, fillvalue=sentinel):
++        if any(x is sentinel for x in group):
++            return False  # the iterables do not have the same length
++        if not all_equal(group):
++            return False
++
++    return True
++
++
+ def _extract_monotonic(iterator, indices):
+     'Non-decreasing indices, lazily consumed'
+     num_read = 0
+diff --git a/more_itertools/more.pyi b/more_itertools/more.pyi
+index 2f9569f..59d0dae 100644
+--- a/more_itertools/more.pyi
++++ b/more_itertools/more.pyi
+@@ -75,6 +75,7 @@ __all__ = [
+     'groupby_transform',
+     'ichunked',
+     'idft',
++    'iequals',
+     'ilen',
+     'interleave',
+     'interleave_evenly',
+@@ -994,6 +995,7 @@ def argmin(
+ def argmax(
+     iterable: Iterable[_T], *, key: Callable[[_T], _U] | None = ...
+ ) -> int: ...
++def iequals(*iterables: Iterable[Any]) -> bool: ...
+ def extract(
+     iterable: Iterable[_T],
+     indices: Iterable[int],

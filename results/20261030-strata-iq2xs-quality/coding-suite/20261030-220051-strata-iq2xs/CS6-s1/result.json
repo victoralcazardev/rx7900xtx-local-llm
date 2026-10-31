@@ -1,0 +1,20 @@
+{
+  "task": "CS6",
+  "seed": 1,
+  "completed": true,
+  "reason": null,
+  "turns": 33,
+  "wall_s": 910.6,
+  "usage": {
+    "prompt_tokens": 703268,
+    "completion_tokens": 12490
+  },
+  "tool_calls": {
+    "run_tests": 7,
+    "read_file": 27,
+    "edit_file": 9
+  },
+  "tests": true,
+  "score_rc": 0,
+  "pass": true
+}

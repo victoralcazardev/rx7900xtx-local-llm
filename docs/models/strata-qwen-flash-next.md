@@ -15,8 +15,15 @@
 - **Last measured Coder** (older Strata build and the old shard, 2026-10-16): 52-57 tok/s from short prompts to
   a ~250K context, retrieval 20/20 at 240K, with `--vram-reserve-mib 3072`
   ([results](../../results/20261016-strata-coder-vram-reserve/README.md)).
-- **Next**: a real harness session on `local-flash-262k` (tool calls, cache reuse), the coding suite (plan step B2),
-  240K retrieval; then `STRATA_PF_GEMM`/`STRATA_PF_FUSED` and `--calibrate` one at a time.
+- **Quality gates (2026-10-30/31)**: coding suite **fails** against the 27B (`--compare`: regression; CS3 1/3,
+  CS5 2/3): IQ2_XS sometimes calls a tool that does not exist (`run_file`) as raw text, which ends the episode;
+  240K retrieval 12/12 on 3 of 5 documents (partial) ([quality gates](#quality-gates-2026-10-3031),
+  [results](../../results/20261030-strata-iq2xs-quality/README.md)).
+- **Next**: the 2 missing 240K retrieval documents (the script has no resume: whole run again, ~1.5-3 h); the speed arms, one per run on the
+  current config (`--conversation-cache-mib 4096`, `STRATA_PF_GEMM=1`,
+  `STRATA_PF_FUSED=1`, resident mode with `GPU_PINNED_MIN_XFER_SIZE`, then `STRATA_RAM_ADAPT=1` on the resident
+  mode only); `--calibrate`; the sysctl candidate (SOP). A harness session only after a fix for the invented tool
+  calls.
 - **Limit on this machine**: RAM (31.25 GiB usable), not VRAM.
 
 The sections below are dated history, oldest first: a desk review (2026-09-29 to 2026-10-08), the first run
@@ -652,3 +659,24 @@ Measured on this machine; raw data and commands:
 - **UI**: no install. The server already serves a chat page at `http://127.0.0.1:8080/` and the checkout's CLI
   offers `strata monitor`. The desktop AppImage (v0.2.8) uses its own engine and model folders and binds only
   127.0.0.1 (repo read, not run), so it would duplicate ~70 GB and add RAM use on a RAM-bound machine.
+
+## Quality gates 2026-10-30/31
+
+Same config as above (`[strata.iq2_xs]` at `91565a6`); commands, raw data and per-task table:
+[`results/20261030-strata-iq2xs-quality/`](../../results/20261030-strata-iq2xs-quality/README.md).
+
+- **Coding suite: regression.** Seed 1: 4/6 (27B 6/6). The rule's reruns (seeds 2 and 3 of the failed tasks, both
+  arms): CS3 1/3 against 3/3, CS5 2/3 against 3/3; `--compare` says "candidate rejected (regression)". In 11 of its
+  responses IQ2_XS wrote a call to a tool that does not exist (`run_file`, once `read_path`) as raw `<tool_call>`
+  text; v0.2.8's `tool_call_recovery` mapped 7 of them to some existing tool (`run_file` -> `run_tests`), and the
+  other 4 came back as plain text with `finish_reason: stop`, which ends the episode: all three failures. No
+  loops, no stall. When it called real tools, it solved the tasks.
+- **Retrieval at 240K**: 12/12 exact on 3 of 5 documents (run stopped at the user's time limit; 2 documents pending).
+- **Cold 240K reads in this test took 6-25 min** (370, 809 and 1,488 s for the first three documents) against
+  26 min for the bench's 245,002-token C-source prompt: the expert set a prompt routes to, and so how much of it
+  streams from `experts.bin`, depends on the text (inference from the spread, not isolated).
+- **`STRATA_RAM_ADAPT`** moves experts in and out of the resident RAM copy; both code paths require that copy
+  (`src.complement_ready()`, `src/program/generate.cpp` lines 16588 and 16661), so in mapped mode it does nothing.
+  Test it only together with the resident mode. Source-checked, not run.
+- Not run in this session (user's time limit): the speed arms and `--calibrate`. The sysctl candidate was not
+  applied, so its before/after check is pending too.

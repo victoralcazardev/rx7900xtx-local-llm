@@ -1,0 +1,101 @@
+{
+  "run": "20261030-220051-strata-iq2xs",
+  "tasks": {
+    "CS1": {
+      "tests": 1,
+      "completed": 1,
+      "pass": 1,
+      "seeds": [
+        {
+          "seed": 1,
+          "tests": true,
+          "completed": true,
+          "pass": true,
+          "reason": null,
+          "turns": 16,
+          "wall_s": 493.6
+        }
+      ]
+    },
+    "CS2": {
+      "tests": 1,
+      "completed": 1,
+      "pass": 1,
+      "seeds": [
+        {
+          "seed": 1,
+          "tests": true,
+          "completed": true,
+          "pass": true,
+          "reason": null,
+          "turns": 25,
+          "wall_s": 1037.0
+        }
+      ]
+    },
+    "CS3": {
+      "tests": 0,
+      "completed": 1,
+      "pass": 0,
+      "seeds": [
+        {
+          "seed": 1,
+          "tests": false,
+          "completed": true,
+          "pass": false,
+          "reason": "tests",
+          "turns": 2,
+          "wall_s": 37.1
+        }
+      ]
+    },
+    "CS4": {
+      "tests": 1,
+      "completed": 1,
+      "pass": 1,
+      "seeds": [
+        {
+          "seed": 1,
+          "tests": true,
+          "completed": true,
+          "pass": true,
+          "reason": null,
+          "turns": 12,
+          "wall_s": 1304.2
+        }
+      ]
+    },
+    "CS5": {
+      "tests": 0,
+      "completed": 1,
+      "pass": 0,
+      "seeds": [
+        {
+          "seed": 1,
+          "tests": false,
+          "completed": true,
+          "pass": false,
+          "reason": "tests",
+          "turns": 1,
+          "wall_s": 30.6
+        }
+      ]
+    },
+    "CS6": {
+      "tests": 1,
+      "completed": 1,
+      "pass": 1,
+      "seeds": [
+        {
+          "seed": 1,
+          "tests": true,
+          "completed": true,
+          "pass": true,
+          "reason": null,
+          "turns": 33,
+          "wall_s": 910.6
+        }
+      ]
+    }
+  }
+}

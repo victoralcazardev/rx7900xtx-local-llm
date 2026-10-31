@@ -1,0 +1,55 @@
+{
+  "run": "20261030-230526-strata-iq2xs-cs35-s23",
+  "tasks": {
+    "CS3": {
+      "tests": 1,
+      "completed": 2,
+      "pass": 1,
+      "seeds": [
+        {
+          "seed": 2,
+          "tests": false,
+          "completed": true,
+          "pass": false,
+          "reason": "tests",
+          "turns": 4,
+          "wall_s": 73.0
+        },
+        {
+          "seed": 3,
+          "tests": true,
+          "completed": true,
+          "pass": true,
+          "reason": null,
+          "turns": 16,
+          "wall_s": 438.6
+        }
+      ]
+    },
+    "CS5": {
+      "tests": 2,
+      "completed": 2,
+      "pass": 2,
+      "seeds": [
+        {
+          "seed": 2,
+          "tests": true,
+          "completed": true,
+          "pass": true,
+          "reason": null,
+          "turns": 21,
+          "wall_s": 660.8
+        },
+        {
+          "seed": 3,
+          "tests": true,
+          "completed": true,
+          "pass": true,
+          "reason": null,
+          "turns": 10,
+          "wall_s": 204.1
+        }
+      ]
+    }
+  }
+}

@@ -7,6 +7,7 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- Strata IQ2_XS quality gates: the coding suite rejects it against the 27B (CS3 1/3, CS5 2/3 vs. 3/3; IQ2_XS calls a non-existent `run_file` tool as raw text, which ends the episode); 240K retrieval 12/12 on 3 of 5 documents (partial); `STRATA_RAM_ADAPT` is inert in mapped mode (source); speed arms and `--calibrate` pending ([`results/20261030-strata-iq2xs-quality/`](results/20261030-strata-iq2xs-quality/README.md)).
 - Strata v0.2.8 + Qwen3.8-Flash-Next IQ2_XS installed (`models.toml` `[strata.iq2_xs]`, mapped mode, 262K, KV int8): warm short decode 59-65 tok/s, 240K decode 36.7 tok/s, 128K retrieval 8/8; long prompts need `GPU_PINNED_MIN_XFER_SIZE=1048576` on ROCm or every memory mode stalls; hipBLASLt table and a larger prompt chunk rejected ([`results/20261030-strata-iq2xs-baseline/`](results/20261030-strata-iq2xs-baseline/README.md)).
 - Strata SOP: IQ2_XS install with `--low-ram mmap`, the ROCclr userptr stall and its fix, setup's stale `args` and missing hipBLASLt rebuild, the start wrapper's server log ([`docs/sop/strata.md`](docs/sop/strata.md)).
 - Strata IQ2_XS plan challenged: llama.cpp's `--moe-cache-mib` (merged, in b11846) still measures below Strata for Flash-Next, so Strata stays; first IQ2_XS session must confirm `tool_call_recovery` (default from v0.2.8) and count valid tool calls; Qwen4 has no confirmed date ([`docs/models/strata-qwen-flash-next.md`](docs/models/strata-qwen-flash-next.md#alternative-without-strata-plain-llamacpp)).
