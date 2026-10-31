@@ -257,6 +257,41 @@ local provider (344 assistant messages).
   `LLAMA_SERVER_SLOTS_N_DIFF` at startup (`tools/server/server-context.cpp:1011-1012,1459-1472` at
   b11454).
 
+### Session of 2026-10-10: misses from goal mode and a local handoff (single session)
+
+Server log and session-file correlation, no GPU run (analyzed 2026-10-31). Method: `python3
+scripts/cache_misses.py <log>` plus the harness session file. One omp session on the local provider
+(425 assistant turns, no local subagents), b11454 + PR #29509 engine (in use 2026-10-06 to 2026-10-18), `--ctx-checkpoints 4`.
+
+| Class | Requests | Prefill tokens | Prefill s |
+|---|---|---|---|
+| Full reuse | 377 | 396,276 | 1,081 |
+| Partial | 40 | 105,484 | 283 |
+| Compaction | 6 | 314,318 | 467 |
+| Miss | 3 | 208,851 | 382 |
+| LRU-selected (includes the startup request) | 2 | 108,928 | 169 |
+
+- **The `soft` compactions worked as intended**: five ran on the cloud compaction model at 184-191K, each
+  followed by one re-prefill of the kept context (62-115 s), the expected cost on this hybrid model.
+- **Entering omp's goal mode cost two full re-prefills** (129.5 s and 137.4 s, 78,906 and 82,490 tokens):
+  goal mode started 2 min after a compaction, injected a hidden `goal-mode-context` message, and the
+  session recorded a new `system-prompt-digest` on the second request, so the prompt diverged at ~8.4K
+  tokens (`f_keep` 0.103). The system-prompt digest was otherwise constant for the whole session.
+- **One `handoff` compaction at 110,488 tokens** (method order `soft, handoff, shake`) followed leaving goal
+  mode; the server shows a 115,979-token request at that moment (216.4 s, `f_keep` 0.258), which matches a
+  summary generated on the local slot. Inference: the session file does not record which model wrote the
+  handoff summary. omp's `handoff` uses the session model, the live prompt-cache key and the pinned base
+  system prompt (omp `compaction.md`, "Handoff generation"), so it can normally extend the cached prefix;
+  here the goal-mode system prompt differed from the base one, so it could not (inference).
+- **Harness note (2026-10-31, docs only)**: omp's `shake` elides old tool output locally with no model call,
+  and `soft` tries the model's `compactionModel` first (a cloud model in this setup). Pi 1.4.0 (gentle-shell)
+  summarizes a text serialization of the history with the session model (pi `docs/compaction.md`), which on
+  the local slot means a fresh prefill of that text; not measured.
+- **No miss came from other injected messages**: the visible `advisor` and `async-result` messages and the
+  hidden `mid-run-todo-nudge` messages are appended and were followed by full reuse.
+- Avoidable this session: ~483 s of the 2,382 s of prefill (20%). Toggling goal mode right after a
+  compaction keeps each such re-prefill at the smallest context.
+
 ### Multi-turn prefix reuse with reasoning (2026-10-03)
 
 When the client sends `reasoning_content` back, turns 2-4 process only 18-20 new tokens on b11160
