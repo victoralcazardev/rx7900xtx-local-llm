@@ -445,9 +445,9 @@ interleaved A/arm pair on the adopted config with F2's bench, temperature 0, SHA
 | Arm | Change | Adopt if |
 |---|---|---|
 | F4a | `--spec-min-p 0.70` in `user_args` (now 0.5) | F2's speed rule (≥ 5% at ~120K and ~250K, 2 of 3 pairs, no stall); a draft-acceptance option, so text must match A or pass 8/8 retrieval at 190K |
-| F4b | `--prefill auto:16384` in `user_args` (now `auto`) | Prefill tok/s ≥ 5% at ~120K with gen tok/s not below A, no stall, min `MemAvailable` > 5 GiB |
-| F4c | `STRATA_PF_FUSED`, `STRATA_PREFILL_MMQ`, `STRATA_GDN_CHUNKED`, `STRATA_SPLIT_OVERLAP` = `1` in `env`, one per arm | Skip any that the start log or `DETAILS.md` shows already on by default on HIP; else F4b's rule plus the same SHA as A |
-| F4d | `STRATA_RAM_ADAPT=1` in `env` with `--adapt-every` (mapped mode only: the RAM copy follows the conversation) | F2's speed rule plus a lower `blob reads from the file` count; upstream numbers are CUDA (RTX 3060), so HIP support is unverified |
+| F4b | `--prefill auto:16384` in `user_args` (now `auto`) | **Done, rejected (2026-10-30, IQ2_XS):** explicit `--prefill 16384` read 120K at 331 vs. 552-672 tok/s, and `auto:32768` was cut to 4096-token chunks by the host-aware plan ([TRIED.md](../TRIED.md), [results](../../results/20261030-strata-iq2xs-baseline/README.md)); a bigger chunk lends more GPU slots whose experts then stream from `experts.bin`. Do not reopen from the engine's "fewest passes win" log line |
+| F4c | `STRATA_GDN_CHUNKED=1` in `env` | F4b's rule plus retrieval, since it changes rounding (upstream measured +1.5-2% prompt on gfx1151 only, `AMD_HIP.md`). Dropped 2026-10-31: `STRATA_PREFILL_MMQ` (already on: built with `STRATA_PREFILL_MMQ=ON` and on when unset, `prefill.cpp:1352`), `STRATA_SPLIT_OVERLAP` (stages on different GPUs only, `MULTI_GPU.md`), `STRATA_PF_FUSED` (gfx12 native IQ packs, `AMD_HIP.md`; rejected at parity on gfx1100 by the xyzzing fork) |
+| F4d | `STRATA_RAM_ADAPT=1` in `env` with `--adapt-every`, resident mode only | F2's speed rule plus a lower `blob reads from the file` count. Inert in mapped mode (needs the RAM copy; [quality gates](#quality-gates-2026-10-3031), source-checked), so it waits for a resident-mode config; upstream numbers are CUDA (RTX 3060), HIP support unverified |
 
 Adopted values go to `models.toml` `[strata.coder-iq1_m]` and `scripts/strata.py apply`; losers to
 [`TRIED.md`](../TRIED.md). Then the coding suite once on the final config (plan step C2's gate).
@@ -680,3 +680,25 @@ Same config as above (`[strata.iq2_xs]` at `91565a6`); commands, raw data and pe
   Test it only together with the resident mode. Source-checked, not run.
 - Not run in this session (user's time limit): the speed arms and `--calibrate`. The sysctl candidate was not
   applied, so its before/after check is pending too.
+
+## Review 2026-10-31: the xyzzing gfx1100 fork's `refresh-0145` branch
+
+Desk review, nothing run. The fork's default branch is now `refresh-0145`: 48 commits ahead of and 2,491 behind
+Niko1221/Strata `main` (merge base `477ac13c`, 2026-10-16; GitHub compare API); no release after
+v0.1.39-rocm.1. Its figures (README: decode 102-142 tok/s at 1K, 44-45 at 262K, prefill ~2.3-2.4K tok/s) come from
+IQ3_S with 96 GB of RAM, so the experts never stream from disk; here IQ2_XS runs in mapped mode on 31 GiB. Checked
+against the local clone at v0.2.8:
+
+| Fork item | In upstream v0.2.8? | Use here |
+|---|---|---|
+| `STRATA_ROUTE_PRIOR=0.5` (cache-conditioned routing; fork: +22.2% @1K, +25.6% @32K, +0.2% @128K decode, battery 7/8 = base) | Yes, opt-in: on by default in 0.2.7, off again since 2026-10-29 because it changes which experts run (`include/strata/core/defaults_026.hpp`, `sm120_series.hpp`) | The one candidate: biasing routing to resident experts could cut cold reads in mapped mode (inference). Changes the output, so it needs the coding suite, which IQ2_XS already fails |
+| `STRATA_GDN_CHUNKED`, `STRATA_PF_GEMM`, `STRATA_PF_PAD`, `STRATA_SH_STREAM`, `STRATA_ROUTE_TAIL_SKIP`, `STRATA_HIP_WMMA` | Yes (env names found in `src`/`include`) | Nothing to port; opt-in env switches |
+| PcieAuto default-on for gfx1100 | Yes, opt-in with `STRATA_PCIE_FRAC_DEFAULT=auto` (fork: "no regression" gate only) | Env switch, no measured gain on gfx1100 |
+| Top-k register kernel at 262K decode (`STRATA_TOPK_DECODE_REG`, #2514 port) | Covered: `block_topk_reg_kernel<TK_PER_MAX>` with `STRATA_TOPK_REG_MIN_BLOCKS` (`src/kernels/cuda/qsa_select.cu`) | None |
+| fp16 rocWMMA QSA select scorer for gfx110x (`qsa_block_scores_wmma`) | No: upstream's `STRATA_SELECT_WMMA` arm is gfx12 and bf16; fork: +11.2% prefill @128K (0.1.39 line), 1.64x faster than the bf16 arm at phase level | The only code upstream lacks; not portable without a 2,491-commit rebase. Upstream watch item |
+| Short-read chooser (`ShortReadCost`) | No | Fork measured parity on this card (fixed 64 near-optimal) |
+| GDN WY recurrence, fused-int8 MoE WMMA, INT8-Q scorer, HC-up bench | No | Rejected or dormant in the fork itself |
+
+Conclusion: no reason to run the fork; it trails upstream by 2,491 commits, including the v0.2.8 fixes this setup
+depends on (`tool_call_recovery`, ROCclr pinned-copy workaround). Track the gfx110x fp16 select arm upstream, and
+treat `STRATA_ROUTE_PRIOR` as an untested env candidate for the speed arms.

@@ -94,6 +94,20 @@ All claims below are the authors' own and are unverified here.
   tok/s on an RTX 3060 12 GB with 32 GB RAM in mapped mode (author-measured, source-checked, not reproduced);
   gfx1100 decode regression #4556 and restart report #3463 are open risks. Details in
   [`docs/models/strata-qwen-flash-next.md`](models/strata-qwen-flash-next.md#fit-check-2026-10-30-iq2_xs-and-iq3_xxs-without-ssd-reads).
+- **Update 2026-10-31 (xyzzing fork, branch `refresh-0145`)**: 48 commits ahead of and 2,491 behind upstream `main`;
+  every flag it adopts except its fp16 gfx110x select scorer (+11.2% prefill @128K, fork-measured, 96 GB RAM) is
+  already in v0.2.8 as an opt-in env switch (source-checked). Details in
+  [`docs/models/strata-qwen-flash-next.md`](models/strata-qwen-flash-next.md#review-2026-10-31-the-xyzzing-gfx1100-forks-refresh-0145-branch).
+- **Update 2026-10-31 (F4 candidates checked against upstream issues)**: [#2685](https://github.com/Niko1221/Strata/issues/2685)
+  (closed in the 0.2.0 tracker reset, not fixed): on an RTX 5070 (sm_120) only `STRATA_PREFILL_MMQ=0` made runs
+  bit-identical and stopped invented tool calls; an sm_89 and an sm_86 reporter found `MMQ=0` alone did not, and an RTX
+  5090 stopped seeing the failures after a CUDA 13.2.2 rebuild (source-checked; no HIP data, so it is only a lead for
+  our open T=0 nondeterminism #4673 and IQ2_XS's invented `run_file` calls). Same issue: calibrated `--spec-min-p 0.70`
+  157.6 vs. 154.9 tok/s short-chat decode on that 5090 (noise). [#2824](https://github.com/Niko1221/Strata/issues/2824)
+  (32 GB RAM, IQ2_XS, 0.1.44): a smaller chunk cut a 28.7K prompt from 164-287 s to 36-38 s because the file set then
+  fit the page cache; v0.2.8 already plans the chunk against the page cache, and here the larger chunk already lost
+  (`--prefill 16384`, [TRIED.md](TRIED.md)). Details in
+  [`docs/models/strata-qwen-flash-next.md`](models/strata-qwen-flash-next.md#tuning-plan-2026-10-16-not-run).
 - **[sybil-solutions/glm53-flash-offload](https://github.com/sybil-solutions/glm53-flash-offload)
   (checked 2026-10-08, README only)**: GLM-5.3-Flash EXL3 3.05 bpw (125 GB; 42 MoE layers x 288
   experts, 8 active, 9.4 MB per expert) on one 24 GB RTX 3090, built on exllamav3 + an SGLang
