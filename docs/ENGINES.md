@@ -17,7 +17,8 @@ hash — the difference lives in the shared library, not the file hashed here.
 |---|---|---|---|
 | `llama-b11160-bin-ubuntu-rocm-10.0-x64` | **Current** (`hip` in `local.toml`) | b11160 / `70c4e1582`, official CI | `8c98a329346088d0cdd03195ae5864e29c9a8b11fc293397a723f8730e9492dc` |
 | `llama-b11160-bin-ubuntu-vulkan-x64` | Reference (2-3.5x slower on generation here; still 1.2-1.6x slower with the memory clock pinned, see `docs/measurements/engines.md`) | b11160 / `70c4e1582`, official CI | `ddb272c01521fc81c14ae430a944cd52d8db9c7d237e1b90f77d0b2f33a2c012` |
-| `llama-b11846-pr30792q51-linux-rocm10-gfx1100-kvmix` | **Current** (`hip-kvmix` in `local.toml`, since 2026-10-24; 240K A/B vs. b11820 + the same patch and coding suite in [`results/20261024-engine-b11846-240k/`](../results/20261024-engine-b11846-240k/README.md)) | b11846 / `1a24df1` + local `pr30792-q5_1.patch` kernel hunks, own build (recipe below) | `410a809bcd04ffaa46100dd68b29eb5d6d0fb12b84d25bc3c543ce18c7968ac6` (launcher; `libllama-server-impl.so` `6ae92a82ad656b4d02ce9ef621a8034d384f496846bc9134cbefecbbebbf3878`) |
+| `llama-v0.9.0-pr30792q51-linux-rocm10-gfx1100-kvmix` | **Current** (`hip-kvmix` in `local.toml`, since 2026-11-05, operator choice against a -4.6% decode screen at 64K, [results](../results/20261105-huihui-iq3s-262k/README.md)) | v0.9.0 / `cd959ba` + local `pr30792-q5_1.patch`, own build (recipe below) | `410a809bcd04ffaa46100dd68b29eb5d6d0fb12b84d25bc3c543ce18c7968ac6` (launcher; `libllama-server-impl.so` `523395ca9d4af53609d2a443c302b1e33e2a41560f5f0fdc8cdd4f2dffb47f63`) |
+| `llama-b11846-pr30792q51-linux-rocm10-gfx1100-kvmix` | Previous `hip-kvmix` (rollback; 2026-10-24 to 2026-11-05; 240K A/B vs. b11820 + the same patch and coding suite in [`results/20261024-engine-b11846-240k/`](../results/20261024-engine-b11846-240k/README.md)) | b11846 / `1a24df1` + local `pr30792-q5_1.patch` kernel hunks, own build (recipe below) | `410a809bcd04ffaa46100dd68b29eb5d6d0fb12b84d25bc3c543ce18c7968ac6` (launcher; `libllama-server-impl.so` `6ae92a82ad656b4d02ce9ef621a8034d384f496846bc9134cbefecbbebbf3878`) |
 | `llama-b11820-pr30792q51-linux-rocm10-gfx1100-kvmix` | Previous `hip-kvmix` (rollback; 2026-10-23 to 2026-10-24; 240K A/B vs. plain b11820 and coding suite in [`results/20261023-d1-pr30792q51-240k/`](../results/20261023-d1-pr30792q51-240k/README.md)) | b11820 / `d77256999f21` + local `pr30792-q5_1.patch`, own build (recipe below) | `410a809bcd04ffaa46100dd68b29eb5d6d0fb12b84d25bc3c543ce18c7968ac6` (launcher; `libllama-server-impl.so` `ea6b95ef53e991f3ee49faff2f9b3590ad856500f547c7fc806b005c46301caf`) |
 | `llama-b11820-linux-rocm10-gfx1100-kvmix` | Control arm of the 2026-10-23 A/B (neutral vs. b11718); not used; deleted locally 2026-10-30 | b11820 / `d77256999f21`, own build | `410a809bcd04ffaa46100dd68b29eb5d6d0fb12b84d25bc3c543ce18c7968ac6` (launcher) |
 | `llama-b11718-linux-rocm10-gfx1100-kvmix` | Previous `hip-kvmix` (2026-10-18 to 2026-10-23; 240K check vs. b11454 + PR #29509 in [`results/20261018-engine-b11718-vs-b11454-240k/`](../results/20261018-engine-b11718-vs-b11454-240k/README.md)); deleted locally 2026-10-30, rebuild from the recipe | b11718 / `547208dca`, own build (same recipe as below, no patch) | `410a809bcd04ffaa46100dd68b29eb5d6d0fb12b84d25bc3c543ce18c7968ac6` (launcher; `libllama-server-impl.so` `0c21f1486ccdfd97b63678eb45087501a575c0aecc318a63300a78b3dc0a7eac`) |
@@ -38,15 +39,17 @@ build recipe — downloaded as-is. Runtime dependency: the ROCm binary uses the 
 ROCm runtime libraries (ROCm 7.2.4 packages on this Arch-based system) unless a newer runtime is
 provided on the library path.
 
-### `llama-v0.9.0-pr30792q51-linux-rocm10-gfx1100-kvmix` (built 2026-11-05, not adopted)
+### `llama-v0.9.0-pr30792q51-linux-rocm10-gfx1100-kvmix` (current `hip-kvmix` engine, 2026-11-05)
 
 llama.cpp tag v0.9.0 (commit `cd959ba`, `--version` `0.9.0-dev (build 1)`), 313 commits after b11846, same
 recipe and patches as b11846 below (`tests-kvmix-cases.patch` offsets 325 and 410; `pr30792-q5_1.patch`
 clean; PR #30792 still open). `--help` adds only `--models-memory-margin`. FA Qwen-shape cases 30/30 OK.
 At 64K fill: decode -4.6% on identical greedy text, prefill -2.2%, same VRAM
-([results](../results/20261105-huihui-iq3s-262k/README.md)). Kept on disk as a candidate only.
+([results](../results/20261105-huihui-iq3s-262k/README.md)). Adopted by operator choice as the latest release despite that screen; not
+published as a release. Not in v0.9.0: #30137 (ref-counted checkpoints) and #31660 (MTP conv snapshots), both
+merged on 2026-11-05 after the tag; #30141 (MTP hidden state save/restore) is in.
 
-### `llama-b11846-pr30792q51-linux-rocm10-gfx1100-kvmix` (current `hip-kvmix` engine, 2026-10-24)
+### `llama-b11846-pr30792q51-linux-rocm10-gfx1100-kvmix` (`hip-kvmix` engine 2026-10-24 to 2026-11-05, rollback)
 
 llama.cpp b11846 (commit `1a24df1`, `--version` `0.7.0-dev (build 200)`), same recipe as b11820 below
 (`build.sh`: ROCm 10.0.0 venv, `GPU_TARGETS=gfx1100`, same `GGML_CUDA_FA_QUANTS`). Source, from a clean

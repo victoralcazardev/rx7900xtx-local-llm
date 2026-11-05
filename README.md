@@ -53,7 +53,7 @@ planned trials [`docs/ENGINES-EXPERIMENTS.md`](docs/ENGINES-EXPERIMENTS.md).
 | CPU / RAM | Ryzen 7 5700X (8C/16T), 32 GiB (31.25 GiB usable) plus zram swap |
 | Board / storage | Gigabyte B450 AORUS PRO, NVMe (Kingston A2000 500 GB) |
 | OS / drivers | CachyOS (Arch-based), kernel 7.2.11-1-cachyos, Mesa 26.2.4, ROCm runtime 7.2.4 |
-| Engine | llama.cpp b11846 + native `q8_0`/`q5_1` TILE FlashAttention patch (`hip-kvmix`), ROCm 10.0.0 compiler; 240K numbers on this page are this build, empty-context numbers b11820 + the same patch ([`docs/ENGINES.md`](docs/ENGINES.md)) |
+| Engine | llama.cpp b11846 + native `q8_0`/`q5_1` TILE FlashAttention patch (`hip-kvmix`), ROCm 10.0.0 compiler (published build; this machine runs v0.9.0 + the same patch since 2026-11-05); 240K numbers on this page are this build, empty-context numbers b11820 + the same patch ([`docs/ENGINES.md`](docs/ENGINES.md)) |
 
 The default profile runs every layer on the GPU, so CPU and RAM barely matter. GPU and driver notes: [`docs/hardware/gpu-7900xtx.md`](docs/hardware/gpu-7900xtx.md).
 

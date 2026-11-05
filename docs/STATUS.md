@@ -20,9 +20,10 @@ and `scripts/launch.py`'s default when no alias is given. Opt-in, uncensored: `h
 - Model: Qwen3.8-27B GSQ-RCO `IQ3_S-mtp` (native MTP head baked in), 12.1 GB, PPL 6.734 ± 0.084;
   `mmproj-Qwen3.8-27B-BF16.gguf` present but vision disabled. Other quants:
   [`models/qwen38-27b-quants.md`](models/qwen38-27b-quants.md).
-- Engine: llama.cpp b11846 + local PR #30792 patch extended to V `q5_1` (`hip-kvmix`, own ROCm build
+- Engine: llama.cpp v0.9.0 + local PR #30792 patch extended to V `q5_1` (`hip-kvmix`, own ROCm build
   with FlashAttention kernels for K `q8_0` + V `q5_1`, dequantized natively in the TILE kernel), in use
-  since 2026-10-24; rollback b11820 with the same patch. ROCm/HIP beats Vulkan 2-3.5x on generation
+  since 2026-11-05 by operator choice (-4.6% decode at 64K vs. b11846); rollback b11846. 240K numbers
+  below are b11846. ROCm/HIP beats Vulkan 2-3.5x on generation
   here, Vulkan is reference-only. [`ENGINES.md`](ENGINES.md).
 - Power: 272 W permanent cap (driver minimum; stock 303 W) — [`sop/power-cap.md`](sop/power-cap.md).
 - Harness wiring: one fixed provider `local-262k` (contextWindow 262144) on `:8080`, verified by

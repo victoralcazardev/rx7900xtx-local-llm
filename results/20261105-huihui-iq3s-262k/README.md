@@ -5,6 +5,9 @@ peak 22.12 GiB, 0 evicted) and is added to `models.toml` as `huihui-iq3s-mtp` / 
 llama.cpp v0.9.0 + the local q5_1 patch is **not adopted**: 4.6% slower decode on identical greedy text
 (`copy`), 2.2% slower prefill, same VRAM. b11846 stays the `hip-kvmix` engine.
 
+**Update (same day):** the user adopted v0.9.0 anyway as the latest release (operator choice, see
+`docs/DECISIONS.md`); b11846 is the rollback.
+
 ## Setup
 
 - Model: [`huihui-ai/Huihui-Qwen3.8-27B-abliterated-GGUF`](https://huggingface.co/huihui-ai/Huihui-Qwen3.8-27B-abliterated-GGUF)
