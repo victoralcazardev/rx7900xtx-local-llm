@@ -76,8 +76,8 @@ flags = ["-ub", "256", "--reasoning-effort", "medium", "--cache-ram", "12288"]
 # strata_dir): keys replace the run config's, `env` is merged. `user_args` is Strata's list of hand-set engine
 # options, applied by every setup run and start on top of setup's generated `args`.
 # No Strata model is installed (2026-11-05). The Unsloth UD-IQ2_XS trial on v0.2.11 decoded at 2.6-8.2 tok/s (7.1-10.8
-# with the squeeze arm), below the 15 tok/s floor, because 20.2 GiB (base) / 11.5 GiB (squeeze) of its experts had to
-# be read from the drive on every request, and every Flash-Next set was then deleted
+# with the squeeze arm), below the 15 tok/s floor, because its experts did not fit GPU + RAM (file tier 20.2 / 11.5 GiB,
+# 24-51 GB read from the drive per request), and every Flash-Next set was then deleted
 # (results/20261105-strata-unsloth-ud-iq2xs/). The clone and its engine stay for Qwen4; add a table back per
 # docs/sop/strata.md when a model is installed again.
 

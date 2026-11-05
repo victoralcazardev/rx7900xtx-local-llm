@@ -10,8 +10,9 @@
   `/opt/rocm`); no Flash-Next set, pack or drafter is on disk and `models.toml` has no `[strata.*]` table. Paused
   until new models, new quants or a new engine arrive. Procedure: [`../sop/strata.md`](../sop/strata.md).
 - **Last trial (2026-11-05)**: Unsloth UD-IQ2_XS rejected for speed — short decode 2.6-8.2 tok/s, 7.1-10.8 with
-  the squeeze arm (131K context, 14 GiB RAM copy), against the user's 15 tok/s floor, with 20.2 GiB (base) /
-  11.5 GiB (squeeze) of experts read from the shards on every request
+  the squeeze arm (131K context, 14 GiB RAM copy), against the user's 15 tok/s floor, with a file tier of 20.2 GiB (base) /
+  11.5 GiB (squeeze) that the page cache could not hold: the OS read 24-51 GB (base) / 25-28 GB (squeeze) from the
+  drive per request
   ([trial](#unsloth-ud-iq2_xs-on-v0211-2026-11-05),
   [results](../../results/20261105-strata-unsloth-ud-iq2xs/README.md)).
 - **Last faster Strata set** (ISTA IQ2_XS on v0.2.8, measured 2026-10-30, deleted 2026-11-05): 59-65 tok/s warm
@@ -19,11 +20,18 @@
   ([IQ2_XS on v0.2.8](#iq2_xs-on-v028-2026-10-30), [quality gates](#quality-gates-2026-10-3031)).
 - **Check first for any future model on this PC**: the experts *off* the GPU must fit the host room. Both numbers
   are in the start log's `prefill plan inputs` line (`N GiB experts, M GiB in the GPU caches, K GiB RAM copy ...,
-  file tier F GiB`); an F above ~0 means every request streams F from the drive. Here 39.4 GiB of experts against
-  an 11-14 GiB GPU cache left F at 20.2 GiB and warm decode at 8.2 tok/s.
+  file tier F GiB; P GiB available for the page cache`). F is capacity, not traffic: when F is larger than P the
+  page cache cannot hold the file tier and requests read from the drive (here 24-51 GB per request; the `file tier
+  I/O this request` line has the measured bytes). Here 39.4 GiB of experts against an 11-14 GiB GPU cache left F at
+  20.2 GiB against P 12.5 GiB, and warm decode at 8.2 tok/s.
 - **Unsloth sets share tables**: each Unsloth Dynamic set's last shard is the same 28.8 GB n-gram/PLE table
   (UD-IQ2_XS shard 3, sha256 `05716382…`; UD-IQ1_M and UD-Q2_0 identical), so only a set's own shards download.
 - **Limit on this machine**: RAM (31.25 GiB usable), not VRAM.
+
+## Current state (2026-10-30)
+
+Superseded: see [Current state (2026-11-05)](#current-state-2026-11-05); the 2026-10-30 install is in
+[IQ2_XS on v0.2.8](#iq2_xs-on-v028-2026-10-30).
 
 The sections below are dated history, oldest first: a desk review (2026-09-29 to 2026-10-08), the first run
 (2026-10-15), the tuning plan (2026-10-16), the 2026-10-24 review, the 2026-10-30 config review and fit check,
