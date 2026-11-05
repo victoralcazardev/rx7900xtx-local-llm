@@ -92,9 +92,10 @@ Sampling is the Qwen3.8-27B card's own; `--min-p 0.0` is set explicitly because 
   [agent-traffic.md](measurements/agent-traffic.md#open-ab-tests).
 - **KVMem**: not adopted until a real agent run —
   [ENGINES-EXPERIMENTS.md](ENGINES-EXPERIMENTS.md#kvmem-trial-round-2-and-final-round-2026-09-30-not-adopted).
-- **Qwen3.8-Flash-Next via Strata**: IQ2_XS on v0.2.8 stable in mapped mode with
-  `GPU_PINNED_MIN_XFER_SIZE` (59-65 tok/s short, 36.7 at 240K); fails the coding suite against the 27B (invented
-  tool calls), 240K retrieval 12/12 on 3 of 5 documents (partial); speed arms open — [owner](models/strata-qwen-flash-next.md#current-state-2026-10-30).
+- **Qwen3.8-Flash-Next via Strata**: paused 2026-11-05, no model installed (clone v0.2.11, engine 0.1.57 kept for
+  Qwen4). Unsloth UD-IQ2_XS decoded at 2.6-8.2 tok/s, 10.8 at best with 131K context, because 11.5-20.2 GiB of its
+  experts came off the drive per request — below the 15 tok/s floor —
+  [owner](models/strata-qwen-flash-next.md#current-state-2026-11-05).
 
 ## Next steps
 

@@ -1,33 +1,31 @@
 # Qwen3.8-Flash-Next via Strata
 
-## Current state (2026-10-30)
+## Current state (2026-11-05)
 
 - **Role**: optional second engine on `:8080`, never the default; one of the repository's focus models with
   the 27B and Qwen4 ([`DECISIONS.md`](../DECISIONS.md), 2026-10-29).
-- **Installed (2026-10-30)**: Strata v0.2.8 (engine 0.1.54, built from source against ROCm 7.2.4) with
-  Qwen3.8-Flash-Next IQ2_XS in mapped mode, settings in `models.toml` `[strata.iq2_xs]`, procedure
-  [`../sop/strata.md`](../sop/strata.md). The Coder IQ1_M entry stays for a re-download only (shard 1 deleted).
-- **IQ2_XS measured (2026-10-30)**: warm short decode 59-65 tok/s; 121,709-token cold prompt 552-672 tok/s prefill,
-  43-45 tok/s decode; 245,002 tokens 159 tok/s prefill (26 min), 36.7 tok/s decode; 128K retrieval 8/8. Requires
-  `GPU_PINNED_MIN_XFER_SIZE=1048576`: without it every memory mode stalled on a 120K prompt. hipBLASLt table and
-  `--prefill 16384` rejected ([IQ2_XS on v0.2.8](#iq2_xs-on-v028-2026-10-30),
-  [results](../../results/20261030-strata-iq2xs-baseline/README.md)).
-- **Last measured Coder** (older Strata build and the old shard, 2026-10-16): 52-57 tok/s from short prompts to
-  a ~250K context, retrieval 20/20 at 240K, with `--vram-reserve-mib 3072`
-  ([results](../../results/20261016-strata-coder-vram-reserve/README.md)).
-- **Quality gates (2026-10-30/31)**: coding suite **fails** against the 27B (`--compare`: regression; CS3 1/3,
-  CS5 2/3): IQ2_XS sometimes calls a tool that does not exist (`run_file`) as raw text, which ends the episode;
-  240K retrieval 12/12 on 3 of 5 documents (partial) ([quality gates](#quality-gates-2026-10-3031),
-  [results](../../results/20261030-strata-iq2xs-quality/README.md)).
-- **Next**: the 2 missing 240K retrieval documents (the script has no resume: whole run again, ~1.5-3 h); the speed arms, one per run on the
-  current config (`--conversation-cache-mib 4096`, `STRATA_PF_GEMM=1`,
-  `STRATA_PF_FUSED=1`, resident mode with `GPU_PINNED_MIN_XFER_SIZE`, then `STRATA_RAM_ADAPT=1` on the resident
-  mode only); `--calibrate`; the sysctl candidate (SOP). A harness session only after a fix for the invented tool
-  calls.
+- **Installed: no model.** The Strata clone stays at v0.2.11-3-g9f7d977d with engine 0.1.57 built (ROCm 7.2.4,
+  `/opt/rocm`); no Flash-Next set, pack or drafter is on disk and `models.toml` has no `[strata.*]` table. Paused
+  until new models, new quants or a new engine arrive. Procedure: [`../sop/strata.md`](../sop/strata.md).
+- **Last trial (2026-11-05)**: Unsloth UD-IQ2_XS rejected for speed — short decode 2.6-8.2 tok/s, 7.1-10.8 with
+  the squeeze arm (131K context, 14 GiB RAM copy), against the user's 15 tok/s floor, with 20.2 GiB (base) /
+  11.5 GiB (squeeze) of experts read from the shards on every request
+  ([trial](#unsloth-ud-iq2_xs-on-v0211-2026-11-05),
+  [results](../../results/20261105-strata-unsloth-ud-iq2xs/README.md)).
+- **Last faster Strata set** (ISTA IQ2_XS on v0.2.8, measured 2026-10-30, deleted 2026-11-05): 59-65 tok/s warm
+  short, 43-45 at ~120K, 36.7 at 240K, 128K retrieval 8/8, but the coding suite failed against the 27B
+  ([IQ2_XS on v0.2.8](#iq2_xs-on-v028-2026-10-30), [quality gates](#quality-gates-2026-10-3031)).
+- **Check first for any future model on this PC**: the experts *off* the GPU must fit the host room. Both numbers
+  are in the start log's `prefill plan inputs` line (`N GiB experts, M GiB in the GPU caches, K GiB RAM copy ...,
+  file tier F GiB`); an F above ~0 means every request streams F from the drive. Here 39.4 GiB of experts against
+  an 11-14 GiB GPU cache left F at 20.2 GiB and warm decode at 8.2 tok/s.
+- **Unsloth sets share tables**: each Unsloth Dynamic set's last shard is the same 28.8 GB n-gram/PLE table
+  (UD-IQ2_XS shard 3, sha256 `05716382…`; UD-IQ1_M and UD-Q2_0 identical), so only a set's own shards download.
 - **Limit on this machine**: RAM (31.25 GiB usable), not VRAM.
 
 The sections below are dated history, oldest first: a desk review (2026-09-29 to 2026-10-08), the first run
-(2026-10-15), the tuning plan (2026-10-16), the 2026-10-24 review and the 2026-10-30 config review and fit check.
+(2026-10-15), the tuning plan (2026-10-16), the 2026-10-24 review, the 2026-10-30 config review and fit check,
+the IQ2_XS runs (2026-10-30/31) and the 2026-11-05 Unsloth trial.
 
 ## Parked state (2026-10-21, ended 2026-10-24)
 
@@ -702,3 +700,36 @@ against the local clone at v0.2.8:
 Conclusion: no reason to run the fork; it trails upstream by 2,491 commits, including the v0.2.8 fixes this setup
 depends on (`tool_call_recovery`, ROCclr pinned-copy workaround). Track the gfx110x fp16 select arm upstream, and
 treat `STRATA_ROUTE_PRIOR` as an untested env candidate for the speed arms.
+
+## Unsloth UD-IQ2_XS on v0.2.11 (2026-11-05)
+
+Measured; the numbers, the log excerpt and the arm script:
+[`results/20261105-strata-unsloth-ud-iq2xs/`](../../results/20261105-strata-unsloth-ud-iq2xs/README.md).
+
+- **Install**: Unsloth `unsloth/Qwen3.8-Flash-Next-GGUF` revision `d9620119` (v0.2.11's pin), 75.8 GB, shards
+  verified by SHA-256. Setup wrote **no `experts.bin`**: `--low-ram mmap does not apply to UD-IQ2_XS: it always reads
+  part of its experts from the files`, so every expert read is an in-place read of the shards and all three must
+  stay on the NVMe.
+- **Engine and drafter**: engine 0.1.57. Setup's start script writes `--spec 4 --mtp`, but the engine never gets
+  those: the server picks the drafter at start (`serve/server.py:3781`, `drafting.apply`) and DFlash2 is Auto on
+  gfx1100 since v0.2.10. Both arms ran DFlash2 alone (`--spec 6`, `--draft-fallback none`, no MTP layer), 800 MiB of
+  VRAM, draft acceptance 79-81% (base) and 66-73% (squeeze).
+- **Memory and speed**: two arms. Setup config (262K, reserve 3072, `--resident-budget-gib 8`, headroom 6): GPU
+  cache 11.15 GiB, RAM copy 8.00 GiB, file tier 20.2 GiB, page cache 12.5 GiB, plan ~104.9 GB read per
+  32,768-token prompt; short decode 2.6 / 5.7 / 6.4 / 8.2 / 6.0 tok/s. Squeeze arm (131K, reserve 2048, budget 14,
+  headroom 4): GPU cache 13.92 GiB, RAM copy 14.00 GiB, file tier 11.5 GiB, page cache 7.4 GiB, plan ~67.2 GB,
+  2260 MiB of VRAM free, `MemAvailable` 7.6 GiB; warm decode 10.8 / 10.8 / 7.1 tok/s. Each request read 25-28 GB
+  (squeeze) or 24-51 GB (base) from the drive and spent 15-50 s of its decode waiting on those reads.
+- **Why it lost**: 39.4 GiB of experts against the ISTA IQ2_XS's 33.02 GiB, and only 11-14 GiB of it fits the GPU
+  cache plus 8-14 GiB the page-locked copy. ISTA's 18.53 GiB copy left a 2.1 GiB file tier; the smallest here is
+  11.5 GiB, so the drive, not the drafter, set the speed. The engine also kept the page-cached read path although
+  it measured `direct reads 1.18 GB/s, cached-path reads 0.33 GB/s (3.57x)`.
+- **Rejected**: below the user's floor of 15 tok/s, and tuning context alone does not close the gap (the squeeze
+  arm gave up half the context and the reserve for +32%). Deleted with every other Flash-Next set the same day;
+  the clone and engine stay for Qwen4.
+- **The next round's first arms** (unmeasured; the results folder gives the exact switch for each):
+  `STRATA_UNBUFFERED_LOAD=1` against the page-cached file tier; `GPU_PINNED_MIN_XFER_SIZE` unset (carried over from
+  the mapped mode); `--resident-budget-gib` 10 and 12 at headroom 4 and 6; `STRATA_ADAPT_OVERLAP_RESIDENT=1` and
+  `STRATA_RAM_ADAPT=1` in the resident mode; the drive measured and pinned with `STRATA_SSD_GBPS`, because the plan
+  prices it `1.50 GB/s (assumed)`; and a same-hardware report for the set, since the field reports so far are the
+  smaller ISTA IQ2_XS on an RTX 4070 12 GB / 32 GB.

@@ -88,8 +88,10 @@ class LoadSettingsTest(unittest.TestCase):
 
     def test_repository_models_toml_tables_are_valid(self):
         local = self.write("local.toml", 'strata_dir = "/s"\n')
+        # No table is valid (no Strata model installed); load_settings raises on any malformed one.
         _, tables = strata.load_settings(REPO_ROOT / "models.toml", local)
-        self.assertTrue(tables)
+        for name, table in tables.items():
+            self.assertIn("config", table, name)
 
 
 if __name__ == "__main__":
