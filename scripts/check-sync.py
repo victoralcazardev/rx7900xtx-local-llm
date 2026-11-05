@@ -123,6 +123,9 @@ def validate_harness(name: str, entries, expected_port: int = EXPECTED_PORT,
     seen = {e[1] for e in local}
     expected = {**EXPECTED_ENTRIES, **OPTIONAL_ENTRIES}
     if context_window is not None:
+        if type(context_window) is not int or context_window <= 0:
+            problems.append(f"{name}: context_window must be a positive integer, got {context_window!r}.")
+            return problems
         if context_window > LOCAL_262K_CONTEXT:
             problems.append(f"{name}: context_window={context_window} is above the server context "
                             f"{LOCAL_262K_CONTEXT} -> 400 exceed_context.")

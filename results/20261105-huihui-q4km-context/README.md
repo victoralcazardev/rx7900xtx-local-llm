@@ -32,7 +32,8 @@ CPU-mapped), main KV 3,712 MiB, MTP KV 512 MiB, recurrent state 598.5 MiB, compu
 | 147,456 | 23.47 GB (21.86 GiB) | ~2.3 GB | 0 | Passed |
 | 131,072 | 22.84 GB (21.27 GiB) | ~2.9 GB | 0 | Passed, adopted |
 
-Each extra context token costs ~33.8 KB (main KV, MTP KV and prefill buffers).
+Measured peaks grow ~38.5 KB per extra context token ((23.47 - 22.84 GB) / 16,384 and (25.38 - 22.84 GB) /
+65,536); main KV + MTP KV alone account for 33.8 KB ((3,712 + 512 MiB) / 131,072).
 
 **Desktop impact of the 192K run (18:41):** the kernel logged repeated `amdgpu: Not enough memory for
 command submission`, Brave was killed, KWin stalled for a few seconds and the Plasma panel stopped
@@ -64,7 +65,7 @@ Coding suite, KV quality (KLD), retrieval, any comparison against the IQ3_S at t
 
 ## Harness
 
-The only wired harness provider is `local-262k` (contextWindow 262144). Its compaction threshold (70%,
-~183K) is above this profile's 131,072, so a harness session with this model can overflow the context
-before the harness compacts. Use this model for direct API or chat use, or lower the harness compaction
-threshold while it is loaded.
+Written before the compaction change of the same day: with the 70% threshold (~183K) a harness session could
+overflow this 131,072 context. Since then the harness configs advertise a smaller window for `local-262k`
+(omp 131072 x 70% = 91,750 tokens; Gentle Shell 108544 - 16384 = 92,160), so the harness compacts first;
+91,750 + 32,768 `maxTokens` = 124,518 < 131,072.

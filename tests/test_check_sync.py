@@ -104,6 +104,15 @@ class TestValidateHarness(unittest.TestCase):
         self.assertEqual(len(problems), 1)
         self.assertIn("context_window=300000 is above the server context 262144", problems[0])
 
+    def test_context_window_override_not_positive_int_reported(self):
+        entries = self._entries(
+            ("p1", "local-262k", 131072, "http://127.0.0.1:8080/v1"),
+        )
+        for bad in ("131072", 0, -1, True):
+            problems = check_sync.validate_harness("t", entries, context_window=bad)
+            self.assertEqual(len(problems), 1, bad)
+            self.assertIn("context_window must be a positive integer", problems[0])
+
     def test_orphaned_local_provider_reported(self):
         entries = self._entries(
             ("p1", "local-262k", 262144, "http://127.0.0.1:8080/v1"),
