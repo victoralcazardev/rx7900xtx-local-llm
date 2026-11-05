@@ -7,7 +7,8 @@ Two independent checks:
      only a WARNING (not installed yet) -- it does not fail the check.
   2. If your local machine config has a `[harness]` table with `targets`, each
      config file is checked for EXACTLY the local provider (local-262k) with
-     the right port and contextWindow, optionally local-flash-262k (Strata,
+     the right port and contextWindow (262144, or the target's optional
+     `context_window`, which moves that harness's compaction trigger), optionally local-flash-262k (Strata,
      same port, docs/sop/strata.md), and no other provider pointing at
      127.0.0.1 (an orphan from an earlier setup). This check is off by
      default -- see local.example.toml.
@@ -112,12 +113,23 @@ def _is_local(base_url: str) -> bool:
         return False
 
 
-def validate_harness(name: str, entries, expected_port: int = EXPECTED_PORT) -> list[str]:
+def validate_harness(name: str, entries, expected_port: int = EXPECTED_PORT,
+                     context_window: int | None = None) -> list[str]:
+    """`context_window` overrides the contextWindow expected for local-262k (a target's
+    `context_window` in local.toml): a smaller advertised window moves the harness's
+    compaction trigger for the local model only. It may not exceed the server context."""
     problems = []
     local = [e for e in entries if _is_local(e[3])]
     seen = {e[1] for e in local}
+    expected = {**EXPECTED_ENTRIES, **OPTIONAL_ENTRIES}
+    if context_window is not None:
+        if context_window > LOCAL_262K_CONTEXT:
+            problems.append(f"{name}: context_window={context_window} is above the server context "
+                            f"{LOCAL_262K_CONTEXT} -> 400 exceed_context.")
+            return problems
+        expected["local-262k"] = context_window
 
-    for expected_id, expected_ctx in {**EXPECTED_ENTRIES, **OPTIONAL_ENTRIES}.items():
+    for expected_id, expected_ctx in expected.items():
         matches = [e for e in local if e[1] == expected_id]
         if not matches:
             if expected_id in EXPECTED_ENTRIES:
@@ -201,7 +213,8 @@ def main() -> int:
             if error:
                 print(f"  WARNING: {error} (skipped)")
                 continue
-            probs = validate_harness(target["name"], entries, expected_port=port)
+            probs = validate_harness(target["name"], entries, expected_port=port,
+                                     context_window=target.get("context_window"))
             if probs:
                 harness_problems.extend(probs)
                 for p in probs:

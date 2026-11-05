@@ -16,7 +16,9 @@ hip-kvmix = ""
 # Optional: verify this launcher is wired into your own coding-agent harness. Off unless
 # harness.enabled = true. Each target's config file is checked for EXACTLY one provider,
 # local-262k, pointing at :8080 with the right contextWindow -- see scripts/check-sync.py
-# and AGENTS.md.
+# and AGENTS.md. Optional per target: `context_window = <N>` (at most 262144) advertises a
+# smaller window for local-262k, which moves that harness's auto-compaction trigger for the
+# local model only (omp: thresholdPercent x window; pi/Gentle Shell: window - reserveTokens).
 # [harness]
 # enabled = true
 # targets = [

@@ -82,6 +82,28 @@ class TestValidateHarness(unittest.TestCase):
         self.assertEqual(len(problems), 1)
         self.assertIn("contextWindow=8192, expected 262144", problems[0])
 
+    def test_context_window_override_accepted(self):
+        entries = self._entries(
+            ("p1", "local-262k", 131072, "http://127.0.0.1:8080/v1"),
+        )
+        self.assertEqual(check_sync.validate_harness("t", entries, context_window=131072), [])
+
+    def test_context_window_override_mismatch_reported(self):
+        entries = self._entries(
+            ("p1", "local-262k", 262144, "http://127.0.0.1:8080/v1"),
+        )
+        problems = check_sync.validate_harness("t", entries, context_window=108544)
+        self.assertEqual(len(problems), 1)
+        self.assertIn("contextWindow=262144, expected 108544", problems[0])
+
+    def test_context_window_override_above_server_context_reported(self):
+        entries = self._entries(
+            ("p1", "local-262k", 300000, "http://127.0.0.1:8080/v1"),
+        )
+        problems = check_sync.validate_harness("t", entries, context_window=300000)
+        self.assertEqual(len(problems), 1)
+        self.assertIn("context_window=300000 is above the server context 262144", problems[0])
+
     def test_orphaned_local_provider_reported(self):
         entries = self._entries(
             ("p1", "local-262k", 262144, "http://127.0.0.1:8080/v1"),
