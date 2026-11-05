@@ -81,10 +81,12 @@ leaves about 2.6 GiB more VRAM for experts than 262K int8 (KV below).
 
 ## Next round (when a new set or engine ships)
 
+0. Context floor: more than 128K (user, 2026-11-05: "128k es poco"); 262K is the target, so free VRAM with
+   `--kv-resident`, not with a shorter context. UD-Q2_0 (34.8 GiB of experts) fits only that way, unmeasured.
 1. Pick a set whose experts fit: today UD-IQ1_M (setup 34.8 GB, ~32.4 GiB; same table file as UD-IQ2_XS, sha
    `05716382`) or the ISTA IQ2_XS; check `prefill plan inputs` on the first start.
 2. Base run on stock settings, then the PR #3665 lossless sets one at a time (gfx12 decode set, `HC_Q8`, prompt set,
-   `VERIFY_COHERENT`/`DOORBELL_STORE`, hipBLASLt table on), then context 262K vs. 128K vs. 64K.
+   `VERIFY_COHERENT`/`DOORBELL_STORE`, hipBLASLt table on), then `--kv-resident 32768` at 262K.
 3. DFlash2 vs. MTP vs. off on the winner (`drafting` key), then `--draft-conf` 0.35 / 0.7 / 0.8.
 4. `STRATA_ROUTE_TAIL_SKIP=7` last and only with the coding suite, because it changes answers.
 5. Same session, same desktop state, warm-up discarded; record the slot count and `VRAM free` line of every arm.
