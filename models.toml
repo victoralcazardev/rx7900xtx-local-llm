@@ -16,7 +16,7 @@
 # - `default_alias`/`default_profile`: what `scripts/launch.py` loads when called with no
 #   alias (see docs/STATUS.md for why this is the current best configuration).
 # - One best default (2026-09-26, docs/DECISIONS.md), plus opt-in models the user asked for
-#   (2026-11-05: huihui-q4km-mtp). Add a new model/profile per docs/sop/new-model.md.
+#   (2026-11-05: huihui-iq3s-mtp). Add a new model/profile per docs/sop/new-model.md.
 
 [defaults]
 port = 8080
@@ -95,37 +95,6 @@ spec_n_max = 3
 spec_type = "draft-mtp,ngram-map-k4v"
 vision = false
 vram_gib = 22.2
-flags = ["-ub", "256", "--reasoning-effort", "medium", "--cache-ram", "12288"]
-
-# ---------------------------------------------------------------------------
-# Huihui Qwen3.8-27B abliterated UD-DW-Q4_K_M (uncensored; opt-in, not the default).
-# Card: https://huggingface.co/huihui-ai/Huihui-Qwen3.8-27B-abliterated-GGUF ("UD-DW series come from
-# unsloth/Qwen3.8-27B-GGUF. Only layers 22 to 52 (0-based indexing) have been ablated"; "MTP and visual
-# has not been modified"). Same `qwen35` architecture, NextN head and template as the model above, so the
-# same engine and flags apply. The card sets no sampling: these are the base Qwen3.8-27B card's values,
-# which match the GGUF's general.sampling.* (temp 1.0, top_p 0.95, top_k 20). No mmproj downloaded.
-[models.huihui-q4km-mtp]
-gguf = "Huihui-Qwen3.8-27B-abliterated-UD-DW-Q4_K_M/Huihui-Qwen3.8-27B-abliterated-UD-DW-Q4_K_M.gguf"
-backend = "hip-kvmix"
-mtp = true
-
-[models.huihui-q4km-mtp.sampling]
-temp = 1.0
-top_p = 0.95
-top_k = 20
-min_p = 0.0
-
-# 128K (2026-11-05, results/20261105-huihui-q4km-context/): the Q4_K_M weights take 15,092 MiB on the GPU
-# (+~3 GiB over the IQ3_S), so 262K does not fit. Measured process peaks grow ~38.5 KB per context token
-# (KV q8_0/q5_1 + MTP KV alone: 33.8 KB). 196,608 evicted VRAM during prefill and crashed the desktop (Brave killed, KWin stalled);
-# 147,456 runs but leaves ~2.3 GB for the desktop; 131,072 peaks at 22.84 GB and leaves ~2.9 GB. Production
-# flags of the profile above. The harness compacts the local model at ~92K, so it fits (see the results README).
-[models.huihui-q4km-mtp.profiles."128k-q8q51-mtp"]
-context = 131072
-kv = ["q8_0", "q5_1"]
-spec_n_max = 3
-spec_type = "draft-mtp,ngram-map-k4v"
-vram_gib = 21.3
 flags = ["-ub", "256", "--reasoning-effort", "medium", "--cache-ram", "12288"]
 
 # ---------------------------------------------------------------------------

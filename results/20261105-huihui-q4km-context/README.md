@@ -5,6 +5,8 @@ Q4_K_M runs at **131,072 context (128K)** with a 22.84 GB process peak, leaving 
 25.75 GB for the desktop. 147,456 (144K) also runs, but leaves ~2.3 GB, the margin that has already cost
 a KWin session with the default profile. 196,608 (192K) does not fit: it crashed the desktop.
 Added to `models.toml` as `huihui-q4km-mtp` / `128k-q8q51-mtp`, opt-in; the IQ3_S stays the default.
+**Update (same day):** the GGUF was deleted and the entry removed at the user's request; the GSQ-RCO
+IQ3_S-mtp of the same model runs at 262K instead (`results/20261105-huihui-iq3s-262k/`).
 
 ## Setup
 

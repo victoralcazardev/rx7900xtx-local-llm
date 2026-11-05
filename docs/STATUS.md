@@ -14,7 +14,7 @@ adopted: [`TRIED.md`](TRIED.md); planned engine trials:
 
 `qwen38-iq3s-mtp` / `262k-q8q51-mtp` — the best default (2026-09-26, [`DECISIONS.md`](DECISIONS.md))
 and `scripts/launch.py`'s default when no alias is given. Opt-in, uncensored: `huihui-iq3s-mtp` / `262k-q8q51-mtp`
-([results](../results/20261105-huihui-iq3s-262k/README.md)) and `huihui-q4km-mtp` / `128k-q8q51-mtp`
+([results](../results/20261105-huihui-iq3s-262k/README.md)). The Q4_K_M (128K) was tried and deleted
 ([results](../results/20261105-huihui-q4km-context/README.md)).
 
 - Model: Qwen3.8-27B GSQ-RCO `IQ3_S-mtp` (native MTP head baked in), 12.1 GB, PPL 6.734 ± 0.084;
