@@ -38,6 +38,14 @@ build recipe — downloaded as-is. Runtime dependency: the ROCm binary uses the 
 ROCm runtime libraries (ROCm 7.2.4 packages on this Arch-based system) unless a newer runtime is
 provided on the library path.
 
+### `llama-v0.9.0-pr30792q51-linux-rocm10-gfx1100-kvmix` (built 2026-11-05, not adopted)
+
+llama.cpp tag v0.9.0 (commit `cd959ba`, `--version` `0.9.0-dev (build 1)`), 313 commits after b11846, same
+recipe and patches as b11846 below (`tests-kvmix-cases.patch` offsets 325 and 410; `pr30792-q5_1.patch`
+clean; PR #30792 still open). `--help` adds only `--models-memory-margin`. FA Qwen-shape cases 30/30 OK.
+At 64K fill: decode -4.6% on identical greedy text, prefill -2.2%, same VRAM
+([results](../results/20261105-huihui-iq3s-262k/README.md)). Kept on disk as a candidate only.
+
 ### `llama-b11846-pr30792q51-linux-rocm10-gfx1100-kvmix` (current `hip-kvmix` engine, 2026-10-24)
 
 llama.cpp b11846 (commit `1a24df1`, `--version` `0.7.0-dev (build 200)`), same recipe as b11820 below

@@ -71,6 +71,33 @@ vram_gib = 22.2
 flags = ["-ub", "256", "--reasoning-effort", "medium", "--cache-ram", "12288"]
 
 # ---------------------------------------------------------------------------
+# Huihui Qwen3.8-27B abliterated GSQ-RCO IQ3_S-mtp (uncensored; opt-in, not the default).
+# Card: https://huggingface.co/huihui-ai/Huihui-Qwen3.8-27B-abliterated-GGUF (no sampling stated; the base
+# Qwen3.8-27B card's values, matching the GGUF's general.sampling.*). Same file size (12,120,016,416 bytes),
+# quant method, architecture, NextN head and template as qwen38-iq3s-mtp, so it takes the default's 262K
+# profile unchanged and the harness's `local-262k` provider (results/20261105-huihui-iq3s-262k/).
+[models.huihui-iq3s-mtp]
+gguf = "Huihui-Qwen3.8-27B-abliterated-GSQ-RCO-IQ3_S-mtp/Huihui-Qwen3.8-27B-abliterated-GSQ-RCO-IQ3_S-mtp.gguf"
+backend = "hip"
+mtp = true
+
+[models.huihui-iq3s-mtp.sampling]
+temp = 1.0
+top_p = 0.95
+top_k = 20
+min_p = 0.0
+
+[models.huihui-iq3s-mtp.profiles."262k-q8q51-mtp"]
+backend = "hip-kvmix"
+context = 262144
+kv = ["q8_0", "q5_1"]
+spec_n_max = 3
+spec_type = "draft-mtp,ngram-map-k4v"
+vision = false
+vram_gib = 22.2
+flags = ["-ub", "256", "--reasoning-effort", "medium", "--cache-ram", "12288"]
+
+# ---------------------------------------------------------------------------
 # Huihui Qwen3.8-27B abliterated UD-DW-Q4_K_M (uncensored; opt-in, not the default).
 # Card: https://huggingface.co/huihui-ai/Huihui-Qwen3.8-27B-abliterated-GGUF ("UD-DW series come from
 # unsloth/Qwen3.8-27B-GGUF. Only layers 22 to 52 (0-based indexing) have been ablated"; "MTP and visual

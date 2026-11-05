@@ -41,6 +41,7 @@ row: item, key numbers, evidence.
 | Unmeasured speed candidates (2026-09-26, each <5% or blocked by VRAM/context) | llama.cpp PR #29393 outside a regular engine update; fork adaptive MTP (`draft-mtp-adaptive`; upstream PR #27210's author advises against it below draft depth 7); building ik_llama.cpp. | [depth.md](measurements/depth.md#why-decode-slows-with-depth-attention-bandwidth-2026-09-26-round-4) |
 | KVMem (kvmem-llama.cpp) | Candidate: budget 28,672, block 32: 45.5 tok/s at 244K vs. 20.8 (2.2x), 8/8 at 240K. Budget 49,152 crashes. Not adopted; agent run (T6) outstanding. | [measurements/kvmem.md](measurements/kvmem.md), [results/20260930-kvmem-trial-round2/](../results/20260930-kvmem-trial-round2/) |
 | Strata IQ2_XS memory/prefill arms (v0.2.8, 2026-10-30) | Without `GPU_PINNED_MIN_XFER_SIZE` a 120K prompt stalls in every mode (resident 18.53 / 14 GiB, mapped). hipBLASLt table: prefill +41-71%, decode at 120K -16-25%. `--prefill 16384`: prefill 331 vs. 552-672 tok/s. | [results](../results/20261030-strata-iq2xs-baseline/README.md) |
+| llama.cpp v0.9.0 + q5_1 patch vs. b11846 (2026-11-05) | 64K fill: copy -4.6% on identical text, essay/code -7.0/-4.9%, prefill -2.2%, same VRAM; FA 30/30 OK. Not adopted. | [results](../results/20261105-huihui-iq3s-262k/README.md) |
 
 ## Models, quantization and speculative alternatives
 

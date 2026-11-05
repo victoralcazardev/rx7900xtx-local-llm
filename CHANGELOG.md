@@ -7,6 +7,9 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- Opt-in model `huihui-iq3s-mtp` (Huihui Qwen3.8-27B abliterated GSQ-RCO IQ3_S-mtp) with the default's 262K profile: 22.12 GiB peak, 50.6 / 166.8 / 43.1 tok/s essay/copy/code at 64K ([`results/20261105-huihui-iq3s-262k/`](results/20261105-huihui-iq3s-262k/README.md)).
+- `check-sync.py` accepts a per-target `context_window` in `local.toml`; the local model now compacts at ~35% of 262K in omp and Gentle Shell ([`local.example.toml`](local.example.toml), [`docs/DECISIONS.md`](docs/DECISIONS.md)).
+- llama.cpp v0.9.0 + q5_1 patch built and screened at 64K: 4.6% slower decode on identical text, not adopted ([`docs/ENGINES.md`](docs/ENGINES.md)).
 - Opt-in model `huihui-q4km-mtp` (Huihui Qwen3.8-27B abliterated UD-DW-Q4_K_M) at 128K context, KV q8_0/q5_1 + MTP: 192K evicts VRAM and crashed the desktop, 128K leaves ~2.9 GB of VRAM for it; 36.6 / 102.3 / 32.0 tok/s essay/copy/code at 115K ([`results/20261105-huihui-q4km-context/`](results/20261105-huihui-q4km-context/README.md)).
 - Strata tuning guide for gfx1100 from a v0.2.11 source review: expert tiers and the fit rule, gfx1100 runs without the gfx12/CUDA decode switches, and a same-class 7900 XTX that reaches 87-100 tok/s with them ([`docs/models/strata-tuning-gfx1100.md`](docs/models/strata-tuning-gfx1100.md)).
 - Strata v0.2.11 + Unsloth UD-IQ2_XS tried and deleted: 2.6-8.2 tok/s short decode (10.8 in the squeeze arm) because its 39.4 GiB of experts did not fit GPU + RAM (file tier 11.5-20.2 GiB, 24-51 GB read from the drive per request); no Strata model is installed now, the clone stays for Qwen4 ([`results/20261105-strata-unsloth-ud-iq2xs/`](results/20261105-strata-unsloth-ud-iq2xs/README.md)).
