@@ -75,35 +75,23 @@ flags = ["-ub", "256", "--reasoning-effort", "medium", "--cache-ram", "12288"]
 # `python3 scripts/strata.py apply` writes each key below into <strata_dir>/<config> (local.toml has
 # strata_dir): keys replace the run config's, `env` is merged. `user_args` is Strata's list of hand-set
 # engine options, applied by every setup run and start on top of setup's generated `args`.
-# Qwen3.8-Flash-Next Coder IQ1_M, shard 1 at ISTA-DASLab revision bba88856 (2026-10-19). Shard 1 and its pack
-# were deleted on 2026-10-30 (shard 2 kept); re-download shard 1 before using this entry.
-[strata.coder-iq1_m]
-config = "strata-coder-iq1_m.json"
-# 262K, KV int8, 3 GiB VRAM left for the desktop (2026-10-16, results/20261016-strata-coder-vram-reserve/).
+# Qwen3.8-Flash-Next UD-IQ2_XS, Unsloth Dynamic v3.1 (unsloth/Qwen3.8-Flash-Next-GGUF revision d9620119, the one
+# Strata 0.2.11 pins; sha256 of shards 1-3: 91e8dc8f…, 11a67c82…, 05716382…), installed 2026-11-05 on Strata
+# v0.2.11 with `--gguf-dir`. Setup keeps no experts.bin for this set: the engine reads the experts in place from
+# shard 2 (8 GiB resident copy, `--resident-budget-gib 8`), so all three shards must stay on the NVMe. The ISTA
+# IQ2_XS and the Coder IQ1_M were deleted on 2026-11-05.
+[strata.ud-iq2_xs]
+config = "strata-unsloth-ud-iq2_xs.json"
+# 262K, KV int8, 3 GiB VRAM left for the desktop (same policy as the ISTA IQ2_XS; the reserve is what keeps KDE alive).
 user_args = ["--max-context", "262144", "--kv", "int8", "--vram-reserve-mib", "3072"]
-# Keep 6 GiB of RAM free instead of 4 (upstream tip #834 for 31 GB PCs).
-env = { STRATA_RESIDENT_HEADROOM_GIB = "6" }
-# Qwen3.8-Flash-Next card, thinking mode (https://huggingface.co/Qwen/Qwen3.8-Flash-Next); the Coder
-# card sets none. Explicit, so a change of Strata's own defaults cannot change it silently.
-sampling = { temperature = 1.0, top_p = 0.95, top_k = 20, min_p = 0.0 }
-
-# Qwen3.8-Flash-Next IQ2_XS (ISTA-DASLab GSQ-RCO-GGUF revision ed59f920; shard 1 sha256 92cee27a…, shard 2 is the
-# Coder's file, hardlinked), installed 2026-10-30 on Strata v0.2.8 with `--gguf-dir`; setup chose the resident RAM mode.
-[strata.iq2_xs]
-config = "strata-iq2_xs.json"
-# Same choices as the Coder: 262K, KV int8, 3 GiB VRAM left for the desktop. Mapped mode (setup `--low-ram mmap`, no
-# RAM copy): the resident copy (18.53 GiB automatic, or 14 GiB with --resident-budget-gib) stalled deep prompts
-# (zram swap storm, amdgpu SVM restores, engine restarted by its watchdog; 2026-10-30, results/20261030-strata-iq2xs-baseline/).
-user_args = ["--max-context", "262144", "--kv", "int8", "--vram-reserve-mib", "3072"]
-# GPU_PINNED_MIN_XFER_SIZE (MiB): ROCclr locks a pageable copy source of >= 1 MiB as a GPU userptr; expert blobs are
-# 1.1-1.5 MB, so every copy from experts.bin (or the pageable RAM copy) pinned it and page reclaim suspended the GPU
-# queues (kernel: svm_range_restore_work -> filemap_fault). Upstream workaround (docs/AMD_HIP.md "Linux: verify
-# timeouts while the kernel reclaims host memory", #920); the engine sets it itself only with STRATA_ARENA_MMAP=1.
-# Table off on purpose: once the engine links hipBLASLt (build-hip now finds it, so the next source-change rebuild
-# will), setup's STRATA_HIPBLASLT_TUNING path loads the gfx1100 table regardless of STRATA_HIPBLASLT_TABLE
-# (src/prefill/gemm.cu create_hipblaslt_state); measured prefill +41-71% but decode at 120K -16-25%. An empty path
-# plus TABLE=off returns no table (plain hipBLAS), and scripts/strata.py apply re-sets both after every update.
+# Carried over from the ISTA IQ2_XS (2026-10-30), to re-measure on this set and engine:
+# - GPU_PINNED_MIN_XFER_SIZE (MiB): without it ROCclr locks every >= 1 MiB pageable expert copy source as a GPU
+#   userptr and page reclaim suspends the GPU queues; a 120K prompt stalled in every memory mode. In-place reads go
+#   through the same pageable page cache.
+# - hipBLASLt table off: decode at 120K was 16-25% slower with it (gfx1100-hipblaslt-100100 then; setup now picks
+#   100202, so it is an open arm). An empty path plus TABLE=off returns no table.
+# - 6 GiB RAM headroom instead of 4 (upstream tip #834 for 31 GB PCs; setup prints it again).
 env = { STRATA_RESIDENT_HEADROOM_GIB = "6", GPU_PINNED_MIN_XFER_SIZE = "1048576", STRATA_HIPBLASLT_TUNING = "", STRATA_HIPBLASLT_TABLE = "off" }
-# Qwen3.8-Flash-Next card, thinking mode (https://huggingface.co/Qwen/Qwen3.8-Flash-Next, checked 2026-10-30);
-# the ISTA card sets none.
+# Qwen3.8-Flash-Next card, thinking mode (https://huggingface.co/Qwen/Qwen3.8-Flash-Next; the Unsloth card repeats
+# it, checked 2026-11-05).
 sampling = { temperature = 1.0, top_p = 0.95, top_k = 20, min_p = 0.0 }
