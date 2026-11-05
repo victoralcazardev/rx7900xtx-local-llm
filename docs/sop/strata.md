@@ -99,7 +99,9 @@ more), and/or cap `--conversation-cache-mib` (mapped mode sizes it at 8192 MiB o
 allocating side is an inference from the flags.
 
 Why these values: `--kv` offers `int8|q4_0|k8v4`; int8 is the 8-bit one. Shrinking the KV does not free VRAM
-in Strata, because the expert cache takes whatever is left; only `--vram-reserve-mib` keeps VRAM free. 3072
+for the desktop in Strata, because the expert cache takes whatever is left; only `--vram-reserve-mib` keeps VRAM
+free. The same rule makes a smaller KV a speed lever: every MiB it saves becomes expert slots (KV arms:
+[`../models/strata-tuning-gfx1100.md`](../models/strata-tuning-gfx1100.md#kv-cache-as-a-speed-lever)). 3072
 leaves ~1.4 GiB of the card free while loaded, enough for the desktop to open apps without the driver pushing
 GPU memory into RAM (without it a Slack launch ended the KDE session). The cost is ~2.3 GiB more experts in RAM.
 

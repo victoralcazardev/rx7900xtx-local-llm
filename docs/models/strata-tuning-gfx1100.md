@@ -79,6 +79,21 @@ leaves about 2.6 GiB more VRAM for experts than 262K int8 (KV below).
 | `STRATA_ROUTE_PRIOR` | 0 everywhere since 2026-10-29 | biases routing to resident experts; repetitions in long sessions | `include/strata/core/sm120_series.hpp:75-80` (last resort) |
 | `GPU_PINNED_MIN_XFER_SIZE=1048576` | ours | fixed the 2026-10-30 mapped-mode stalls; no decode effect expected in resident mode | `generate.cpp:3299-3305`; `TROUBLESHOOTING.md:345` |
 
+## KV cache as a speed lever
+
+Strata gives the GPU expert cache whatever VRAM is left, so the KV competes with experts, not with the desktop. Until
+2026-11-05 this repo ran `--kv int8` at 262K fully in VRAM (setup's choice) and never measured the KV as a speed lever.
+
+| Option at 262K | KV in VRAM | VRAM gained for experts | Cost |
+|---|---:|---:|---|
+| `int8` (used so far) | 3.00 GiB | — | reference |
+| `k8v4` | 2.39 GiB | +0.6 GiB (~320 slots at 1.95 MiB) | exact int8 K, rotated Q4_0 V; prompts 2-5% slower (`DETAILS.md:234-235`); unmeasured here. The 2026-10-15 Coder trial reported "k8v4 OOM-killed the desktop on 31 GiB RAM" without isolating the cause |
+| `q4_0` | 1.69 GiB | +1.3 GiB | +8-12% perplexity on long documents: not for coding |
+| `--kv-resident 32768` | 0.39 GiB | +2.6 GiB | ~3.4 GiB of pinned RAM (13.7 KB per token): it moves capacity from RAM to VRAM and shrinks GPU+RAM by ~0.8 GiB, so it cannot rescue a set that does not fit; it helps only if a GPU hit is worth more than a RAM hit (likely, since a RAM hit still crosses PCIe; inference) |
+
+Context also buys VRAM: PR #3665 ran 64K int8 (0.75 GiB of KV), about 2.25 GiB (~1,150 slots) more expert cache than
+262K, part of its gap to our numbers. The user's floor is above 128K, so the KV mode and streaming are the levers here.
+
 ## Next round (when a new set or engine ships)
 
 0. Context floor: more than 128K (user, 2026-11-05: "128k es poco"); 262K is the target, so free VRAM with
@@ -86,7 +101,7 @@ leaves about 2.6 GiB more VRAM for experts than 262K int8 (KV below).
 1. Pick a set whose experts fit: today UD-IQ1_M (setup 34.8 GB, ~32.4 GiB; same table file as UD-IQ2_XS, sha
    `05716382`) or the ISTA IQ2_XS; check `prefill plan inputs` on the first start.
 2. Base run on stock settings, then the PR #3665 lossless sets one at a time (gfx12 decode set, `HC_Q8`, prompt set,
-   `VERIFY_COHERENT`/`DOORBELL_STORE`, hipBLASLt table on), then `--kv-resident 32768` at 262K.
+   `VERIFY_COHERENT`/`DOORBELL_STORE`, hipBLASLt table on), then the KV arms at 262K: `k8v4` vs. `int8`, and `--kv-resident 32768` vs. all in VRAM (watch `MemAvailable`).
 3. DFlash2 vs. MTP vs. off on the winner (`drafting` key), then `--draft-conf` 0.35 / 0.7 / 0.8.
 4. `STRATA_ROUTE_TAIL_SKIP=7` last and only with the coding suite, because it changes answers.
 5. Same session, same desktop state, warm-up discarded; record the slot count and `VRAM free` line of every arm.
