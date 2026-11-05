@@ -2,6 +2,8 @@
 
 ## Current state (2026-11-05)
 
+- **Tuning guide**: how Strata places experts on this card and which switches matter (gfx1100 defaults vs. a tuned
+  7900 XTX at 87-100 tok/s): [`strata-tuning-gfx1100.md`](strata-tuning-gfx1100.md).
 - **Role**: optional second engine on `:8080`, never the default; one of the repository's focus models with
   the 27B and Qwen4 ([`DECISIONS.md`](../DECISIONS.md), 2026-10-29).
 - **Installed: no model.** The Strata clone stays at v0.2.11-3-g9f7d977d with engine 0.1.57 built (ROCm 7.2.4,
