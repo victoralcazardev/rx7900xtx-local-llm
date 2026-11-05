@@ -1,0 +1,16 @@
+0.00.115.737 I common_params_fit_impl: getting device memory data for initial parameters:
+0.00.524.579 I common_params_fit_impl: projected to use 20638 MiB of device memory vs. 23756 MiB of free device memory
+0.00.524.583 I common_params_fit_impl: will leave 3117 >= 1024 MiB of free device memory, no changes needed
+0.11.872.636 I load_tensors:   CPU_Mapped model buffer size =   682.03 MiB
+0.11.872.637 I load_tensors:        ROCm0 model buffer size = 15092.05 MiB
+0.13.669.916 I llama_context:  ROCm_Host  output buffer size =     0.95 MiB
+0.13.673.143 I llama_kv_cache:      ROCm0 KV buffer size =  3712.00 MiB
+0.13.681.619 I llama_memory_recurrent:      ROCm0 RS buffer size =   598.50 MiB
+0.13.740.154 I sched_reserve:      ROCm0 compute buffer size =   626.28 MiB
+0.13.740.158 I sched_reserve:  ROCm_Host compute buffer size =    84.28 MiB
+0.13.867.974 I llama_context:  ROCm_Host  output buffer size =     0.95 MiB
+0.13.869.673 I llama_kv_cache:      ROCm0 KV buffer size =   512.00 MiB
+0.13.921.329 I sched_reserve:      ROCm0 compute buffer size =    98.01 MiB
+0.13.921.332 I sched_reserve:  ROCm_Host compute buffer size =    74.01 MiB
+0.13.937.601 I sched_reserve:      ROCm0 compute buffer size =    98.01 MiB
+0.13.937.603 I sched_reserve:  ROCm_Host compute buffer size =    74.01 MiB

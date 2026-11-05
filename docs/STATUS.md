@@ -12,9 +12,9 @@ adopted: [`TRIED.md`](TRIED.md); planned engine trials:
 
 ## Current profile
 
-`qwen38-iq3s-mtp` / `262k-q8q51-mtp` — the only model/profile in `models.toml` (one best default,
-no overlapping alternatives, 2026-09-26, [`DECISIONS.md`](DECISIONS.md)) and `scripts/launch.py`'s
-default when no alias is given.
+`qwen38-iq3s-mtp` / `262k-q8q51-mtp` — the best default (2026-09-26, [`DECISIONS.md`](DECISIONS.md))
+and `scripts/launch.py`'s default when no alias is given. Opt-in: `huihui-q4km-mtp` / `128k-q8q51-mtp`
+(uncensored Q4_K_M, [results](../results/20261105-huihui-q4km-context/README.md)).
 
 - Model: Qwen3.8-27B GSQ-RCO `IQ3_S-mtp` (native MTP head baked in), 12.1 GB, PPL 6.734 ± 0.084;
   `mmproj-Qwen3.8-27B-BF16.gguf` present but vision disabled. Other quants:

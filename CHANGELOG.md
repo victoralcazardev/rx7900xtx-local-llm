@@ -7,6 +7,7 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- Opt-in model `huihui-q4km-mtp` (Huihui Qwen3.8-27B abliterated UD-DW-Q4_K_M) at 128K context, KV q8_0/q5_1 + MTP: 192K evicts VRAM and crashed the desktop, 128K leaves ~2.9 GB of VRAM for it; 36.6 / 102.3 / 32.0 tok/s essay/copy/code at 115K ([`results/20261105-huihui-q4km-context/`](results/20261105-huihui-q4km-context/README.md)).
 - Strata tuning guide for gfx1100 from a v0.2.11 source review: expert tiers and the fit rule, gfx1100 runs without the gfx12/CUDA decode switches, and a same-class 7900 XTX that reaches 87-100 tok/s with them ([`docs/models/strata-tuning-gfx1100.md`](docs/models/strata-tuning-gfx1100.md)).
 - Strata v0.2.11 + Unsloth UD-IQ2_XS tried and deleted: 2.6-8.2 tok/s short decode (10.8 in the squeeze arm) because its 39.4 GiB of experts did not fit GPU + RAM (file tier 11.5-20.2 GiB, 24-51 GB read from the drive per request); no Strata model is installed now, the clone stays for Qwen4 ([`results/20261105-strata-unsloth-ud-iq2xs/`](results/20261105-strata-unsloth-ud-iq2xs/README.md)).
 - 2026-10-10 agent session cache misses classified: ~483 s of 2,382 s prefill avoidable, from entering omp goal mode mid-session (system prompt changes) and one `handoff` summary on the local slot; injected advisor/nudge messages cause none; omp vs. pi compaction notes for local use ([`docs/measurements/agent-traffic.md`](docs/measurements/agent-traffic.md#session-of-2026-10-10-misses-from-goal-mode-and-a-local-handoff-single-session)).
