@@ -75,6 +75,26 @@ while generating leaves ~13°C of margin; the ~105°C hotspot seen during long p
 of the junction critical limit. These limits are read from this specific card's firmware, not a
 universal AMD spec — a different card may report different values.
 
+Reading these sensors (external sources, checked 2026-11-06):
+
+- **Junction**: AMD states that "Operating at up to 110C Junction Temperature during typical gaming
+  usage is expected and within spec" (RX 5700 series; [TechPowerUp quoting AMD's blog,
+  2019-08-13](https://www.techpowerup.com/258228/110-c-hotspot-temps-expected-and-within-spec-amd-on-rx-5700-series-thermals)).
+  The junction reading is the hottest of many on-die sensors, not a fixed location.
+- **Memory**: `mem` is the junction temperature of the hottest GDDR6 module (peak, not average),
+  per AMD as quoted by [Igor's Lab (2019-11-11)](https://www.igorslab.de/en/gddr6-memory-temperatures-comprehensibly-explained-and-remeasured-is-amd-doing-everything-right-basics/).
+  No public GDDR6 datasheet gives a junction maximum; the only vendor figure Igor's Lab found is
+  Micron's 100°C for GDDR5. Treat ~100°C sustained `mem` as the practical warning line, not the
+  108°C firmware critical value. The SK hynix datasheet for this card's chips (H56G42AS8DX-014,
+  per a TechPowerUp teardown) was not reached: unverified.
+- **Cooler health**: the 2022-2023 reference-card vapor-chamber defect showed as a 30-40°C+ gap
+  between edge and junction (forum reports, unverified; [AMD statement to Tom's Hardware,
+  2022-12-29](https://www.tomshardware.com/news/amd-responds-to-rx-7900-xtx-hotspot-fiasco)). This
+  card runs a ~16°C gap (edge 75°C, junction 91°C, memory 92°C at 271 W, 2026-11-06). A gap that
+  grows over months points to degraded paste or pads.
+- **Long-term wear**: no public study measures lifetime loss for consumer GPUs held at ~90°C
+  junction or memory; data-center failure studies do not isolate temperature as the cause.
+
 ## Power limit (`power1_cap`)
 
 The power limit is read and set via sysfs, `/sys/class/drm/card*/device/hwmon/hwmon*/power1_cap*`
@@ -147,3 +167,6 @@ every step, since an unstable compute undervolt can corrupt output silently).
   the operator (see `depth.md`'s quality test); deep-prefill tests (128K+) then ran under a 272 W
   cap, and the cap was later made permanent and set via a systemd oneshot unit instead of a manual
   per-boot command.
+- **2026-11-06**: spot reading under inference at 272 W: edge 75°C, junction 91°C, memory 92°C,
+  fan ~55-70%. Added sensor-interpretation notes (junction spec, `mem` meaning, edge/junction gap
+  as cooler-health check) under "Sensor limits".
