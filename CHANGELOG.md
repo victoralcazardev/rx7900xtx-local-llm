@@ -82,6 +82,7 @@ All notable changes to this project are documented here. Format follows
 
 ### Changed
 
+- `local-262k` advertises the full 262K in omp and Gentle Shell; every model now compacts at ~35% of its window (omp `thresholdPercent` 35, Gentle Shell per-model `reserveTokens`) instead of the local model advertising a smaller window ([`docs/DECISIONS.md`](docs/DECISIONS.md)).
 - README opens with key findings and a copyable quick start; the Strata doc is renamed `docs/models/strata-qwen-flash-next.md` and opens with a current-state block ([`docs/models/strata-qwen-flash-next.md`](docs/models/strata-qwen-flash-next.md)).
 - Scope narrowed to Qwen3.8-27B (llama.cpp), Qwen3.8-Flash-Next via Strata and Qwen4 when released; the Nemotron 3.5 Bolt candidate is removed from the README, STATUS, the plan and SOURCES ([`docs/DECISIONS.md`](docs/DECISIONS.md)).
 - CI runs Python 3.11 and 3.14 with `actions/checkout@v7` and `actions/setup-python@v7` ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)).
