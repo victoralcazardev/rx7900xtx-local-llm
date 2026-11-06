@@ -26,10 +26,11 @@ and `scripts/launch.py`'s default when no alias is given. Opt-in, uncensored: `h
   below are b11846. ROCm/HIP beats Vulkan 2-3.5x on generation
   here, Vulkan is reference-only. [`ENGINES.md`](ENGINES.md).
 - Power: 272 W permanent cap (driver minimum; stock 303 W) — [`sop/power-cap.md`](sop/power-cap.md).
-- Harness wiring: one fixed provider `local-262k` on `:8080`, advertised at the full 262144; every
-  model compacts at ~35% of its window (local: 91,750 tokens; omp `compaction.thresholdPercent` 35,
-  Gentle Shell per-model `compaction.modelOverrides` reserveTokens), verified by
-  `python3 scripts/check-sync.py` when `local.toml` has `[harness] enabled = true`. Hermes profiles
+- Harness wiring: one fixed provider `local-262k` on `:8080`, advertised at the full 262144 (provider,
+  port and window verified by `python3 scripts/check-sync.py` when `local.toml` has
+  `[harness] enabled = true`). Every model compacts at ~35% of its window (local: 91,750 tokens; omp
+  `compaction.thresholdPercent` 35, Gentle Shell per-model `compaction.modelOverrides` reserveTokens);
+  `check-sync.py` does not check these compaction settings. Hermes profiles
   outside this repo use the same endpoint (not covered by `check-sync.py`), and `tailscale serve`
   exposes it to the tailnet without a key ([`DECISIONS.md`](DECISIONS.md), 2026-10-23).
 
