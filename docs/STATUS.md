@@ -92,8 +92,8 @@ Sampling is the Qwen3.8-27B card's own; `--min-p 0.0` is set explicitly because 
   with one local compaction-summary fallback found —
   [agent-traffic.md](measurements/agent-traffic.md#first-session-after-the-compaction-change-2026-10-03-evening-single-session).
 - **Compaction threshold, compaction method order and presence penalty** A/B only after a fixed
-  coding-task suite with executable tests and pass/fail criteria exists; checkpoint count is
-  conditional on a logged mid-context divergence; 60% (~157K) is the comparison arm —
+  coding-task suite with executable tests and pass/fail criteria exists; checkpoint count was
+  settled at 10 by a compaction replay (2026-11-06, [DECISIONS](DECISIONS.md)); 60% (~157K) is the comparison arm —
   [agent-traffic.md](measurements/agent-traffic.md#open-ab-tests).
 - **KVMem**: not adopted until a real agent run —
   [ENGINES-EXPERIMENTS.md](ENGINES-EXPERIMENTS.md#kvmem-trial-round-2-and-final-round-2026-09-30-not-adopted).
