@@ -27,6 +27,16 @@
 - **Unsloth sets share tables**: each Unsloth Dynamic set's last shard is the same 28.8 GB n-gram/PLE table
   (UD-IQ2_XS shard 3, sha256 `05716382…`; UD-IQ1_M and UD-Q2_0 identical), so only a set's own shards download.
 - **Limit on this machine**: RAM (31.25 GiB usable), not VRAM.
+- **Best known setup (2026-11-07, not installed)**: ISTA IQ2_XS (GSQ-RCO, ~68 GB + ~6 GB MTP layer) on Strata v0.2.12
+  or newer, with the 2026-10-30 run config (mapped mode, 262K, KV int8, `--vram-reserve-mib 3072`, `--prefill auto`,
+  `GPU_PINNED_MIN_XFER_SIZE=1048576`; [IQ2_XS on v0.2.8](#iq2_xs-on-v028-2026-10-30)) plus `undeclared_tool_calls:
+  "call"` and `--ram-keep-gib` when a browser stays open. It is the only Flash-Next set measured fast here (59-65 tok/s
+  warm short, 36.7 at 240K). Its open question is the coding suite on v0.2.12, where the tool-call parser fixes may
+  change the 2026-10-31 failure. Retest with Qwen4, new quants or a new Strata version
+  ([switches](strata-tuning-gfx1100.md#other-switches-worth-an-arm)).
+- **Agent quality floor (2026-11-07)**: 2-bit sets fit this machine, but no 2-bit set has an agentic evaluation and the
+  field evidence puts the floor for agents at IQ3_S, which does not fit 32 GB without SSD reads
+  ([sources](../SOURCES-community.md#flash-next-low-bit-quants-for-agents-2026-11-07)).
 
 ## Current state (2026-10-30)
 

@@ -142,3 +142,16 @@ kill criteria: [ENGINES-EXPERIMENTS.md](ENGINES-EXPERIMENTS.md#candidates-from-t
 | Without `--reasoning-preserve`, a client that drops past thinking (Hermes) re-prefills a median 5K tokens per exchange | README, quick-start flag table | 2026-11-06 | locally reproduced in kind: dropping `reasoning_content` re-processes the previous answer ([agent-traffic.md](measurements/agent-traffic.md#multi-turn-prefix-reuse-with-reasoning-2026-10-03)) | Hermes unchecked; candidate R1 |
 | `GGML_HIP_FA_GQA6`: decode +10-12% at 41K for Qwen3.8-27B | README, environment variables | 2026-11-06 | not applicable (a GQA-6 band needs K and V of one type; ours is `q8_0`/`q5_1`, [TRIED.md](TRIED.md)) | None |
 | WMMA GEMM prefill: 17K cold prompt 781 to 864 t/s on IQ4_XS, batches of 512 tokens or more | README, "Prompts through a WMMA GEMM" | 2026-11-06 | not applicable at `-ub 256` | None |
+
+## Flash-Next low-bit quants for agents (2026-11-07)
+
+Whether a 2-bit Qwen3.8-Flash-Next set is good enough for an agent harness. Vendor tables measure single-turn tasks;
+agentic evidence is scarce. Strata side: [`strata-tuning-gfx1100.md`](models/strata-tuning-gfx1100.md#next-round-when-a-new-set-or-engine-ships).
+
+| Claim | Source | Date | Status | Own test |
+|---|---|---|---|---|
+| "while all the GGUFs I tested performed very well on non-agentic tasks, even down to "Q1", agentic tasks are a different story. Even higher-end Q2 variants, like UD-Q2_K_XL, show significant degradation"; recommends GSQ-RCO IQ3_S ("far smaller" than UD-Q4_K_XL, on par with the original model); only four variants evaluated | [Benjamin Marie, kaitchup](https://kaitchup.substack.com/p/agentic-coding-with-qwen38-flash) | ~2026-10-10 | source-checked (quotes fetched 2026-11-07) | Consistent with ours: ISTA IQ2_XS failed the coding suite on invented tool calls ([results](../results/20261030-strata-iq2xs-quality/README.md)) |
+| Same author's long-horizon chart, pass@1 recovery vs. BF16: IQ3_S 100%, UD-Q4_K_XL 100%, UD-Q2_K_XL 73.8% (+15% tokens), Coder IQ1_M 64.3% (+71% tokens) | Chart in the article above (read by a research subagent from the SVG) | ~2026-10 | hypothesis (numbers not re-read here) | None |
+| ISTA card, single-turn task average (AIME25, GPQA-D, LiveCodeBench v6), BF16 93.12: IQ3_S 93.26, IQ3_XXS 92.57, IQ2_XS 89.16, Q2_0 89.07; no tool-calling evaluation | [ISTA-DASLab/Qwen3.8-Flash-Next-GSQ-RCO-GGUF](https://huggingface.co/ISTA-DASLab/Qwen3.8-Flash-Next-GSQ-RCO-GGUF) | 2026-11 | hypothesis (read by a research subagent; IQ2_XS 89.16 also on the vramcalculator Strata page) | IQ2_XS: 128K retrieval 8/8, coding suite failed |
+| Strata's same-top-token-as-Q8_0 table: IQ3_S 87.69%, IQ3_XXS 84.46%, Q2_0 80.60% (IQ2_XS not measured) | Strata `docs/QUANTS.md:76-82` at `146df3c4` | 2026-11-07 | hypothesis (read by a research subagent) | None |
+| HF discussion "Thinking hallucination, looping for IQ2_XS but not q2_0" | ISTA-DASLab Flash-Next GGUF discussions #45 | ~2026-10 | unverified (title only, body not reached) | None |

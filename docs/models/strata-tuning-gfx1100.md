@@ -1,11 +1,12 @@
 # Strata on gfx1100: how it uses memory and what to tune
 
 How Strata (Niko1221/Strata) places a Qwen3.8-Flash-Next set on an RX 7900 XTX (24 GB) with 32 GB of RAM, and the
-switches that matter, read from the v0.2.11 source (`v0.2.11-3-g9f7d977d`, engine 0.1.57) on 2026-11-05. Model history
+switches that matter, read from the v0.2.11 source (`v0.2.11-3-g9f7d977d`, engine 0.1.57) on 2026-11-05 and rechecked
+against `main` `146df3c4` (v0.2.12, engine 0.1.58) on 2026-11-07. Model history
 and measurements: [`strata-qwen-flash-next.md`](strata-qwen-flash-next.md); procedure: [`../sop/strata.md`](../sop/strata.md).
 
 Evidence labels: **source-checked** (read in the Strata source at the cited line, not run here), **community-measured**
-(a third party's run, cited), **measured here** (a result folder in this repo). Paths are relative to the Strata clone. Line numbers come from a read-only review; `generate.cpp:813, 1044-1050, 2459, 3735-3743`, `drafting.py:47, 228-238`, `memory.hpp:73-78`, `expert_source.hpp:726`, `setup.py:486-508` and `AMD_HIP.md:772-774` were re-read for this page.
+(a third party's run, cited), **measured here** (a result folder in this repo). Paths are relative to the Strata clone. Line numbers come from a read-only review; `generate.cpp:813, 1044-1050, 2459, 3735-3743`, `drafting.py:47, 228-238`, `memory.hpp:59-72` (v0.2.12), `expert_source.hpp:726`, `setup.py:486-508` and `AMD_HIP.md:772-774` were re-read for this page.
 
 ## Current conclusion
 
@@ -18,8 +19,9 @@ Evidence labels: **source-checked** (read in the Strata source at the cited line
   only: "every other AMD part (gfx11, gfx906, ...) keeps its earlier behaviour" (`src/program/generate.cpp:2459`,
   source-checked). gfx1100 has no architecture defaults at all (`src/core/arch_defaults.cpp`).
 - **A tuned 7900 XTX box gets ~45% more.** Same card, 30 GB DDR5, CachyOS, ROCm 7.2.4, ISTA IQ2_XS, Strata 0.1.45: chat
-  decode 59.8 -> 87.3 tok/s, agent 75.5 -> 99.7, 4K prompt 339 -> 802 tok/s, "from the configuration changes ... not from
-  a newer engine" ([PR #3665](https://github.com/Niko1221/Strata/pull/3665), community-measured). Its 59.8 default
+  decode 59.8 -> 87.3 tok/s (code 117-123), agent 75.5 -> 99.7, 4K prompt 339 -> 802 tok/s, "from the configuration changes ... not from
+  a newer engine" ([PR #3665](https://github.com/Niko1221/Strata/pull/3665), community-measured; closed unmerged
+  2026-10-29, the maintainer moves such results to a future website). Its 59.8 default
   matches ours, so our earlier numbers were the gfx1100 defaults, not a broken setup. Recipe below.
 - **The drafter barely changes memory.** MTP takes 1082 MiB of VRAM, DFlash2 890 (715 with the Q4_0 selector pack)
   (`strata_control/drafting.py:47`, source-checked); the ~5 GB MTP figure is the download. DFlash2 on gfx1100 is
@@ -27,8 +29,9 @@ Evidence labels: **source-checked** (read in the Strata source at the cited line
 - **The hipBLASLt table is prompt-only in the code.** It is read in `src/prefill/gemm.cu` (`Gemm::bf16`/`Gemm::f16`)
   and nowhere in `src/core` (decode/verify) (source-checked). The 2026-10-30 "decode -16-25% with the table" result needs
   a re-check; PR #3665 runs with `gfx1100-hipblaslt-100202.txt` on.
-- **Direct (unbuffered) expert reads need a fast drive**: the engine picks them only at 4 GB/s or more
-  (`include/strata/platform/memory.hpp:73-78`, source-checked). The PCIe 3 drive here reads 1.18 GB/s direct, so the
+- **Direct (unbuffered) expert reads need a fast drive**: the engine picks them only at 4 GB/s or more, when the page
+  cache holds under half of the read set, and when direct is 1.3x (under 30% held) or 1.5x faster than cached
+  (`include/strata/platform/memory.hpp:59-72` in v0.2.12, source-checked). The PCIe 3 drive here reads 1.18 GB/s direct, so the
   page cache stays; `STRATA_UNBUFFERED_LOAD=1` forces direct but turns io prefetch off (`src/core/expert_source.cpp:1160`).
 
 ## How the expert tiers work
@@ -38,10 +41,13 @@ Evidence labels: **source-checked** (read in the Strata source at the cited line
 | GPU expert cache | `--expert-cache auto`: VRAM left after dense weights, KV, drafter and `--vram-reserve-mib` (default 700), filled in expert-profile order | `generate.cpp:797`; `include/strata/core/expert_source.hpp:746-751` |
 | Resident RAM copy (page-locked) | `--resident-budget-gib N`, clipped to `available - headroom - 0.25 GiB`; headroom `STRATA_RESIDENT_HEADROOM_GIB` (default 4) | `generate.cpp:3735-3743`; `expert_source.cpp:3584-3593` |
 | File tier | the rest: `experts.bin` mapped, or (Unsloth sets without `experts.bin`) the GGUF shards read in place, three role slices per expert | `expert_source.hpp:726`; `expert_source.cpp:1698-1771` |
-| Page cache | whatever RAM is left; Strata reads the file tier through it unless direct reads win (above) | `memory.hpp:73-78` |
+| Page cache | whatever RAM is left; Strata reads the file tier through it unless direct reads win (above) | `memory.hpp:59-72` (v0.2.12) |
 
 Setup's rules on 31 GiB of RAM (`setup.py`, source-checked): every Unsloth v3.1 set gets the 8 GiB budget mode
 (`budget = round(RAM) - 24 - KV`, minimum 8; full RAM copy only when RAM >= experts + 16 GiB, `setup.py:3650-3686`).
+ISTA sets need RAM >= shard-1 experts + ~10 GB to load fully; below that setup maps them (low-RAM mode). Shard-1
+experts: Q2_0 34 GB, IQ2_XS 35.5, IQ3_XXS 43, IQ3_S 50, Coder 23; "A 32 GB PC with a 24 GB GPU runs Q2_0, IQ2_XS and the
+Coder this way" (`docs/MODELS.md:122-141`, v0.2.12, source-checked).
 Expert sizes setup uses (`arena_gb`, GB; UD-IQ2_XS 42.3 GB = the engine's 39.4 GiB): UD-IQ1_M 34.8, UD-Q2_0 37.4, UD-IQ2_XS 42.3, UD-Q2_K_XL 46.0, UD-IQ3_XXS 50.3
 (`setup.py:486-508`). With 64 GB, UD-IQ2_XS and smaller would fit in RAM entirely.
 
@@ -77,7 +83,9 @@ leaves about 2.6 GiB more VRAM for experts than 262K int8 (KV below).
 | `--expert-profile-save` / `tools/make_profile.py` | shipped `data/expert-profile.bin` | a profile learned from our own traffic orders the GPU and RAM tiers | `expert_source.hpp:746-751` |
 | `STRATA_RAM_ADAPT=1`, `STRATA_ADAPT_OVERLAP_RESIDENT=1` | off | the RAM copy follows the conversation; needs the resident mode | `generate.cpp:18705-18720, 12689` |
 | `STRATA_ROUTE_PRIOR` | 0 everywhere since 2026-10-29 | biases routing to resident experts; repetitions in long sessions | `include/strata/core/sm120_series.hpp:75-80` (last resort) |
-| `GPU_PINNED_MIN_XFER_SIZE=1048576` | ours | fixed the 2026-10-30 mapped-mode stalls; no decode effect expected in resident mode | `generate.cpp:3299-3305`; `TROUBLESHOOTING.md:345` |
+| `GPU_PINNED_MIN_XFER_SIZE=1048576` | ours | fixed the 2026-10-30 mapped-mode stalls; no decode effect expected in resident mode. The engine sets `1000000` itself only under `STRATA_ARENA_MMAP=1`; an explicit value wins | `generate.cpp:3317-3321` (v0.2.12); `TROUBLESHOOTING.md:345` |
+| `--ram-keep-gib W` / `STRATA_RAM_KEEP_GIB` | 0 | RAM left free for desktop apps (browser): the arena is used only if W GiB stay available after it, and the RAM copy that replaces it, and the explicit modes (`--resident-budget-gib`, `--resident-experts`), leave `max(W, 4 GiB headroom)` free. The app's "Leave 20% for my work" passes 5-8 | `DETAILS.md:755-764` (present in v0.2.11, unmeasured here) |
+| `undeclared_tool_calls: "call"` (run config, outside `args`) / `STRATA_UNDECLARED_TOOL_CALLS=call` | `"text"` (v0.2.12) | a well-formed call of an undeclared tool comes back as a tool call, so the client can answer with the real tool names; the 2026-10-31 IQ2_XS coding-suite failures ended on such calls returned as text | `DETAILS.md:495` (v0.2.12); [IQ2_XS quality](../../results/20261030-strata-iq2xs-quality/README.md) |
 
 ## KV cache as a speed lever
 
@@ -98,10 +106,14 @@ Context also buys VRAM: PR #3665 ran 64K int8 (0.75 GiB of KV), about 2.25 GiB (
 
 0. Context floor: more than 128K (user, 2026-11-05: "128k es poco"); 262K is the target, so free VRAM with
    `--kv-resident`, not with a shorter context. UD-Q2_0 (34.8 GiB of experts) fits only that way, unmeasured.
-1. Pick a set whose experts fit: today UD-IQ1_M (setup 34.8 GB, ~32.4 GiB; same table file as UD-IQ2_XS, sha
-   `05716382`) or the ISTA IQ2_XS; check `prefill plan inputs` on the first start.
+1. Pick a set whose experts fit: today the ISTA Q2_0 (34 GB of shard-1 experts, the smallest full-expert ISTA set),
+   UD-IQ1_M (setup 34.8 GB, ~32.4 GiB; same table file as UD-IQ2_XS, sha `05716382`) or the ISTA IQ2_XS; check
+   `prefill plan inputs` on the first start. Update to v0.2.12 or newer first (tool-call parser fixes). For agent use
+   no 2-bit set has an agentic evaluation; the field evidence puts the floor at IQ3_S
+   ([SOURCES-community.md](../SOURCES-community.md#flash-next-low-bit-quants-for-agents-2026-11-07)).
 2. Base run on stock settings, then the PR #3665 lossless sets one at a time (gfx12 decode set, `HC_Q8`, prompt set,
    `VERIFY_COHERENT`/`DOORBELL_STORE`, hipBLASLt table on), then the KV arms at 262K: `k8v4` vs. `int8`, and `--kv-resident 32768` vs. all in VRAM (watch `MemAvailable`).
 3. DFlash2 vs. MTP vs. off on the winner (`drafting` key), then `--draft-conf` 0.35 / 0.7 / 0.8.
-4. `STRATA_ROUTE_TAIL_SKIP=7` last and only with the coding suite, because it changes answers.
+4. `STRATA_ROUTE_TAIL_SKIP=7` last and only with the coding suite, because it changes answers. Run the coding suite
+   with `undeclared_tool_calls: "call"`, and `--ram-keep-gib` set to the browser's RAM when one stays open.
 5. Same session, same desktop state, warm-up discarded; record the slot count and `VRAM free` line of every arm.

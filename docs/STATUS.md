@@ -100,7 +100,8 @@ Sampling is the Qwen3.8-27B card's own; `--min-p 0.0` is set explicitly because 
 - **Qwen3.8-Flash-Next via Strata**: paused 2026-11-05, no model installed (clone v0.2.11, engine 0.1.57 kept for
   Qwen4). Unsloth UD-IQ2_XS decoded at 2.6-8.2 tok/s, 10.8 at best with 131K context, because its experts did not fit
   GPU + RAM (file tier 11.5-20.2 GiB; 24-51 GB read from the drive per request) — below the 15 tok/s floor —
-  [owner](models/strata-qwen-flash-next.md#current-state-2026-11-05).
+  [owner](models/strata-qwen-flash-next.md#current-state-2026-11-05). Best known setup to reinstall when testing
+  resumes (Qwen4, new quants or Strata versions): ISTA IQ2_XS on Strata >= 0.2.12, not installed.
 
 ## Next steps
 
