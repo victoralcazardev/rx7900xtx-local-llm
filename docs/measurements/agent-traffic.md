@@ -306,12 +306,16 @@ Log analysis only, no GPU run (2026-11-06). Method: `python3 scripts/cache_misse
 `q5_1` patch, `-np 1`, `--ctx-checkpoints 4`, `--cache-ram 12288`, 31 GB host RAM). Which clients sent the
 requests is not in the log.
 
-| Log | Full | Partial | Compaction | Miss | LRU | Prefill s, miss + LRU |
-|---|---|---|---|---|---|---|
-| 1105-213901 | 23 | 8 | 0 | 2 | 6 | 258 |
-| 1105-221907 | 111 | 17 | 2 | 1 | 19 | 1,114 |
-| 1106-113531 | 189 | 19 | 1 | 5 | 10 | 858 |
-| 1106-144605 | 195 | 40 | 2 | 9 | 2 | 792 |
+| Log | Full | Partial | Compaction | Miss | LRU | Prefill s, miss + LRU | Shared prefix lost (requests, s) |
+|---|---|---|---|---|---|---|---|
+| 1105-213901 | 23 | 8 | 1 | 1 | 6 | 139 | 1, 119 |
+| 1105-221907 | 111 | 17 | 2 | 1 | 19 | 1,114 | 2, 155 |
+| 1106-113531 | 189 | 19 | 3 | 3 | 10 | 687 | 5, 458 |
+| 1106-144605 | 195 | 40 | 10 | 1 | 2 | 95 | 10, 844 |
+
+Labels are those of `cache_misses.py` after its 35% compaction rule (same day). With the earlier
+under-half rule the compaction/miss counts were 0/2, 2/1, 1/5 and 2/9, and miss + LRU 258, 1,114, 858
+and 792 s.
 
 - **Large LRU prefills: cold prompts, not proven evictions.** In 1105-221907 a client whose conversation grew
   to 160-184K (above the ~35% compaction point, so probably not omp or Gentle Shell) alternated with
@@ -331,9 +335,14 @@ requests is not in the log.
   eviction erases it as the session grows (`erasing old context checkpoint (pos_min = 28025` at
   1106-144605 lines 248, 740, 1092, 1504, ...), before the next compaction needs it.
   Keeping that checkpoint (R2) would skip the 503,809 shared tokens (51% of that prefill; estimated
-  ~9 min at the ~900 tok/s of a shallow prefill, not measured). `cache_misses.py` labels most of them
-  `miss`: its `compaction` class needs the new prompt under half the old one, which a 35% threshold no
-  longer produces.
+  ~9 min at the ~900 tok/s of a shallow prefill, not measured). `cache_misses.py` labelled most of them
+  `miss`, because its `compaction` class needed the new prompt under half the old one, which a 35% threshold
+  no longer produces. It now also labels `f_keep` < 0.5 with a new prompt under 0.7 of the old slot as
+  `compaction` (16 of the 18; the two that did not shrink stay `miss`) and prints a "shared prefix lost"
+  line (LCP >= 20,000, prefill >= 0.9 x new prompt). On these four logs that line gives the same 18
+  requests, 984,474 tokens and 1,575 s as the manual count above: the 20K floor admits no request below the
+  26-29K LCPs, and the 0.9 floor excludes only small tails (e.g. 4,732 of 74,358 tokens at 1106-113531
+  line 2981).
 - **No sign of dropped reasoning (R1)**: partial requests reuse 97-99.9% of the slot. Hermes' local source
   sends `reasoning_content` back for a `custom` provider on `chat_completions`
   (`~/.hermes/hermes-agent/agent/message_sanitization.py`, `apply_reasoning_content_policy`); not confirmed

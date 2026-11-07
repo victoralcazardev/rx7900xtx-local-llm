@@ -1,9 +1,13 @@
 """Unit tests for scripts/cache_misses.py (stdlib unittest only, synthetic log lines)."""
 from __future__ import annotations
 
+import contextlib
+import io
 import pathlib
 import sys
+import tempfile
 import unittest
+from unittest import mock
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
@@ -82,6 +86,58 @@ class TestParse(unittest.TestCase):
         ]
         [e] = cache_misses.parse(log)
         self.assertEqual((e["cls"], e["old_tokens"], e["lcp_est"]), ("unknown", None, None))
+
+
+# Excerpt of _tmp/logs/huihui-iq3s-mtp-262k-q8q51-mtp-20261106-144605.log (lines 1086 and 1674 with their
+# previous release): a 35% compaction that re-processed the 28K shared prefix, then an ordinary partial miss.
+LOG_35 = """\
+67.30.492.203 I slot      release: id  0 | task 40996 | stop processing: n_tokens = 92036, truncated = 0
+67.30.629.908 I slot get_availabl: id  0 | task -1 | selected slot by LCP similarity, f_sim_best = 0.583 (> 0.100 thold), f_keep = 0.306
+69.18.390.832 I slot print_timing: id  0 | task 43212 | prompt eval time =   74336.09 ms / 48262 tokens (    1.54 ms per token,   649.24 tokens per second)
+42.58.434.088 I slot      release: id  0 | task 24188 | stop processing: n_tokens = 62203, truncated = 0
+42.58.533.711 I slot get_availabl: id  0 | task -1 | selected slot by LCP similarity, f_sim_best = 0.939 (> 0.100 thold), f_keep = 0.940
+43.22.867.652 I slot print_timing: id  0 | task 26088 | prompt eval time =   11931.20 ms /  6110 tokens (    1.95 ms per token,   512.10 tokens per second)
+"""
+
+
+class TestCompaction35(unittest.TestCase):
+    def test_35_percent_compaction_from_a_real_log(self):
+        events = cache_misses.parse(LOG_35.splitlines())
+        self.assertEqual([e["cls"] for e in events], ["compaction", "miss"])
+        self.assertEqual([cache_misses.prefix_lost(e) for e in events], [True, False])
+
+    def test_compaction_boundaries(self):
+        cases = (  # (f_keep, new, old, class)
+            (0.499, 69_999, 100_000, "compaction"),
+            (0.500, 69_999, 100_000, "miss"),        # f_keep not under 0.5
+            (0.499, 70_000, 100_000, "miss"),        # not under 0.7 of the old slot
+            (0.900, 49_999, 100_000, "compaction"),  # the original under-half rule still holds
+        )
+        for f_keep, new, old, cls in cases:
+            with self.subTest(f_keep=f_keep, new=new):
+                self.assertEqual(cache_misses.classify(f_keep, new, old), cls)
+
+    def test_prefix_lost_boundaries(self):
+        cases = (  # (lcp_est, new_est, prefill_tokens, lost)
+            (20_000, 50_000, 45_000, True),
+            (19_999, 50_000, 50_000, False),   # LCP under 20K
+            (20_000, 50_000, 44_999, False),   # prefill under 0.9 x new prompt
+            (None, None, 90_000, False),       # LRU or unknown: no LCP
+        )
+        for lcp, new, prefill, lost in cases:
+            with self.subTest(lcp=lcp, prefill=prefill):
+                e = {"lcp_est": lcp, "new_est": new, "prefill_tokens": prefill}
+                self.assertEqual(cache_misses.prefix_lost(e), lost)
+
+    def test_summary_line(self):
+        with tempfile.NamedTemporaryFile("w", suffix=".log") as f:
+            f.write(LOG_35)
+            f.flush()
+            out = io.StringIO()
+            with mock.patch.object(sys, "argv", ["cache_misses.py", f.name]), contextlib.redirect_stdout(out):
+                cache_misses.main()
+        self.assertIn("\nshared prefix lost (LCP >= 20000, prefill >= 0.9 x new):         1           48262         74\n",
+                      out.getvalue())
 
 
 if __name__ == "__main__":

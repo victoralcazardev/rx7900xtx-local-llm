@@ -7,7 +7,9 @@ This script pairs each with the previous `stop processing: n_tokens` and the req
     full        f_keep 1.000: the previous request's tokens, generated reasoning included, are
                 all a prefix of the new prompt
     partial     f_keep >= 0.95: the tail of the previous request was not reused
-    compaction  f_keep < 0.95 and the new prompt is under half the old slot (summary shape)
+    compaction  f_keep < 0.95 and the new prompt is under half the old slot (summary shape), or
+                f_keep < 0.5 and the new prompt is under 0.7 of the old slot (a harness that compacts
+                at ~35% of the window leaves ~0.5-0.65 of the old slot)
     miss        f_keep < 0.95 otherwise: the prompt diverged early without shrinking, i.e. a
                 rewrite of earlier history; read the request around that line to see why
     lru         the slot was picked by LRU because LCP similarity was under the threshold
@@ -15,6 +17,10 @@ This script pairs each with the previous `stop processing: n_tokens` and the req
     unknown     similarity logged but the slot's previous size is not (log starts mid-session)
 Estimated LCP = f_keep x old tokens; estimated new prompt = LCP / f_sim_best. Both use the
 three decimals that the log prints, so they are approximate.
+
+A summary line, across classes, counts "shared prefix lost" requests: estimated LCP >= 20,000
+tokens yet a prefill >= 0.9 x the new prompt, i.e. a long shared prefix (system prompt and tools)
+matched but no checkpoint covered it, so the whole prompt was re-processed.
 
 Usage: python3 scripts/cache_misses.py <server.log> [--all]
 """
@@ -35,7 +41,11 @@ def classify(f_keep, new, old):
         return "full"
     if f_keep >= 0.95:
         return "partial"
-    return "compaction" if new < old / 2 else "miss"
+    return "compaction" if new < old / 2 or (f_keep < 0.5 and new < 0.7 * old) else "miss"
+
+
+def prefix_lost(e):
+    return e["lcp_est"] is not None and e["lcp_est"] >= 20_000 and e["prefill_tokens"] >= 0.9 * e["new_est"]
 
 
 def parse(lines):
@@ -92,6 +102,9 @@ def main():
     for c in CLASSES:
         sel = [e for e in events if e["cls"] == c]
         print(f"{c:<10} {len(sel):>9} {sum(e['prefill_tokens'] for e in sel):>15} {sum(e['prefill_s'] for e in sel):>10.0f}")
+    sel = [e for e in events if prefix_lost(e)]
+    print(f"\nshared prefix lost (LCP >= 20000, prefill >= 0.9 x new): {len(sel):>9} "
+          f"{sum(e['prefill_tokens'] for e in sel):>15} {sum(e['prefill_s'] for e in sel):>10.0f}")
 
 
 if __name__ == "__main__":
