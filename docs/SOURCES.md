@@ -87,6 +87,10 @@ Moved to [SOURCES-alternatives.md](SOURCES-alternatives.md#vllm-on-rocm-and-hype
 
 Moved to [SOURCES-alternatives.md](SOURCES-alternatives.md#vllm-rocm-forks-and-low-bit-llamacpp-forks-2026-10-03).
 
+## RDNA-FAST fork (2026-11-06)
+
+Moved to [SOURCES-community.md](SOURCES-community.md#rdna-fast-fork-2026-11-06).
+
 ## Not pursued
 
 Moved to [SOURCES-alternatives.md](SOURCES-alternatives.md#not-pursued).

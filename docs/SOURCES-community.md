@@ -123,3 +123,22 @@ llama.cpp master the same day. No run. The trial that follows from these rows is
 | `turbo2`/`turbo3`/`turbo4` KV types (WHT + PolarQuant, no QJL) build for HIP; turbo4 PPL +0.23% vs. `q8_0`; KLD (Qwen3.5-35B, 512 ctx) `q8_0` 0.001549, `q4_0` 0.008091, turbo4 0.009633; `q8_0` K + turbo3 V gave NaN on HIP | [TheTom/llama-cpp-turboquant](https://github.com/TheTom/llama-cpp-turboquant) `docs/KV-cache-quantization.md` (pushed 2026-10-14); gfx1100-only port [domvox/llama.cpp-turboquant-hip](https://github.com/domvox/llama.cpp-turboquant-hip) (base b8680, stale since 2026-04-26) | 2026-10-18 | hypothesis (vendor numbers, short context) | Not queued: turbo4's own KLD is worse than plain `q4_0`, which already lost here; the forks' FA paths would replace our `hip-kvmix` kernels; no KLD at ≥100K exists. Revisit only if T29 lands and VRAM, not quality, becomes the limit |
 | QJL residual is dropped in production TurboQuant forks: it lowers MSE but adds variance that softmax turns into attention noise | turboquant_plus README (via scout) | 2026-10-18 | hypothesis | Argues against copying the fork's QJL key format |
 | RX 7900 XTX + 30 GB DDR5, CachyOS, ROCm 7.2.4, ISTA IQ2_XS on Strata 0.1.45: tuned config 87.3 tok/s chat, 99.7 agent (59.8 / 75.5 with the same machine's earlier config); gfx12 switch sets and route tail skip on gfx1100 | [Niko1221/Strata PR #3665](https://github.com/Niko1221/Strata/pull/3665) (closed 2026-10-29, kept for a community page) | 2026-11-05 | source-checked | Read in the PR README; not reproduced here. Tail skip changes answers (KL 0.036). Recipe and per-switch table: [`models/strata-tuning-gfx1100.md`](models/strata-tuning-gfx1100.md#the-pr-3665-recipe-community-measured-on-a-7900-xtx-30-gb) |
+
+## RDNA-FAST fork (2026-11-06)
+
+[serrynaimo/RDNA-FAST](https://github.com/serrynaimo/RDNA-FAST) at `2ec3411`: a llama.cpp fork on ROCmFPX for
+agents on AMD consumer GPUs. Only the README and `docs/` were read; no code was built or run. Its README: RX
+7900 XT 20 GB, Ryzen 9 7900, Windows 11, ROCm 10.1, "Nothing here has been measured on an XTX". Candidates and
+kill criteria: [ENGINES-EXPERIMENTS.md](ENGINES-EXPERIMENTS.md#candidates-from-the-rdna-fast-fork-2026-11-06-not-run).
+
+| Claim | Source | Date | Status | Own test |
+|---|---|---|---|---|
+| Two-agent scripted session 93 s vs. 130 s, same model, quant and context | README, "Speed" | 2026-11-06 | hypothesis (vs. LM Studio's runtime 2.69.0, not stock llama.cpp) | None |
+| SSD prompt cache: back to a 40-53K conversation 77-105 s (stock) to 2.9 s; first request after a restart 30-50 s to 4.2 s | README, "The SSD prompt cache" | 2026-11-06 | hypothesis | None; candidate R3 |
+| Checkpoint eviction keeps the one at the first user message and drops the one leaving the smallest gap | README, quick-start flag table | 2026-11-06 | source-checked (README only) | Matches our post-compaction miss; candidate R2 |
+| `ROCMFPX_DRAFT_VOCAB=24576`: decode +9% short, +3-5% at 41K; main model verifies against the full vocabulary | README, environment variables | 2026-11-06 | hypothesis | None; candidate R4 |
+| Lean MTP reserve 80 vs. 784 MiB; rollback by replay saves 0.8 GB at two slots, decode equal | README, environment variables and "Rollback by replay" | 2026-11-06 | hypothesis | None; candidate R5 |
+| `GDN_CONV_SNAP` with `MMVQ_FUSE_VERIFY`: decode +2.3-3.9%, short prompts +9-17% | README, environment variables | 2026-11-06 | hypothesis | None; candidate R6 |
+| Without `--reasoning-preserve`, a client that drops past thinking (Hermes) re-prefills a median 5K tokens per exchange | README, quick-start flag table | 2026-11-06 | locally reproduced in kind: dropping `reasoning_content` re-processes the previous answer ([agent-traffic.md](measurements/agent-traffic.md#multi-turn-prefix-reuse-with-reasoning-2026-10-03)) | Hermes unchecked; candidate R1 |
+| `GGML_HIP_FA_GQA6`: decode +10-12% at 41K for Qwen3.8-27B | README, environment variables | 2026-11-06 | not applicable (a GQA-6 band needs K and V of one type; ours is `q8_0`/`q5_1`, [TRIED.md](TRIED.md)) | None |
+| WMMA GEMM prefill: 17K cold prompt 781 to 864 t/s on IQ4_XS, batches of 512 tokens or more | README, "Prompts through a WMMA GEMM" | 2026-11-06 | not applicable at `-ub 256` | None |

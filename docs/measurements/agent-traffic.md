@@ -299,6 +299,46 @@ and b11371 (servers log "chat template supports preserving reasoning, it is enab
 A client that drops reasoning makes the server re-process the previous answer every turn —
 [`results/20261003-b11371-mtp-draft-sampling/`](../../results/20261003-b11371-mtp-draft-sampling/README.md).
 
+### Sessions of 2026-11-05/06: host-cache thrash and the lost shared prefix (four logs)
+
+Log analysis only, no GPU run (2026-11-06). Method: `python3 scripts/cache_misses.py` on the four
+`huihui-iq3s-mtp-262k-q8q51-mtp-2026110{5-213901,5-221907,6-113531,6-144605}.log` server logs (v0.9.0 +
+`q5_1` patch, `-np 1`, `--ctx-checkpoints 4`, `--cache-ram 12288`, 31 GB host RAM). Which clients sent the
+requests is not in the log.
+
+| Log | Full | Partial | Compaction | Miss | LRU | Prefill s, miss + LRU |
+|---|---|---|---|---|---|---|
+| 1105-213901 | 23 | 8 | 0 | 2 | 6 | 258 |
+| 1105-221907 | 111 | 17 | 2 | 1 | 19 | 1,114 |
+| 1106-113531 | 189 | 19 | 1 | 5 | 10 | 858 |
+| 1106-144605 | 195 | 40 | 2 | 9 | 2 | 792 |
+
+- **Large LRU prefills: cold prompts, not proven evictions.** In 1105-221907 a client whose conversation grew
+  to 160-184K (above the ~35% compaction point, so probably not omp or Gentle Shell) alternated with
+  76-123K prompts that were always re-processed in full (e.g. 108,014 tokens, 204.8 s; 122,598 tokens,
+  240.8 s; LRU prefill 611,290 tokens and 1,094 s in that session). The large conversation was restored
+  from the host cache each time (24-1,901 new tokens). The 76-123K prompts are not monotonic and no
+  eviction of their size precedes them, so they look like new conversations rather than evicted ones.
+  Cache loads and saves log only at trace level, so this stays unproven; a larger `--cache-ram` (R8) is
+  not justified by these logs
+  ([ENGINES-EXPERIMENTS.md](../ENGINES-EXPERIMENTS.md#candidates-from-the-rdna-fast-fork-2026-11-06-not-run)).
+- **Compactions re-process the ~26-28K shared prefix.** 18 requests (all four logs) matched 26-29K tokens
+  of the slot (system prompt and tools) yet re-processed the whole prompt: 984,474 tokens and 1,575 s in
+  total, 46-70K tokens and 70-119 s each. Most follow a slot of ~92K, the ~35% compaction threshold
+  (two in 1106-113531 diverged at 60-70K without shrinking). No checkpoint covered the shared prefix any
+  more, as on [2026-10-04](#remaining-miss-classes-after-the-compaction-change-2026-10-04-single-session).
+  The checkpoint exists at first: each post-compaction prefill creates one at position 28,025, and FIFO
+  eviction erases it as the session grows (`erasing old context checkpoint (pos_min = 28025` at
+  1106-144605 lines 248, 740, 1092, 1504, ...), before the next compaction needs it.
+  Keeping that checkpoint (R2) would skip the 503,809 shared tokens (51% of that prefill; estimated
+  ~9 min at the ~900 tok/s of a shallow prefill, not measured). `cache_misses.py` labels most of them
+  `miss`: its `compaction` class needs the new prompt under half the old one, which a 35% threshold no
+  longer produces.
+- **No sign of dropped reasoning (R1)**: partial requests reuse 97-99.9% of the slot. Hermes' local source
+  sends `reasoning_content` back for a `custom` provider on `chat_completions`
+  (`~/.hermes/hermes-agent/agent/message_sanitization.py`, `apply_reasoning_content_policy`); not confirmed
+  on the wire.
+
 ## Open A/B tests
 
 Four arms, all gated on the fixed coding-task suite: compaction threshold (70% vs. 60%), compaction

@@ -7,6 +7,7 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- RDNA-FAST fork and four agent-session logs reviewed: candidates R1-R9 with kill criteria and a revised order that measures host RAM before changing the profile ([`docs/ENGINES-EXPERIMENTS.md`](docs/ENGINES-EXPERIMENTS.md#candidates-from-the-rdna-fast-fork-2026-11-06-not-run)).
 - Opt-in model `huihui-iq3s-mtp` (Huihui Qwen3.8-27B abliterated GSQ-RCO IQ3_S-mtp) with the default's 262K profile: 22.12 GiB peak, 50.6 / 166.8 / 43.1 tok/s essay/copy/code at 64K ([`results/20261105-huihui-iq3s-262k/`](results/20261105-huihui-iq3s-262k/README.md)).
 - `check-sync.py` accepts a per-target `context_window` in `local.toml`; the local model now compacts at ~35% of 262K in omp and Gentle Shell ([`local.example.toml`](local.example.toml), [`docs/DECISIONS.md`](docs/DECISIONS.md)).
 - `hip-kvmix` engine switched to llama.cpp v0.9.0 + q5_1 patch by operator choice, despite a 64K screen with 4.6% slower decode on identical text; b11846 is the rollback ([`docs/ENGINES.md`](docs/ENGINES.md)).
