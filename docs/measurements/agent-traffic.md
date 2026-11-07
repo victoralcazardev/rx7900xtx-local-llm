@@ -348,6 +348,16 @@ and 792 s.
   (`~/.hermes/hermes-agent/agent/message_sanitization.py`, `apply_reasoning_content_policy`); not confirmed
   on the wire.
 
+### Compaction replay: `--ctx-checkpoints` 4 vs. 10 (2026-11-06)
+
+`bench/compaction_replay.py` replays the shape above (28K system prompt, +4K turns, compaction to a
+16K summary at 35% of 262K; 4 epochs) on `huihui-iq3s-mtp`. With 4 checkpoints the system-prompt
+checkpoint was erased in every epoch and each post-compaction request re-processed 48,030 tokens
+(70 s); with 10 it re-processed 20,025 (33 s) and no checkpoint was erased; warm turns equal within
+2.6%; peak RssAnon 13.0 vs. 11.5 GiB. Adopted as the default
+([`results/20261106-ctx-checkpoints-replay/`](../../results/20261106-ctx-checkpoints-replay/README.md),
+[DECISIONS](../DECISIONS.md)). Still open: sessions that grow past ~110K before compacting.
+
 ## Open A/B tests
 
 Four arms, all gated on the fixed coding-task suite: compaction threshold (70% vs. 60%), compaction

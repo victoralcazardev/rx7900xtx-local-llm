@@ -1,0 +1,15 @@
+   line slot class           old  f_sim f_keep     lcp~     new~  prefill      s
+     11    0 lru               -      -      -        -        -    32017   42.8
+    213    0 compaction    92484  0.583  0.303    28023    48067    20025   32.7
+    366    0 compaction    92530  0.583  0.303    28037    48091    20025   32.7
+    519    0 compaction    92567  0.583  0.303    28048    48110    20025   32.7
+
+class       requests  prefill_tokens  prefill_s
+full              48          192666        422
+partial            0               0          0
+compaction         3           60075         98
+miss               0               0          0
+lru                1           32017         43
+unknown            0               0          0
+
+shared prefix lost (LCP >= 20000, prefill >= 0.9 x new):         0               0          0

@@ -39,7 +39,7 @@ python3 scripts/launch.py            # default profile; add --dry-run to print t
 llama-server -m <models_root>/Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp/Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp.gguf \
   --port 8080 -c 262144 -ctk q8_0 -ctv q5_1 \
   --temp 1.0 --top-p 0.95 --top-k 20 --min-p 0.0 \
-  -fa on -np 1 --ctx-checkpoints 4 -ngl all --metrics \
+  -fa on -np 1 --ctx-checkpoints 10 -ngl all --metrics \
   --spec-type draft-mtp,ngram-map-k4v --spec-draft-n-max 3 -ub 256 --reasoning-effort medium \
   --cache-ram 12288
 ```
@@ -79,7 +79,7 @@ Sampling is the Qwen3.8-27B card's own; `--min-p 0.0` is set explicitly because 
 | `--spec-draft-n-max 3` | +9-11% mean tg over n=2 at the real 190K/240K depths (a 128K screening favored n=3 only on copy); n=4 loses 9-23% at 240K, re-checked on the current engine — [speculative.md](measurements/speculative.md), [TRIED.md](TRIED.md) |
 | `-ub 256` | -350 MiB peak VRAM vs. 512, -5% prefill, no generation cost — [memory.md](measurements/memory.md) |
 | `-np 1` | Single user; one slot + MTP with queuing beats more slots — [concurrency.md](measurements/concurrency.md) |
-| `--ctx-checkpoints 4` | Default is 32; 4 bounds RAM and warm turns still reuse ~all KV — [memory.md](measurements/memory.md#prompt-cache-reuse-and-context-checkpoints-2026-09-29), [TRIED.md](TRIED.md) |
+| `--ctx-checkpoints 10` | Default is 32; 4 evicted the system-prompt checkpoint before each ~35% compaction (48K re-processed, 70 s); 10 keeps it (20K, 33 s) at peak RssAnon 11.5 GiB — [replay](../results/20261106-ctx-checkpoints-replay/README.md) |
 | `--cache-ram 12288` | The 8192 default evicts a ~180K main state (7.7 GiB) when a side request is cached (412 s re-prefill); 12288 restores it in 1.8 s; up to ~4 GiB more host RAM — [memory.md](measurements/memory.md#host-prompt-cache-eviction-with-a-side-request-2026-10-03) |
 | `-ngl all` | All layers on GPU, explicit rather than `auto` |
 | `--reasoning-effort medium` | Template default `xhigh` injects "think carefully..." and overthinks; `medium` adds no instruction — `models.toml` |

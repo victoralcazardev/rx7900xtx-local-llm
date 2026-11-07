@@ -142,7 +142,7 @@ about 330 requests from a coding-agent harness (main agent plus subagents). Sess
   the same base prompt re-processes it fully.
 - **Checkpoint size grows with position** (host RAM): 270.3 MiB at 30,708 tokens, 303.9 MiB at
   39,269, 384.9 MiB at 59,899, 514.7 MiB at 92,907.
-- **Decision: keep `--ctx-checkpoints 4`.** Keeping the base-prompt checkpoint alive to ~160K
+- **Decision: keep `--ctx-checkpoints 4`** (superseded 2026-11-06 by 10, [replay](../../results/20261106-ctx-checkpoints-replay/README.md)). Keeping the base-prompt checkpoint alive to ~160K
   tokens would need about 16 checkpoints, several GiB more host RAM (per-checkpoint size grows with
   depth) on a 32 GiB host (31.25 GiB usable) that also holds the default 8 GiB `--cache-ram`. The payoff is ~42 s per
   new context, seen once in a 2 h+ session. Re-open only if new contexts become frequent (for
