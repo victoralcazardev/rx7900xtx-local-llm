@@ -3,6 +3,8 @@
 Read-only: reads amdgpu sysfs sensors and GET /slots; never writes sysfs,
 never sends inference. One CSV row per sample on stdout (redirect to a file).
 Timestamps are UTC ISO so rows align with the server log start time.
+With --pid, rss_anon_mib is the RssAnon of the llama-server process: the pid itself or, when it is a
+wrapper (launch.py runs systemd-inhibit), its first llama-server descendant; empty when unreadable.
 Rows crossing the safety gate (junction >104 C, mem >105 C, VRAM free <300 MiB)
 get flag=HOT/VRAM and a line on stderr; nothing is stopped automatically.
 
@@ -28,7 +30,8 @@ LIMITS = {"junction": 104.0, "mem": 105.0, "vram_free_mib": 300}
 # Columns after `flag` were appended later (clock/voltage under the power cap); keep the order stable.
 FIELDS = ["utc", "edge_c", "junction_c", "mem_c", "power_w", "busy_pct",
           "vram_used_mib", "vram_free_mib", "processing", "flag",
-          "sclk_mhz", "mclk_mhz", "vddgfx_mv"]
+          "sclk_mhz", "mclk_mhz", "vddgfx_mv", "rss_anon_mib"]
+PROC = pathlib.Path("/proc")
 
 
 def read(path: pathlib.Path) -> int | None:
@@ -36,6 +39,36 @@ def read(path: pathlib.Path) -> int | None:
         return int(path.read_text().strip())
     except (OSError, ValueError):
         return None
+
+
+def server_pid(pid: int, proc: pathlib.Path = PROC) -> int | None:
+    """pid itself if it is llama-server, else its first llama-server descendant (breadth-first)."""
+    queue, seen = [pid], set()
+    while queue:
+        p = queue.pop(0)
+        if p in seen:
+            continue
+        seen.add(p)
+        try:
+            if (proc / str(p) / "comm").read_text().startswith("llama-server"):
+                return p
+            for children in (proc / str(p) / "task").glob("*/children"):
+                queue += [int(c) for c in children.read_text().split()]
+        except (OSError, ValueError):
+            continue
+    return None
+
+
+def rss_anon_mib(pid: int | None, proc: pathlib.Path = PROC) -> int | None:
+    if pid is None:
+        return None
+    try:
+        for line in (proc / str(pid) / "status").read_text().splitlines():
+            if line.startswith("RssAnon:"):
+                return int(line.split()[1]) // 1024  # kB
+    except (OSError, ValueError, IndexError):
+        pass
+    return None
 
 
 def processing(port: int) -> str:
@@ -46,7 +79,7 @@ def processing(port: int) -> str:
         return ""
 
 
-def sample(dev: pathlib.Path, port: int) -> dict:
+def sample(dev: pathlib.Path, port: int, server: int | None = None) -> dict:
     hw = next(dev.glob("hwmon/hwmon*"))
     temps = {}
     for label in hw.glob("temp*_label"):
@@ -71,6 +104,7 @@ def sample(dev: pathlib.Path, port: int) -> dict:
         "sclk_mhz": sclk // 10**6 if sclk is not None else None,  # freq*_input is in Hz
         "mclk_mhz": mclk // 10**6 if mclk is not None else None,
         "vddgfx_mv": read(hw / "in0_input"),  # in0_input is in mV
+        "rss_anon_mib": rss_anon_mib(server, PROC),
     }
 
 
@@ -83,9 +117,11 @@ def main() -> None:
     args = ap.parse_args()
     dev = gpu_device() or sys.exit("no amdgpu card with mem_info_vram_total found")
     print(",".join(FIELDS), flush=True)
-    n = 0
+    n, server = 0, None
     while (not args.count or n < args.count) and (not args.pid or os.path.exists(f"/proc/{args.pid}")):
-        row = sample(dev, args.port)
+        if args.pid and (server is None or not (PROC / str(server)).exists()):
+            server = server_pid(args.pid)  # the server child may start after the wrapper, or restart
+        row = sample(dev, args.port, server)
         print(",".join("" if row[k] is None else str(row[k]) for k in FIELDS), flush=True)
         if row["flag"]:
             print(f"gpu_watch {row['utc']} {row['flag']}: junction={row['junction_c']} "

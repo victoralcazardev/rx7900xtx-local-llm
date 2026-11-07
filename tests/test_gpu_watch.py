@@ -36,7 +36,7 @@ class TestSample(unittest.TestCase):
         self.assertEqual((row["power_w"], row["vram_free_mib"], row["busy_pct"]), (272.0, 4096, 97))
         self.assertEqual(gpu_watch.FIELDS[:10], ["utc", "edge_c", "junction_c", "mem_c", "power_w", "busy_pct",
                                                  "vram_used_mib", "vram_free_mib", "processing", "flag"])
-        self.assertEqual(gpu_watch.FIELDS[10:], ["sclk_mhz", "mclk_mhz", "vddgfx_mv"])
+        self.assertEqual(gpu_watch.FIELDS[10:13], ["sclk_mhz", "mclk_mhz", "vddgfx_mv"])
 
     def test_missing_clock_sensors_leave_the_columns_empty(self):
         with tempfile.TemporaryDirectory() as tmp, mock.patch.object(gpu_watch, "processing", return_value=""):
@@ -56,6 +56,55 @@ class TestSample(unittest.TestCase):
                     mock.patch.object(gpu_watch, "processing", return_value=""):
                 dev = _fake_device(pathlib.Path(tmp), {**sensors, "temp2_input": temp}, used_gib=used)
                 self.assertEqual(gpu_watch.sample(dev, 8080)["flag"], flag)
+
+
+def _fake_proc(root: pathlib.Path, procs: dict[int, tuple[str, list[int], str | None]]) -> pathlib.Path:
+    """procs: pid -> (comm, child pids, RssAnon kB or None for a status file without it)."""
+    for pid, (comm, children, rss_kb) in procs.items():
+        task = root / str(pid) / "task" / str(pid)
+        task.mkdir(parents=True)
+        (root / str(pid) / "comm").write_text(comm + "\n")
+        (task / "children").write_text("".join(f"{c} " for c in children))
+        status = f"Name:\t{comm}\nVmRSS:\t  999999 kB\n"
+        (root / str(pid) / "status").write_text(status + (f"RssAnon:\t {rss_kb} kB\n" if rss_kb else ""))
+    return root
+
+
+class TestServerRss(unittest.TestCase):
+    def test_rss_column_is_appended_after_vddgfx(self):
+        self.assertEqual(gpu_watch.FIELDS[10:], ["sclk_mhz", "mclk_mhz", "vddgfx_mv", "rss_anon_mib"])
+
+    def test_direct_pid_is_the_server(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            proc = _fake_proc(pathlib.Path(tmp), {100: ("llama-server", [], "12582912")})
+            self.assertEqual(gpu_watch.server_pid(100, proc), 100)
+            self.assertEqual(gpu_watch.rss_anon_mib(100, proc), 12288)
+
+    def test_wrapped_pid_resolves_to_the_server_child(self):
+        procs = {100: ("systemd-inhibit", [101], "512"), 101: ("sh", [102], "256"),
+                 102: ("llama-server", [], "2097152")}
+        with tempfile.TemporaryDirectory() as tmp:
+            proc = _fake_proc(pathlib.Path(tmp), procs)
+            self.assertEqual(gpu_watch.server_pid(100, proc), 102)
+            self.assertEqual(gpu_watch.rss_anon_mib(gpu_watch.server_pid(100, proc), proc), 2048)
+
+    def test_missing_pid_or_field_leaves_the_column_empty(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            proc = _fake_proc(pathlib.Path(tmp), {100: ("systemd-inhibit", [], "512"),
+                                                  200: ("llama-server", [], None)})
+            self.assertIsNone(gpu_watch.server_pid(100, proc))   # wrapper without a server child
+            self.assertIsNone(gpu_watch.server_pid(999, proc))   # pid gone
+            self.assertIsNone(gpu_watch.rss_anon_mib(None, proc))
+            self.assertIsNone(gpu_watch.rss_anon_mib(999, proc))
+            self.assertIsNone(gpu_watch.rss_anon_mib(200, proc))  # status without RssAnon
+
+    def test_sample_reports_the_server_rss(self):
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.object(gpu_watch, "processing", return_value=""):
+            dev = _fake_device(pathlib.Path(tmp), {})
+            proc = _fake_proc(pathlib.Path(tmp) / "proc", {100: ("llama-server", [], "1048576")})
+            with mock.patch.object(gpu_watch, "PROC", proc):
+                self.assertEqual(gpu_watch.sample(dev, 8080, 100)["rss_anon_mib"], 1024)
+                self.assertIsNone(gpu_watch.sample(dev, 8080)["rss_anon_mib"])
 
 
 if __name__ == "__main__":
