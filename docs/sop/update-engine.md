@@ -20,10 +20,13 @@ disabled). One single-backend binary per download/build.
      ([results](../../results/20261023-d1-pr30792q51-240k/README.md)): any newer base needs the patch
      rebased. If merged, check whether the K q8_0 + V q5_1 pair is covered; drop the local patch only
      if the 240K A/B matches.
-   - [PR #31234](https://github.com/ggml-org/llama.cpp/pull/31234), open (checked 2026-11-05): native quantized
+   - [PR #31234](https://github.com/ggml-org/llama.cpp/pull/31234), open (checked 2026-11-11): native quantized
      KV in `flash_attn_tile` for CUDA/HIP, the form a maintainer asked for instead of #30792 (PR #30803).
      Measured on RDNA4 only (qwen35 27B q8_0/q8_0, tg at 131K x1.60); the table shows q4_0/q4_0 and q8_0/q8_0,
-     not K q8_0 / V q5_1. If it merges with that pair, test it against `pr30792-q5_1.patch` and drop the patch.
+     not K q8_0 / V q5_1. It compiles "q4_0, q4_1, q5_0, q5_1, q8_0 and bf16 ... in any K/V combination",
+     but "A shape runs natively only if the GPU has a config row for it, and so far only gfx1201 has
+     rows": on gfx1100 it needs a row before it can replace the patch. If it merges with a gfx1100 row
+     covering that pair, test it against `pr30792-q5_1.patch` and drop the patch.
    - [PR #30885](https://github.com/ggml-org/llama.cpp/pull/30885), merged 2026-10-23 (after b11840):
      bf16 WMMA operand type for gfx11/gfx12, fixes the HIP build on LLVM 23. Needed only when the
      build toolchain moves past ROCm 10.0.0's LLVM.
