@@ -275,5 +275,6 @@ general coding quality — see
 - HauhauCS "Aggressive" de-refusal method (the README names the profile but not the algorithm,
   unlike RVN which documents ARA/heretic in detail).
 - GSQ-RCO's quality claims vs. Unsloth Dynamic — quoted from their own results table, not
-  independently reproduced.
+  independently reproduced. Unsloth's 2026-11-11 docs contest them on the same `UD-IQ3_S` file
+  ([SOURCES-upstream.md](../SOURCES-upstream.md#kv--weight-quantization-quality)).
 - Third-party refusal-rate and KL figures for HauhauCS and RVN — vendor claims, not measured here.

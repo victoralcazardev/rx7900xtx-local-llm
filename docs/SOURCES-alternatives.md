@@ -38,6 +38,8 @@ Checked for one gfx1100 at 200K-262K context. No run.
 
 - `unsloth/Qwen3.8-27B-GGUF` `UD-IQ3_S` (12 GB) as an alternative quant — candidate for a
   perplexity/speed comparison at the same size budget, not tested (`docs/models/qwen38-27b-quants.md`).
+  Still the UD3 file after the 2026-11-11 v3.1 update, with MTP baked in; vendor claims on both sides
+  in [SOURCES-upstream.md](SOURCES-upstream.md#kv--weight-quantization-quality).
 - Quantized vision projector (`mmproj` Q5_K-MIX, ~0.9 GB) — HF-reported 74.58% vs. 74.93% for BF16
   on 11 benchmarks; not pursued because vision was deprioritized for this hardware.
 - Power-limit and undervolt tuning (LACT) — explicitly deprioritized; see `docs/STATUS.md`.
