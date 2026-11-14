@@ -110,6 +110,17 @@ All claims below are the authors' own and are unverified here.
   fit the page cache; v0.2.8 already plans the chunk against the page cache, and here the larger chunk already lost
   (`--prefill 16384`, [TRIED.md](TRIED.md)). Details in
   [`docs/models/strata-qwen-flash-next.md`](models/strata-qwen-flash-next.md#tuning-plan-2026-10-16-not-run).
+- **Update 2026-11-14 (abliterated GSQ-RCO Flash-Next builds)**: two community variants of the ISTA set, card-checked
+  through the Hugging Face API and README (`source-checked`, not reproduced here).
+  [alesha-pro](https://huggingface.co/alesha-pro/Qwen3.8-Flash-Next-abliterated-GSQ-RCO-Strata-GGUF) keeps the ISTA
+  `ed59f920` shards byte for byte and adds a 480 KB control vector applied at run time, which only Strata's projection
+  mode honours (stock llama.cpp adds instead, so the files behave as the original); the author reports 0/10 refusals on
+  IQ3_S and IQ2_XS against 9-10/10 for the original, on one RTX 3090.
+  [SC117](https://huggingface.co/SC117/Qwen3.8-Flash-Next-GSQ-RCO-abliterated-GGUF) transplants 144 residual-writing
+  tensors from an uncensored set into the same files instead (1,079 others byte-identical, loads in stock llama.cpp),
+  with a single-prompt spot check as its only behaviour evidence and an apache-2.0 declaration over a Qwen Community
+  License 1.0 base. Neither was run here. Details in
+  [`docs/models/strata-qwen-flash-next.md`](models/strata-qwen-flash-next.md#review-2026-11-14-abliterated-flash-next-ggufs-control-vector-vs-weight-transplant).
 - **[sybil-solutions/glm53-flash-offload](https://github.com/sybil-solutions/glm53-flash-offload)
   (checked 2026-10-08, README only)**: GLM-5.3-Flash EXL3 3.05 bpw (125 GB; 42 MoE layers x 288
   experts, 8 active, 9.4 MB per expert) on one 24 GB RTX 3090, built on exllamav3 + an SGLang

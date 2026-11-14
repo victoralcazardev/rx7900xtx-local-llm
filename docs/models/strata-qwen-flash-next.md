@@ -753,3 +753,24 @@ Measured; the numbers, the log excerpt and the arm script:
   `STRATA_RAM_ADAPT=1` in the resident mode; the drive measured and pinned with `STRATA_SSD_GBPS`, because the plan
   prices it `1.50 GB/s (assumed)`; and a same-hardware report for the set, since the field reports so far are the
   smaller ISTA IQ2_XS on an RTX 4070 12 GB / 32 GB.
+
+## Review 2026-11-14: abliterated Flash-Next GGUFs (control vector vs. weight transplant)
+
+Desk review of two community abliterated builds of the ISTA GSQ-RCO set; cards read 2026-11-14 via the Hugging
+Face API and README (`source-checked`), nothing run here. alesha-pro, `lastModified` 2026-10-04,
+SC117 at revision `90a3350c`, 2026-10-24.
+
+| | [alesha-pro](https://huggingface.co/alesha-pro/Qwen3.8-Flash-Next-abliterated-GSQ-RCO-Strata-GGUF) | [SC117](https://huggingface.co/SC117/Qwen3.8-Flash-Next-GSQ-RCO-abliterated-GGUF) |
+|---|---|---|
+| Weights | Q2_0, IQ2_XS, IQ3_XXS and IQ3_S copied byte for byte from ISTA `ed59f920` (card's `SHA256SUMS`, not re-hashed here) | 144 residual-writing tensors transplanted from the OrcaRouter uncensored set; the other 1,079 byte-identical (per-tensor blake2b) |
+| Abliteration | 480 KB refusal direction from Huihui, applied at run time over layers 4-44 (`--control-vector-scaled <path>:1.0 --cvec-mode project --cvec-dir per-layer`) | Written into the weights |
+| Engines | Strata only: stock llama.cpp `--control-vector` adds instead of projecting, so the files behave as the original model | Stock llama.cpp and Strata |
+| Shard 1 (GB) | ISTA's, unchanged (the vector is a separate file) | IQ2_XS 39.67, IQ3_XXS 47.34, IQ3_S 55.06, Q2_0 38.02 (+0.25-0.44 vs. upstream); shard 2 (28.8 GB table) byte-identical across tiers |
+| Evidence | Author, one RTX 3090, Strata 0.1.38, 10 refusal prompts: 0/10 refusals on IQ3_S and IQ2_XS (original 9-10/10); KL to BF16 Huihui 0.0738 / 0.1923, top-1 93% / 87%; 59 / 87 tok/s at a 32K prompt. Q2_0 and IQ3_XXS not run | A single-prompt spot check |
+| License | "other" = Qwen Community License 1.0 | Claims apache-2.0 over a Qwen Community License 1.0 base (discrepancy) |
+
+Conclusion: the alesha-pro route keeps the ISTA weights untouched but works only inside Strata; SC117 is
+engine-independent but carries weaker evidence (~4.12M downloads and ~1k likes are the user's listing, not re-read
+here). Neither has run on the RX 7900 XTX: Strata Flash-Next is paused ([`STATUS.md`](../STATUS.md)), and per the
+[2026-10-30 fit check](#fit-check-2026-10-30-iq2_xs-and-iq3_xxs-without-ssd-reads) only IQ2_XS comes close.
+Status: open, not locally tested.
