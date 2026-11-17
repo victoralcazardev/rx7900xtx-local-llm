@@ -338,6 +338,37 @@ GQA-6 FlashAttention band (needs K and V of one type: [TRIED.md](TRIED.md)), `q4
 slot ranges, the shared pass or request priority (one slot wins here), DFlash2 (mostly lost at 190K and 240K), the decision
 classifier, and MoE expert handoff (experts still live in host RAM, the limit that paused Strata).
 
+## Harness-adapter LoRA for Qwen3.8-27B (2026-11-17, candidate, not run)
+
+[`harness-hub/Qwen3.8-27B-pi-adapted`](https://huggingface.co/harness-hub/Qwen3.8-27B-pi-adapted) is a rank-32
+LoRA (GGUF F16, ~319 MB, in `harness-hub/Qwen3.8-27B-pi-GGUF`) trained with RL inside the pi harness. Claims
+and evidence status: [SOURCES-upstream.md](SOURCES-upstream.md#agent-harness--api-compatibility-context-only).
+
+Why it does not transfer directly to our profile:
+
+- **Thinking.** Trained and evaluated with thinking off; our profile runs `--reasoning-effort medium`. No
+  per-effort numbers are published (a "better at every reasoning level" claim in the announcement has no
+  table; the release blog returned HTTP 401 on 2026-11-17).
+- **Base quant.** Trained on BF16; the card recommends Q8_0 and says the GGUF version was not re-evaluated.
+  Ours is GSQ-RCO `IQ3_S`.
+- **Harness.** Trained on vanilla pi (stock prompt and tools, 50 steps, 65K-token rollouts, tool-efficiency
+  reward). Our harness sends a ~33K-token prompt with 44 tools
+  ([agent-traffic.md](measurements/agent-traffic.md#gentle-shell-base-prompt-2026-11-17-single-capture)).
+- **MTP.** `common/speculative.cpp` has no LoRA handling (source read, 2026-11-17), so the MTP head likely
+  drafts unadapted: acceptance may drop. That the server applies the adapter only to the target context
+  is unverified.
+
+**Mechanics (source read, llama.cpp master, 2026-11-17).** `--lora` adds `B·A·x` in the graph next to the
+unchanged quantized matmul, so it runs on the `IQ3_S` base without a merge; `llama-export-lora` would
+re-emit adapted tensors as F16, losing the IQ3_S size. `--lora-init-without-apply` plus `POST
+/lora-adapters` toggles it without a restart.
+
+**Proposed A/B** (coding suite, same IQ3_S-mtp GGUF, adopted flags): (A) current profile, (B) `--lora`
+with thinking off, (C) base with thinking off, (D) `--lora` with thinking medium. Record pass rate, tool
+calls, wall time, tok/s, MTP acceptance and peak VRAM. Kill criterion: B and D both below A on pass rate,
+or the adapter fails to load (tensor-name mismatch on the DeltaNet layers aborts at load). Wait for the
+release blog first if it publishes per-effort results.
+
 ## Upstream watchlist (2026-09-29)
 
 Upstream items to re-check at each engine update ([`sop/update-engine.md`](sop/update-engine.md)); the pinned build

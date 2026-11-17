@@ -28,7 +28,8 @@ other measurement docs. Log and session analysis only: no new GPU run.
   the data shows over-long reasoning, not degenerate loops. One turn hit the harness's
   `max_tokens` (32,768) with nothing usable stored; the cause can't be recovered from the session
   file.
-- **The harness's base prompt is ~14.5K tokens, down from ~32K**: the ~32K figure in
+- **omp's base prompt is ~14.5K tokens, down from ~32K** (Gentle Shell's is ~33K: see
+  "Gentle Shell base prompt" below): the ~32K figure in
   [`memory.md`](memory.md#prompt-cache-reuse-and-context-checkpoints-2026-09-29) came from the
   harness version in use until 2026-09-29. After the harness update (omp v18.4.4) the first request
   of a session is ~14.5K tokens, so the known checkpoint-miss cost drops from ~42 s to roughly
@@ -73,6 +74,30 @@ other measurement docs. Log and session analysis only: no new GPU run.
 
 The same capture from a different project directory gave ~13,900 tokens. Before the harness update
 the server logs show 32,076 and 32,137 tokens for the same first request.
+
+### Gentle Shell base prompt (2026-11-17, single capture)
+
+Gentle Shell 4.8.0 (gentle-pi 4.8.0 on Pi 1.5.2), provider `local-262k`, RDD on, codemode off. Captured by
+serving a throwaway HTTP endpoint on `127.0.0.1:8080` that stores the request body and returns 500, then
+running `gentle-shell -- -p "hi" --provider local-262k --model local-262k`. Tokens are bytes divided by
+~4.78, calibrated against the ~31.5-34.1K first-request sizes in six `llama-server` logs of
+2026-11-07/09 (estimate; not counted with the Qwen tokenizer).
+
+| Part | Bytes | ≈ Tokens |
+|---|---:|---:|
+| Skill catalogs: Pi's `<available_skills>` (38) + gentle-pi's "Effective session skills" table (135 rows) | ~50,500 | ~10,500 |
+| Tool declarations (44 tools) | 47,091 | ~9,800 |
+| Review (RDD) execution contract | ~10,000 | ~2,000 |
+| Workflow, orchestrator, persona, project `AGENTS.md`, rest | ~50,000 | ~10,500 |
+| **Total** | **157,654** | **~33,000** |
+
+- At the 35% compaction threshold (91,750 tokens) the base prompt leaves ~58K tokens of work per
+  compaction cycle.
+- The 135-row table indexes skills from other harnesses' homes (`~/.hermes`, `~/.claude`, `~/.codex`,
+  `~/.pi`) for subagent delegation. `GENTLE_PI_NO_SKILL_REGISTRY=1` (or `--no-skill-registry`) drops it:
+  the same capture gives 122,713 bytes, ~25.7K tokens (-22%), with the 38 Pi-loaded skills kept.
+- The request carries `chat_template_kwargs: {"enable_thinking": true, "preserve_thinking": true}`.
+- Single capture, one user's skill set; the table size depends on what is installed in those homes.
 
 ### Agent turns by depth (31 sessions)
 
