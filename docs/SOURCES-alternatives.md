@@ -121,6 +121,12 @@ All claims below are the authors' own and are unverified here.
   with a single-prompt spot check as its only behaviour evidence and an apache-2.0 declaration over a Qwen Community
   License 1.0 base. Neither was run here. Details in
   [`docs/models/strata-qwen-flash-next.md`](models/strata-qwen-flash-next.md#review-2026-11-14-abliterated-flash-next-ggufs-control-vector-vs-weight-transplant).
+- **Update 2026-11-20 (resident mode on 32 GB RAM)**: [PR #834](https://github.com/Niko1221/Strata/pull/834) runs
+  IQ2_XS with `--resident-experts` on an RTX 4090 + 32 GB up to a 477K prompt only after raising
+  `STRATA_RESIDENT_HEADROOM_GIB` to 6 (source-checked, CUDA); [#4849](https://github.com/Niko1221/Strata/issues/4849)
+  shows automatic resident stalling on an RX 7900 XTX + 32 GB (Q2_0, v0.2.9, 22-38K prompts; source-checked). The
+  32 GB resident sentence has left upstream `DETAILS.md` (unverified, scout). Details in
+  [`docs/models/strata-qwen-flash-next.md`](models/strata-qwen-flash-next.md#review-2026-11-20-resident-mode-on-32-gb-ram-v0217).
 - **[sybil-solutions/glm53-flash-offload](https://github.com/sybil-solutions/glm53-flash-offload)
   (checked 2026-10-08, README only)**: GLM-5.3-Flash EXL3 3.05 bpw (125 GB; 42 MoE layers x 288
   experts, 8 active, 9.4 MB per expert) on one 24 GB RTX 3090, built on exllamav3 + an SGLang

@@ -34,6 +34,9 @@
   warm short, 36.7 at 240K). Its open question is the coding suite on v0.2.12, where the tool-call parser fixes may
   change the 2026-10-31 failure. Retest with Qwen4, new quants or a new Strata version
   ([switches](strata-tuning-gfx1100.md#other-switches-worth-an-arm)).
+- **Zero SSD expert reads (2026-11-20)**: only resident mode avoids them; it stalled here on v0.2.8 and on another
+  RX 7900 XTX + 32 GB on v0.2.9, and it is proven with 32 GB only on CUDA. Retest arm, not run:
+  [review 2026-11-20](#review-2026-11-20-resident-mode-on-32-gb-ram-v0217).
 - **Agent quality floor (2026-11-07)**: 2-bit sets fit this machine, but no 2-bit set has an agentic evaluation and the
   field evidence puts the floor for agents at IQ3_S, which does not fit 32 GB without SSD reads
   ([sources](../SOURCES-community.md#flash-next-low-bit-quants-for-agents-2026-11-07)).
@@ -131,6 +134,8 @@ second. Enable KV Cache - k8v4 for +10% boost in performance with no quality los
   setup keeps the copy pageable (`STRATA_RESIDENT_PIN=0`). This removes the disk-read objection
   above for Q2_0, IQ2_XS and the Coder. **Not measured** on this machine; with 31.25 GiB usable
   and ~16-18 GB of experts it is tight, so check the log line before trusting any speed.
+  Later evidence: resident stalled here on v0.2.8 ([IQ2_XS on v0.2.8](#iq2_xs-on-v028-2026-10-30)), and the quoted
+  sentence is no longer in `DETAILS.md` ([review 2026-11-20](#review-2026-11-20-resident-mode-on-32-gb-ram-v0217)).
 - v0.1.30 also streams every expert from 1024-token prefill chunks (upstream: +17-28% on 1-4K
   prompts, same output). No new RX 7900 XTX generation figures were published.
 
@@ -774,3 +779,44 @@ engine-independent but carries weaker evidence (~4.12M downloads and ~1k likes a
 here). Neither has run on the RX 7900 XTX: Strata Flash-Next is paused ([`STATUS.md`](../STATUS.md)), and per the
 [2026-10-30 fit check](#fit-check-2026-10-30-iq2_xs-and-iq3_xxs-without-ssd-reads) only IQ2_XS comes close.
 Status: open, not locally tested.
+
+## Review 2026-11-20: resident mode on 32 GB RAM (v0.2.17)
+
+Question: can ISTA IQ2_XS run on this PC with no expert read from the SSD (the shard-2 table is always read, a few
+rows per token)? Only resident mode (`--resident-experts`, or `--resident-cpu-experts`) does that; mapped mode, the
+2026-10-30 config, reads cold experts from the file. Desk review, nothing run.
+
+| Evidence | Status | What it says |
+|---|---|---|
+| [PR #834](https://github.com/Niko1221/Strata/pull/834), RTX 4090 + 32 GB, IQ2_XS, engine 0.1.39, 2026-10-04 | source-checked | `--resident-experts` up to a 476,820-token prompt, 122.0 tok/s decode; "with the default resident headroom, 0.1.39 left 1.41 GiB `MemAvailable` at 477K. `STRATA_RESIDENT_HEADROOM_GIB=6` left 3.53 GiB". CUDA with a page-locked copy; says nothing about ROCm |
+| [#4849](https://github.com/Niko1221/Strata/issues/4849), RX 7900 XTX + 32 GB, CachyOS, Q2_0, v0.2.9 (engine 0.1.55), headroom 4, `STRATA_RESIDENT_PIN=0`, 2026-10-31 | source-checked | Automatic resident "stalled on two independent starts" on 22-38K prompts with multi-GiB process swap (resident copy 16.6-17.5 GiB); a local patch plus `STRATA_FILE_CACHE_OLD_RULE=1` passed 24/24, "not proof that all ROCm stalls have the same cause" |
+| [#467](https://github.com/Niko1221/Strata/issues/467), gfx1100 + 32 GB, 2026-10-02 | unverified (scout) | Setup's resident mode never engaged and fell back to mmap ("resident complement 16.20 GiB exceeds available RAM") |
+| Strata `main` at v0.2.17 (released 2026-11-20, engine 0.1.63) | unverified (scout read the source, not re-checked) | The 32 GB sentence quoted [above](#fit-on-a-24-gb-rx-7900-xtx-with-32-gib-ram-3125-gib-usable) left `docs/DETAILS.md` (it survives in a 2026-10-06 bench fixture); `docs/MODELS.md` now places 32 GB + 24 GB under the mapped mode. Since v0.2.12 the engine's automatic RAM copy honours `STRATA_RESIDENT_PIN=0` (it was page-locked whatever the variable said), a new guard targets a 30 GB `--resident-experts` stall on 38-47K prompts, setup suggests headroom 6 on PCs with 48 GB or less, and `docs/AMD_HIP_PERFORMANCE.md` recommends the pageable `--resident-cpu-experts` on HIP |
+| Tool-call recovery in v0.2.12 (`undeclared_tool_calls`) and more in v0.2.16 | user-stated | Justifies rerunning the coding suite; it does not guarantee a pass, since the 2026-10-31 failure was the model inventing `run_file` |
+
+Conclusion: with 32 GB, zero SSD expert reads are proven only on CUDA, with headroom tuned; on this card resident
+failed here (v0.2.8, 120K) and in #4849 (v0.2.9, 22-38K), and no AMD report shows it above 100K. The fixes since
+v0.2.12 make a retest reasonable. RAM is the constraint: an ~17.3-18.5 GiB copy + 6 GiB headroom + a ~10 GiB desktop
+exceeds 31.25 GiB usable, so the arm needs a lean desktop or a smaller context (in Strata a smaller KV leaves more VRAM
+to the expert cache, so less goes to RAM).
+
+Retest arm (not run): v0.2.17 + ISTA IQ2_XS, resident pageable (`STRATA_RESIDENT_PIN=0`),
+`STRATA_RESIDENT_HEADROOM_GIB=6`, the 2026-10-30 prompts (22K, 38K, 120K); pass = `blob reads from the file` 0, no
+stall, no multi-GiB swap; then the coding suite against the 27B. Mapped mode stays the fallback. Status: open.
+
+Field reports from the same window, relevant to that arm (titles and quotes read by a research subagent; #6429 state
+and title source-checked 2026-11-20):
+
+- [#6392](https://github.com/Niko1221/Strata/issues/6392), RX 7900 XTX + 32 GB, Linux HIP, IQ2_XS low-RAM, engines
+  0.1.62 and 0.1.63: the engine hangs within 4-10 min of sustained serving; "the graphics driver paused the GPU for
+  100-3,000 ms ... while Linux moved memory the GPU uses"; setup defaults left 10 GB in swap. Healthy speed 72-83
+  tok/s decode. This is this PC's configuration: the retest arm must serve for more than 10 min, not only 3 prompts.
+- [#6429](https://github.com/Niko1221/Strata/issues/6429) (open, no maintainer decision): `STRATA_HIPBLASLT_TABLE=on`
+  on gfx1100 IQ3_S reads 4K+ prompts 1.33-1.89x as fast (32K 957 → 1,808 tok/s), decode unchanged, needles 9/9 both
+  arms. [#6378](https://github.com/Niko1221/Strata/issues/6378): with a hipBLASLt version other than the table's
+  (100200), the switch silently does nothing or makes 110K cold prefill ~25% slower. Try it only with a matching
+  library.
+- v0.2.16 (engine 0.1.62) replaced the ggml/llama.cpp matrix kernels with Strata's own and lists the RX 7000 changes
+  as "Not tested"; [#6067](https://github.com/Niko1221/Strata/issues/6067) (closed) reported gfx1100 cold prefill ~40%
+  slower than 0.1.59. A/B before trusting 0.1.63 numbers.
+- Strata still lists no Inkling model; Qwen4 is groundwork only (`strata --geometry`, v0.2.13).
