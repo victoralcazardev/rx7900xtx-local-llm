@@ -155,3 +155,41 @@ agentic evidence is scarce. Strata side: [`strata-tuning-gfx1100.md`](models/str
 | ISTA card, single-turn task average (AIME25, GPQA-D, LiveCodeBench v6), BF16 93.12: IQ3_S 93.26, IQ3_XXS 92.57, IQ2_XS 89.16, Q2_0 89.07; no tool-calling evaluation | [ISTA-DASLab/Qwen3.8-Flash-Next-GSQ-RCO-GGUF](https://huggingface.co/ISTA-DASLab/Qwen3.8-Flash-Next-GSQ-RCO-GGUF) | 2026-11 | hypothesis (read by a research subagent; IQ2_XS 89.16 also on the vramcalculator Strata page) | IQ2_XS: 128K retrieval 8/8, coding suite failed |
 | Strata's same-top-token-as-Q8_0 table: IQ3_S 87.69%, IQ3_XXS 84.46%, Q2_0 80.60% (IQ2_XS not measured) | Strata `docs/QUANTS.md:76-82` at `146df3c4` | 2026-11-07 | hypothesis (read by a research subagent) | None |
 | HF discussion "Thinking hallucination, looping for IQ2_XS but not q2_0" | ISTA-DASLab Flash-Next GGUF discussions #45 | ~2026-10 | unverified (title only, body not reached) | None |
+
+## DSpine draft model and the Ajay9o9 dspine fork (2026-11-08)
+
+[aj9o9/Qwen3.8-27B-DSpine-b16-GGUF](https://huggingface.co/aj9o9/Qwen3.8-27B-DSpine-b16-GGUF) (GGUFs of
+`tencent/Qwen3.8-27B-DSpine-b16`, Q4_K_M 1.26 GB) needs
+[Ajay9o9/llama.cpp `dspine`](https://github.com/Ajay9o9/llama.cpp/tree/dspine): one commit, `d493f841b2`
+(2026-11-08), +323 lines in conversion, `src/llama-arch.*` and `src/models/dflash.cpp` (generic ggml ops,
+no backend kernels). It runs as `--spec-type draft-dflash`, so it replaces `draft-mtp` instead of stacking
+on it. Only the card and the commit diff were read; no build, no run, paper not read. Set aside:
+[DECISIONS.md](DECISIONS.md) 2026-11-08.
+
+| Claim | Source | Date | Status | Own test |
+|---|---|---|---|---|
+| Short context, temperature 0: 90.1 tok/s overall (3.19x), code 128.7, math 122.8, prose 41.6, vs. 28.2 without speculation (RTX 3090, Q4_K_M target, `--spec-draft-n-max 15`) | Card, "Speed by task" | 2026-11-08 | hypothesis (CUDA only, ~6,000 tokens per setup) | None; MTP n=3 here is 1.95x at empty context ([STATUS](STATUS.md)) |
+| Max `-c` on 24 GB with q8_0 KV: 65,536 at n=15, 98,304 at n=7, 176,128 without speculation; the target keeps a ~150 MB recurrent-state copy per drafted token | Card, "Maximum context on 24 GB" | 2026-11-08 | source-checked (card only) | None; 262K with n=15 is not expected to fit beside our 22,645 MiB peak |
+| Decode at depth (prose): 31.1 tok/s at 32K vs. 23.8 without speculation; drafter attends an 8K sliding window | Card, "Speed at increasing context depth" | 2026-11-08 | hypothesis (one 256-token run per cell) | DFlash2's 2K window lost to MTP at 190K/240K ([speculative.md](measurements/speculative.md#dflash2-and-the-native-q8-kv-fork-at-190k)) |
+
+
+## inference-optimisation agent skill (2026-11-20)
+
+[sybil-solutions/inference-optimisation-skill](https://github.com/sybil-solutions/inference-optimisation-skill)
+@ `fda968e` (2026-11-16) is an agent skill (`SKILL.md`, references, stdlib bench scripts) for hill-climbing
+local-server speed: theoretical ceiling first, one change at a time, control/candidate/control runs with
+medians, a ledger of every result, and a long-context needle gate. Its own results are EXL3/SGLang/vLLM on
+Intel Arc, RTX 3090 and H200; none are llama.cpp on AMD. Not adopted: this repository already applies the
+same discipline. One idea not yet here: a computed decode ceiling (bytes per token ÷ bandwidth) for the
+current profile, to tell how far ~40 tok/s is from the card's limit. Only `README.md`, `gotchas.md` and
+`levers.md` were read; no script was run. Kept as a methodology reference: consult its `references/` (ceilings,
+measurement traps, levers, publishing gates) when planning a new measurement campaign, and re-read it for new
+AMD or llama.cpp entries at each engine update. Candidates that follow from it:
+[`ENGINES-EXPERIMENTS.md`](ENGINES-EXPERIMENTS.md#candidates-from-the-inference-optimisation-skill-2026-11-20-not-run).
+
+| Claim | Source | Date | Status | Own test |
+|---|---|---|---|---|
+| llama.cpp q8_0 KV dropped decode from 45.4 to 27.0 tok/s on a model with KV in only 16 of 64 layers | `references/levers.md:46`, `references/gotchas.md:40` | 2026-11-16 | hypothesis (no backend, model or raw data given) | Open: no same-build decode-speed A/B of `q8_0/q5_1` vs. `f16` was located during this review; f16 rows exist in [`engines.md`](measurements/engines.md) |
+| llama.cpp MTP lost to no draft on hard prompts: 36.7 vs. 45.4 tok/s | `references/levers.md:36` | 2026-11-16 | hypothesis (no setup given) | None; see [`speculative.md`](measurements/speculative.md) for MTP here |
+| HIP graphs leaked until crash on ROCm; disabling them was stable at 115.6 tok/s | `references/gotchas.md:46` | 2026-11-16 | not applicable (ExLlama/TabbyAPI, not llama.cpp) | `GGML_HIP_GRAPHS` is on by default here and not a lever — [`depth.md`](measurements/depth.md) |
+| A busy host CPU costs GPU decode on laptops: 107 → 75 tok/s | `references/gotchas.md:47` | 2026-11-16 | hypothesis (laptop, ExLlama) | None |

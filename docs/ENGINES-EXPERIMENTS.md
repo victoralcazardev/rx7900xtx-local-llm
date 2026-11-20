@@ -298,6 +298,16 @@ Nothing here is adopted.
 Not carried here: `--reasoning-budget` (profile-level, see the [hypothesis review](archive/engines-experiments-2026.md#hypothesis-review-2026-10-03-no-runs)), undervolt (deferred GPU
 care) and the fork-only `turbo4`/`turbo2` V caches (not in our engine).
 
+## Candidates from the inference-optimisation skill (2026-11-20, not run)
+
+Source rows and verdicts: [`SOURCES-community.md`](SOURCES-community.md#inference-optimisation-agent-skill-2026-11-20).
+Nothing here is adopted; no run is planned yet.
+
+| Candidate | Variable | Why it might matter | Kill criterion |
+|---|---|---|---|
+| Theoretical decode ceiling for the current profile (bytes read per token ÷ measured VRAM bandwidth, MTP acceptance applied), the skill's `references/ceilings.md` method | None: arithmetic plus one bandwidth measurement | Tells whether ~40 tok/s is near the card's limit or whether engine work still has room; lets a target be rejected before measuring | Not a speed change; done once a number with its inputs is recorded in the topic doc |
+| Same-build decode-speed A/B of KV `q8_0/q5_1` vs. `f16` at a depth where `f16` fits | KV types only | The skill reports q8_0 KV 45.4 → 27.0 tok/s on a model with KV in 16 of 64 layers (backend not stated); Qwen3.8-27B is also hybrid. First check whether an existing result already answers it | `q8_0/q5_1` within ~3% of `f16`; KV policy stays unchanged either way unless the gap is large, which would need a [`DECISIONS.md`](DECISIONS.md) row |
+
 ## Candidates from the RDNA-FAST fork (2026-11-06, not run)
 
 Source: [RDNA-FAST](https://github.com/serrynaimo/RDNA-FAST) at `2ec3411` (2026-11-06), a llama.cpp fork on
@@ -395,6 +405,7 @@ is in [`ENGINES.md`](ENGINES.md). Dated per-update checks and the 2026-09-29 pin
 | [#26038](https://github.com/ggml-org/llama.cpp/issues/26038), [#27282](https://github.com/ggml-org/llama.cpp/issues/27282), [#28433](https://github.com/ggml-org/llama.cpp/issues/28433) | MTP compute and draft-context sizing on HIP; all three closed NOT_PLANNED without a fix (2026-10-09, 2026-11-12). Moved from STATUS 2026-10-02. | The 262K MTP profile works as measured; re-check behaviour on the next update |
 | [halo-box/strix-llama.cpp#56](https://github.com/halo-box/strix-llama.cpp/pull/56) | RDNA3 IQ2/IQ3 MMVQ scale change ([`SOURCES.md`](SOURCES.md)). Moved from STATUS 2026-10-02. | Closed unmerged (checked 2026-11-20); drop at the next cleanup |
 | [BuffedMod IQ3_S quant](https://huggingface.co/tooltd/Qwen3.8-27B-GSQ-RCO-BuffedMod-GGUF) | Same quant with an upcast `output.weight` ([`SOURCES.md`](SOURCES.md)). Moved from STATUS 2026-10-02. | Model, not engine; untested here |
+| [inference-optimisation skill](https://github.com/sybil-solutions/inference-optimisation-skill) | Methodology reference, read at `fda968e` ([`SOURCES-community.md`](SOURCES-community.md#inference-optimisation-agent-skill-2026-11-20)); look for new AMD or llama.cpp levers and gotchas. | Third-party; its results are not on AMD or llama.cpp |
 | [#30792](https://github.com/ggml-org/llama.cpp/pull/30792) | Still open (checked 2026-11-20); retitled to native `q8_0` K/V in the FA tile kernel, so it does not cover our V `q5_1`. | Our local patch stays needed |
 | [#31234](https://github.com/ggml-org/llama.cpp/pull/31234) | Open (checked 2026-11-20); native quantized KV rows exist for gfx1201 only, gfx1100 compiles empty instances. | No gain here until a gfx1100 row lands |
 | [#32201](https://github.com/ggml-org/llama.cpp/pull/32201), [#32455](https://github.com/ggml-org/llama.cpp/pull/32455) | Draft: #32201 routes only with F16 K/V (source-checked 2026-11-20); W7800 (gfx1100), Qwen3.8-27B Q8_0, MTP verify step 0.642x master time at 131K, 0.898x at 32K, 1.002x at 2K. #32455 FA split for gfx11 (scout, not re-checked). | No gain with our `q8_0/q5_1` KV unless it gains quantized-KV routing |
