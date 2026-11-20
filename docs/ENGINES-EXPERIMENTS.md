@@ -369,6 +369,16 @@ calls, wall time, tok/s, MTP acceptance and peak VRAM. Kill criterion: B and D b
 or the adapter fails to load (tensor-name mismatch on the DeltaNet layers aborts at load). Wait for the
 release blog first if it publishes per-effort results.
 
+**Community quants (2026-11-20, scout, not re-checked; no independent task evaluation exists).** In the
+11-13.5 GB band: netprojects `Q3_K_M` 13.5 GB and `IQ3_XXS` 11.4 GB with the MTP layer kept at Q4_K (KLD vs.
+their Q8_0: 0.0804 and 0.1244, far above GSQ-RCO `IQ3_S`); mradermacher i1 `IQ3_S` 12.9 GB (MTP not confirmed);
+IsValorum NanoPlus 11.5 GiB with `blk.64.nextn.*` present. [#32123](https://github.com/ggml-org/llama.cpp/issues/32123)
+runs `--lora` together with `--spec-type draft-mtp` on Qwen3.8-27B (its bug is slot-cache invalidation on adapter
+switch). netprojects states the adapter changes only attention q/k/v/o in the 16 full-attention layers and
+gate/up/down in all 64 layers; the MTP layer is untouched. Its card quotes SWE-bench Pro 29.4% -> 62.7%, not the
+39.2% -> 64.7% above: re-check the adapter card before the A/B. The runtime `--lora` arm on our base stays the
+cheapest test.
+
 ## Upstream watchlist (2026-09-29)
 
 Upstream items to re-check at each engine update ([`sop/update-engine.md`](sop/update-engine.md)); the pinned build
@@ -382,6 +392,14 @@ is in [`ENGINES.md`](ENGINES.md). Dated per-update checks and the 2026-09-29 pin
 | [#28003](https://github.com/ggml-org/llama.cpp/pull/28003) | Draft; gfx1100 single-token, no-MoE RDNA3 GEMV fast path; author reports Q4_K per-GEMV 68.91→62.58 µs and 32-token total 493.9→448.5 ms on a 7900 XTX. | Not measured on IQ3_S, MTP verification batches or this repository's server profile; no local validation. |
 | [#27489](https://github.com/ggml-org/llama.cpp/pull/27489) | Open; single-sequence/single-CUDA-device compute-buffer sharing; author reports 1,042 MiB saved on RTX 4090. | CUDA-only evidence; no HIP proof or speed result. Memory-watch only, not an optimization recommendation. |
 | [#26648](https://github.com/ggml-org/llama.cpp/issues/26648) | MTP sampler assertion at long context on HIP; closed per [`depth.md`](measurements/depth.md). Moved from STATUS 2026-10-02. | Re-check on the next update |
-| [#26038](https://github.com/ggml-org/llama.cpp/issues/26038), [#27282](https://github.com/ggml-org/llama.cpp/issues/27282), [#28433](https://github.com/ggml-org/llama.cpp/issues/28433) | MTP compute and draft-context sizing on HIP; open as of b11178. Moved from STATUS 2026-10-02. | Re-check on the next update |
-| [halo-box/strix-llama.cpp#56](https://github.com/halo-box/strix-llama.cpp/pull/56) | RDNA3 IQ2/IQ3 MMVQ scale change ([`SOURCES.md`](SOURCES.md)). Moved from STATUS 2026-10-02. | Not in upstream |
+| [#26038](https://github.com/ggml-org/llama.cpp/issues/26038), [#27282](https://github.com/ggml-org/llama.cpp/issues/27282), [#28433](https://github.com/ggml-org/llama.cpp/issues/28433) | MTP compute and draft-context sizing on HIP; all three closed NOT_PLANNED without a fix (2026-10-09, 2026-11-12). Moved from STATUS 2026-10-02. | The 262K MTP profile works as measured; re-check behaviour on the next update |
+| [halo-box/strix-llama.cpp#56](https://github.com/halo-box/strix-llama.cpp/pull/56) | RDNA3 IQ2/IQ3 MMVQ scale change ([`SOURCES.md`](SOURCES.md)). Moved from STATUS 2026-10-02. | Closed unmerged (checked 2026-11-20); drop at the next cleanup |
 | [BuffedMod IQ3_S quant](https://huggingface.co/tooltd/Qwen3.8-27B-GSQ-RCO-BuffedMod-GGUF) | Same quant with an upcast `output.weight` ([`SOURCES.md`](SOURCES.md)). Moved from STATUS 2026-10-02. | Model, not engine; untested here |
+| [#30792](https://github.com/ggml-org/llama.cpp/pull/30792) | Still open (checked 2026-11-20); retitled to native `q8_0` K/V in the FA tile kernel, so it does not cover our V `q5_1`. | Our local patch stays needed |
+| [#31234](https://github.com/ggml-org/llama.cpp/pull/31234) | Open (checked 2026-11-20); native quantized KV rows exist for gfx1201 only, gfx1100 compiles empty instances. | No gain here until a gfx1100 row lands |
+| [#32201](https://github.com/ggml-org/llama.cpp/pull/32201), [#32455](https://github.com/ggml-org/llama.cpp/pull/32455) | Draft: #32201 routes only with F16 K/V (source-checked 2026-11-20); W7800 (gfx1100), Qwen3.8-27B Q8_0, MTP verify step 0.642x master time at 131K, 0.898x at 32K, 1.002x at 2K. #32455 FA split for gfx11 (scout, not re-checked). | No gain with our `q8_0/q5_1` KV unless it gains quantized-KV routing |
+| `v1.0.0` tag and b12597 (2026-11-20) | Upstream went to 1.0; [#32331](https://github.com/ggml-org/llama.cpp/pull/32331) renamed the FA kernel symbols, so the `q5_1` V patch needs a rebase. v1.0.0 release notes (scout, not re-checked): reference-counted context checkpoints (#30137), `--defrag-thold` removed (unused here), FP8 KV `f8_e4m3` (#28392), `--fit` counts skipped NextN layers (#31569), fixed HIP BLAS workspace (#31838); master README shows `--ctx-checkpoints` default 32 (we pass 10). | Rebase cost, not a gain; diff `--help` at the update |
+| ROCm 10.2.0 (2026-11-18) | [Release notes](https://rocm.docs.amd.com/en/docs-10.2.0/about/release-notes.html): "Improved fp16 and bf16 NN GEMM performance on gfx1100". Validated kernel is 7.0 (this PC runs 7.3.4). | Candidate: rebuild the current engine on 10.2 and A/B prefill |
+| [#31495](https://github.com/ggml-org/llama.cpp/issues/31495) | Open: `--spec-type draft-mtp` cuts HIP prefill 74-80% (Vulkan +1%), decode +30%; RX 7700 XT (gfx1101), Windows, Swift-1.5 Qwen3.8-27B GSQ-RCO IQ3_XXS-mtp, b843e7dc and b11960 (issue body read 2026-11-20). Not in our measurements. | Measure prefill with and without `--spec-type` on the current build |
+| [#31761](https://github.com/ggml-org/llama.cpp/pull/31761), [#31751](https://github.com/ggml-org/llama.cpp/pull/31751), [#31746](https://github.com/ggml-org/llama.cpp/pull/31746) | Drafts, W7800 (gfx1100), ROCm 10.1, Qwen3.8-27B Q8_0 (bodies read 2026-11-20): #31761 D256 FA staging +13.51% non-speculative decode at 131K; #31751 removes `J=32` MMQ register spills for 11 types incl. IQ3_S (only Q8_0 timed); #31746 D256 MMA FA tuning, F16 K/V. | KV-type coverage of #31761 unknown; #31751 is the one that touches our IQ3_S |
+| [thefahien/elpis-on-7900xtx](https://github.com/thefahien/elpis-on-7900xtx) | Reference recipe: Qwen3.8-27B EXL3 4.00 bpw + DFlash2 on exllamav3-rocm, 7900 XTX; 71.6 tok/s decode after a 51,491-token prompt, max 131,072 context with Q8 KV, "192k context does not fit" (scout, not re-checked). | Not usable for the 262K provider |

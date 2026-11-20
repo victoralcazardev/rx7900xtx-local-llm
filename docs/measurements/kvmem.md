@@ -26,7 +26,7 @@ Single samples.
 
 ## KVMem trial (round 1 run 2026-09-30, not adopted)
 
-[kvmem-llama.cpp](https://github.com/kvmem/kvmem-llama.cpp) (paper
+[kvmem-llama.cpp](https://github.com/kvmem/kvmem-llama.cpp) (renamed `kvmem/kvmem`, seen 2026-11-20; paper
 [arXiv:2609.04852](https://arxiv.org/abs/2609.04852)) is a llama.cpp fork with its own
 `llama-kvmem-server`. It keeps the full logical workspace (`-c 262144`) in host RAM and, for each
 agent step, retrieves the relevant 128-token KV blocks into a bounded GPU working set

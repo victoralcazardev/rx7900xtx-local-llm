@@ -102,6 +102,8 @@ Sampling is the Qwen3.8-27B card's own; `--min-p 0.0` is set explicitly because 
   GPU + RAM (file tier 11.5-20.2 GiB; 24-51 GB read from the drive per request) — below the 15 tok/s floor —
   [owner](models/strata-qwen-flash-next.md#current-state-2026-11-05). Best known setup to reinstall when testing
   resumes (Qwen4, new quants or Strata versions): ISTA IQ2_XS on Strata >= 0.2.12, not installed.
+- **Inkling-2-Mini**: desk review only, paused for better quants —
+  [owner](models/inkling-2-mini.md#current-state-2026-11-20-desk-review-nothing-run).
 
 ## Next steps
 

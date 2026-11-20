@@ -7,6 +7,8 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- Upstream and reference-repo check (2026-11-20): watchlist rows for #30792, #31234, the RDNA3 D256 FA PRs, v1.0.0, ROCm 10.2, #31495 and the gfx1100 FA/MMQ drafts; decision to wait for Qwen4 and upstream Inkling support ([`docs/ENGINES-EXPERIMENTS.md`](docs/ENGINES-EXPERIMENTS.md#upstream-watchlist-2026-09-29)).
+- Inkling-2-Mini desk review: KV and fit arithmetic (about 21.5 GiB for 4-bit at 262K), GGUF formats per provider and upstream support, quant survey and a resume checklist; nothing run ([`docs/models/inkling-2-mini.md`](docs/models/inkling-2-mini.md)).
 - `--ctx-checkpoints 10` (was 4) for every model: after a ~35% compaction the server keeps the system-prompt checkpoint, cutting the replayed post-compaction prefill from 48,030 tokens / 70 s to 20,025 / 33 s at peak RssAnon 11.5 GiB; `bench/compaction_replay.py` replays a compacting agent session ([`results/20261106-ctx-checkpoints-replay/`](results/20261106-ctx-checkpoints-replay/README.md)).
 - `gpu_watch.py` CSV gains a trailing `rss_anon_mib` column: host `RssAnon` of `llama-server`, found under the `systemd-inhibit` wrapper by walking `/proc` children ([`docs/sop/launch-model.md`](docs/sop/launch-model.md)).
 - `cache_misses.py` labels compactions at a ~35% harness threshold (`f_keep` < 0.5, new prompt < 0.7 of the old slot) and counts "shared prefix lost" requests (LCP >= 20,000, prefill >= 0.9 x new prompt); on the four 2026-11-05/06 logs: 18 requests, 984,474 tokens, 1,575 s ([`docs/measurements/agent-traffic.md`](docs/measurements/agent-traffic.md#sessions-of-2026-11-0506-host-cache-thrash-and-the-lost-shared-prefix-four-logs)).
