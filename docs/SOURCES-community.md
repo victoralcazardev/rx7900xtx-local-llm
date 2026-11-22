@@ -208,3 +208,56 @@ and the [engine-alternatives review](ENGINES-EXPERIMENTS.md#engine-alternatives-
 | GodGMN `inkling-rdna3`: tg128 64.0 tok/s vs. 31.9 on b12600, pp4096 1,802 vs. 854, 393,216 context with `q4_0` KV at a 23.2 GB peak, 10 of 10 facts retrieved | [fork](https://github.com/GodGMN/llama.cpp) `docs/inkling-rdna3.md` at `cb0e46960` | 2026-11-21 | source-checked (author's own RX 7900 XTX, ROCm 7.2.1, IQ4_NL); not reproduced | Different file, KV type and runtime: 42.0 tok/s at 262K, 48.2 tok/s at 64K `f16` ([BUILD.md](../results/20261122-inkling-rdna3-fork/BUILD.md)) |
 | Inkling's attention kernel ignored a quantized KV cache, so 8-bit KV used more VRAM than `f16`; fixed with banded FA plus three fused CUDA kernels | [unslothai/llama.cpp PR #386](https://github.com/unslothai/llama.cpp/pull/386) | 2026-11-22 | source-checked (fork-only PR, CUDA-benchmarked) | Not measured: that fork is not built here and every arm used `f16` or `q8_0`/`q5_1` KV on the other path |
 | exllamav3-rocm is stale since 2026-09-26, its RDNA3 work moved to `SelfRef/exllamav3-rdna`, and Q8 KV caps around 192-196K | repository state plus [issue #2](https://github.com/phoenixhaxor/exllamav3-rocm/issues/2) (the user's pointer; issue body not re-read) | 2026-11-22 | source-checked (repository state) | Nothing run; no EXL3 model is installed |
+
+## Inkling-2-Mini engines, drafters and adapters (2026-11-22)
+
+Desk review plus one local run ([DSpark on the fork](../results/20261122-inkling-dspark-fork/README.md)).
+Owner of the conclusions: [inkling-2-mini.md](models/inkling-2-mini.md#engine-and-variant-review-2026-11-22-second-pass).
+
+| Claim | Source | Date | Status | Own test |
+|---|---|---|---|---|
+| B70 (Xe2, 32 GB) best Inkling route is vLLM XPU + PR #69186 on the official safetensors: 54.5 / 44.7 / 31.7 tok/s at 0 / 32K / 128K, 262K context; +DSpark k=7 80.4 at 0 | [SergiioB B70 cookbook](https://github.com/SergiioB/intel-arc-pro-b70-inference-cookbook/blob/master/docs/inkling2-mini/README.md) | 2026-11-22 | author-reported | none (no vLLM ROCm Inkling path found for gfx1100) |
+| Q8_0/BF16 Inkling GGUFs cannot beat NVFP4 experts (release has 4-bit experts only) | same repo, `docs/DO-NOT-REPEAT.md` DNR-040 | 2026-11-22 | reasoned from `hf_quant_config.json` | none |
+| DSpark n=3 on llama.cpp SYCL at temperature 1.0: -31% (13.5 vs. 19.5 tok/s, 43% acceptance) | same, DNR-034 | 2026-11-21 | author-reported | our fork cannot load the drafter ([run](../results/20261122-inkling-dspark-fork/README.md)) |
+| llama.cpp IQ4_NL: prompts > ~96 tokens give all-`?` output (CUDA and CPU) | [llama.cpp #32778](https://github.com/ggml-org/llama.cpp/issues/32778) | 2026-11-22 | open issue, read | not seen on the GodGMN fork with Abiray IQ4_NL (32K prompts, [run](../results/20261122-inkling-fork-ngram/README.md)) |
+| Upstream dense rel-bias mask: chunked build (#32752) and compact bias in FLASH_ATTN_EXT (#32740), both open | [#32752](https://github.com/ggml-org/llama.cpp/pull/32752), [#32740](https://github.com/ggml-org/llama.cpp/pull/32740) | 2026-11-21 | open PRs, read | none |
+| `maya-ik2` HIP port on an RX 7900 XTX: 117.11 / 107.47 / 93.70 tok/s decode after 512 / 8,192 / 32,768 input tokens, 3,365.65 tok/s prefill on 8,192, 393,216 positions reserved, ggml-org IQ4_NL, E4M3 KV | [GodGMN/maya-inkling-mini `hip-port`](https://github.com/GodGMN/maya-inkling-mini/tree/hip-port) README and `docs/HIP-PORT.md` (commit `2b31ffe`); the author's post | 2026-11-22 | hypothesis (author's numbers; ROCm 7.2.1 container, power cap not stated) | None; fork baseline 50.0 tok/s at 272 W |
+| The port's expert kernels read IQ4_NL, NVFP4 and Q8_0 only, one type for gate/up/down | same repo, `src/ik2/ik2_rdna3.hip:441`, `src/ik2/ik2_kernels.cu:5994`, `src/ik2/ik2_main.cu:3193` | 2026-11-22 | source-checked | AtomicChat AD-Q4_K experts are Q4_K + Q5_0: not loadable |
+| Drafter in the port: 117.22 -> 137.49 tok/s at 512 input, 116.26 -> 89.51 on a 257-token story; serving rejects a drafter without the block path | `docs/HIP-PORT.md` "Completed archive and drafter runs"; `src/ik2/ik2_main.cu:5393` | 2026-11-22 | source-checked (rule), hypothesis (numbers) | None |
+| Upstream Maya on a 7900 XTX (ROCm 7.2.4): 109.1 tok/s decode (unsloth UD-Q4_K_XL), 94-95 (JoaoZaokk Heretic UD-Q4_K_XL), ~2,270-2,320 prefill, 131,072 context | [mw00/project-maya#1116](https://github.com/mw00/project-maya/issues/1116) | 2026-11-22 | hypothesis (one field report) | None |
+| CUDA `maya-ik2` on an RTX 3090 (300 W): 124-128 tok/s plain, 131 prose / 149-212 code and edits with the DSpark drafter, llama.cpp b12590 57.0 | [alesha-pro/maya-inkling-mini](https://github.com/alesha-pro/maya-inkling-mini) README | 2026-11-22 | hypothesis | not applicable (CUDA) |
+| Inkling has no MTP head; its DSpark drafter runs as `--spec-type draft-dspark -md <drafter>` on Unsloth's build | [unsloth `dspark/README.md`](https://huggingface.co/unsloth/Inkling-2-Mini-GGUF/blob/main/dspark/README.md) | 2026-11-22 | source-checked | Fork rejects it: `markov_w1.weight` 201,024 vs. 200,058 ([run](../results/20261122-inkling-dspark-fork/README.md)) |
+| Inkling DSpark in llama.cpp: PR #32218 open draft, changes requested; x1.05-x1.64 on a Mac M3 | [ggml-org/llama.cpp#32218](https://github.com/ggml-org/llama.cpp/pull/32218) | 2026-11-22 | hypothesis (scout summary of the PR page) | None |
+| OpenUncensored LoRA: rank-2 projection on `attn.wo_ud` of layers 4-23, experts untouched; 0/32 refusals, MMLU 78.95 -> 79.47 | [OpenUncensored/Inkling-2-Mini-Uncensored-LoRA](https://huggingface.co/OpenUncensored/Inkling-2-Mini-Uncensored-LoRA) card | 2026-11-21 | source-checked (method), hypothesis (numbers, author-run) | None |
+| AtomicChat LoRA GGUF (41.8 MiB, "rank-1 on the 49 places that write into the residual stream"); LoRA row MMLU 80.65 -> 79.15 (p = 0.006) | [AtomicChat/Inkling-2-Mini-Uncensored-GGUF](https://huggingface.co/AtomicChat/Inkling-2-Mini-Uncensored-GGUF) card | 2026-11-21 | hypothesis (scout summary) | None |
+| Strata 0.2.19 `strata-inkling`: SQ-20 "bit-exact lossless", 198.9-250.3 tok/s | [Niko1221/Strata releases](https://github.com/Niko1221/Strata/releases) | 2026-11-22 | hypothesis (no gfx1100 Inkling number; speed is an RTX 5090) | None |
+| No source reports ~800K context on a 24 GB 7900 XTX; GodGMN's figure is 393K | [ggml-org/llama.cpp#32694](https://github.com/ggml-org/llama.cpp/pull/32694) comment; the port's README | 2026-11-21/22 | source-checked | not applicable |
+
+## inference-optimization-playbook (2026-11-22)
+
+[alesha-pro/inference-optimization-playbook](https://github.com/alesha-pro/inference-optimization-playbook)
+@ `53868e2` (2026-11-21, MIT) is a map of 115 tested speed ideas, each with a verdict, numbers, the reason and a
+"revisit when", from DeepSeek V4.1 Flash, Qwen3.8-Flash-Next, GLM-5.3-Flash, MiniMax-M3.1-Flash and Hy4 Flash on
+4x RTX 3090 with experts offloaded to RAM, plus Inkling 2 Mini on one RTX 3090 with every expert in VRAM. Engines:
+Strata, Maya forks, an exllamav3 fork, llama.cpp, vLLM. The repo root is an agent skill (`SKILL.md`, 16 chapters
+in `playbook/`, `ledger/hypotheses.md` with condition tags, `cases/`, `protocol/`, two stdlib tools). No AMD
+data and no concurrent-load data.
+
+**How to use it here.** Before planning a speed campaign or a new model bring-up, fill its
+`protocol/situation-card.md`, take the tag line, and grep the ledger with it; then check this repository's
+[`TRIED.md`](TRIED.md) as usual. Our single-card regime is `#in-vram #1gpu` (the playbook says it has little
+data of its own there: read chapters 08 drafter, 11 sessions and prompt cache, 13 output head, 14 benchmark traps).
+The Inkling-2-Mini case (`cases/inkling-2-mini.md`) and Qwen3.8-Flash-Next case are the closest to
+[`models/inkling-2-mini.md`](models/inkling-2-mini.md) and [`sop/strata.md`](sop/strata.md). Treat every number as
+CUDA/Ampere evidence: it transfers as a mechanism, never as a value, until reproduced on gfx1100.
+
+**New versions.** It is a living notebook (dated entries, superseded results kept). At each engine update or
+new-model bring-up, read its `CHANGELOG.md` since the commit pinned above, record new rows that touch
+`#in-vram`, `#1gpu`, `#kv`, `#drafter` or `#agent` here, and move the pin.
+
+| Claim | Source | Date | Status | Own test |
+|---|---|---|---|---|
+| Inkling 2 Mini, every expert in VRAM, one token as one CUDA graph: decode 57 (llama.cpp) → 112 tok/s on one RTX 3090 | `ledger/hypotheses.md` PL-15, `cases/inkling-2-mini.md` | 2026-11-21 | source-checked (author's numbers; CUDA-only engine) | None; our Inkling numbers are in [`models/inkling-2-mini.md`](models/inkling-2-mini.md) |
+| Final resident engine, FP8 KV, 344K window: decode 128.7 / 105.6 / 62.3 tok/s at 47 / 64K / 340K tokens | `cases/inkling-2-mini.md` | 2026-11-21 | source-checked (author's numbers) | None |
+| A short benchmark promised +27% decode; real generation gave +2% | `README.md` | 2026-11-21 | source-checked (no setup given in the README) | Consistent with our policy of 240K pairs and real traffic ([`BENCHMARK-FORMAT.md`](BENCHMARK-FORMAT.md)) |
+| A drafter change matched on 4,400 tokens of the first turn and broke the second turn | `README.md` | 2026-11-21 | hypothesis for llama.cpp MTP | None; argues for multi-turn checks in [`speculative.md`](measurements/speculative.md) |

@@ -1,0 +1,6 @@
+plain code rep1 tg=50.0 n=768 draft=-/- finish= length
+plain code rep2 tg=50.0 n=768 draft=-/- finish= length
+plain prose rep1 tg=50.0 n=768 draft=-/- finish= length
+plain prose rep2 tg=50.0 n=659 draft=-/- finish= stop
+plain vram_used_MiB=22710
+dspark: server died
