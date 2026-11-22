@@ -23,7 +23,7 @@ import urllib.request
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from manifest import (  # noqa: E402
-    REPO, ManifestError, backend_for, load, build_argv, server_executable, resolve,
+    REPO, ManifestError, backend_for, load, server_command, resolve,
     running_servers, validate,
 )
 
@@ -87,29 +87,28 @@ def main() -> int:
         backend = backend_for(model, profile, args.backend)
         validate(m, model, profile_name, profile, backend,
                  allow_low_context=m.allow_low_context)
-        exe = server_executable(m, backend)
+        cmd, cwd = server_command(m, model, profile, backend, REPO / "_tmp" / "maya")
     except ManifestError as e:
         print(f"ERROR: {e}", file=sys.stderr)
         return 2
 
     alive = running_servers()
     if alive is None:
-        print("ABORTED: could not detect running llama-server processes; cannot safely start.")
+        print("ABORTED: could not detect running model servers; cannot safely start.")
         return 2
     if alive:
-        print(f"ABORTED: llama-server is already alive (PID {alive}). Stop it first.")
+        print(f"ABORTED: a model server (llama-server or maya-ik2) is already alive (PID {alive}). Stop it first.")
         return 2
 
-    argv = build_argv(m, model, profile)
     print(f">> {args.alias}/{profile_name} (:{m.default_port}, backend={backend}) ...")
-    print("command:", shlex.join(["llama-server"] + argv))
+    print("command:", shlex.join(cmd))
 
     logs = REPO / "_tmp" / "logs"
     logs.mkdir(parents=True, exist_ok=True)
     stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     log_path = logs / f"smoke-{args.alias}-{profile_name}-{stamp}.log"
     with open(log_path, "w") as log:
-        proc = subprocess.Popen([str(exe)] + argv, cwd=str(exe.parent),
+        proc = subprocess.Popen(cmd, cwd=str(cwd),
                                 stdout=log, stderr=subprocess.STDOUT)
         try:
             if not _wait_healthy(m.default_port, proc, LOAD_WAIT_S):
@@ -136,7 +135,7 @@ def main() -> int:
         finally:
             proc.terminate()
             try:
-                proc.wait(timeout=30)
+                proc.wait(timeout=90)  # the maya server waits up to ~50 s for its engine to exit
             except subprocess.TimeoutExpired:
                 proc.kill()
 

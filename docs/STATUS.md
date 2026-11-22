@@ -106,9 +106,11 @@ Sampling is the Qwen3.8-27B card's own; `--min-p 0.0` is set explicitly because 
   request, dense shard on the HDD priced at 0.15 GB/s), not 0.1.65's kernels; `GPU_PINNED_MIN_XFER_SIZE` is still
   required (without it the engine died on `verify: timed out at layer 28`) — [owner](models/strata-qwen-flash-next.md#2026-11-22-sc117-on-v0219-measured-below-the-floor).
   No `[strata.*]` table. Last faster set stays ISTA IQ2_XS on v0.2.8 (59-65 tok/s warm short, 36.7 at 240K).
-- **Inkling-2-Mini**: measured 2026-11-22 and parked without a config: upstream b12633 cannot fit 262K
-  (12,765 MiB of compute buffer), the GodGMN fork runs it at 41-42 tok/s at 262K. Resuming needs an
-  upstream in-kernel bias or banded FA — [owner](models/inkling-2-mini.md#status-parked-2026-11-22-resume-triggers).
+- **Inkling-2-Mini**: wired 2026-11-22 as opt-in `inkling2-mini-unc` / `262k-q8q8` on the `hip-inkling` engine
+  (GodGMN `inkling-rdna3` fork `cb0e46960`) with Abiray's uncensored IQ4_NL: decode 61.1 / 43.1 tok/s at depth 0 /
+  192K, 21,305 MiB at 262K `q8_0`/`q8_0`. Upstream
+  b12633 still cannot fit 262K (12,765 MiB compute buffer). Smoke only: no long fill, retrieval, refusal or coding
+  check. Faster engine wired 2026-11-22: GodGMN's `maya-ik2` HIP port with `IK2_PAGED_KV=1 --chunk 2048`, same file and 272 W: decode 95 / 63.6 / 51.1 tok/s and prefill 1,894 / 1,292 at 512 / 128K / 262K (fork 57.6 / 44.5 / 37.8 and 882 / 599), GSM8K 95/96 vs. 93/96, refusals 0/8, tool call and prefix reuse OK ([run](../results/20261122-inkling-maya-vs-fork/README.md)); wired as profile `262k-maya` (`python3 scripts/launch.py inkling2-mini-unc --profile 262k-maya`), 262K retrieval 3/3. DSpark does not load on the fork; n-gram speculation is untested on real sessions — [owner](models/inkling-2-mini.md#engine-and-variant-review-2026-11-22-second-pass).
 
 ## Next steps
 

@@ -11,12 +11,14 @@
 # - Optional profile keys: `backend` (overrides the model's), `vision = false`
 #   (skip loading the mmproj) and `vram_gib` (MEASURED peak of the process with a full
 #   context; launch.py warns if that much free VRAM + 0.5 GiB isn't available). Engines:
-#   hip (official), hip-kvmix (own build with K q8_0 + V q5_1/q4_1), vulkan. See
-#   docs/measurements/.
+#   hip (official), hip-kvmix (own build with K q8_0 + V q5_1/q4_1), hip-inkling (GodGMN
+#   `inkling-rdna3` fork, Inkling-2-Mini only), maya (GodGMN `maya-inkling-mini` HIP port, not llama.cpp,
+#   Inkling-2-Mini only; profile keys `chunk` and `env` feed its run config, kv is ["fp8","fp8"] or
+#   ["f16","f16"]), vulkan. See docs/measurements/ and docs/ENGINES.md.
 # - `default_alias`/`default_profile`: what `scripts/launch.py` loads when called with no
 #   alias (see docs/STATUS.md for why this is the current best configuration).
 # - One best default (2026-09-26, docs/DECISIONS.md), plus opt-in models the user asked for
-#   (2026-11-05: huihui-iq3s-mtp). Add a new model/profile per docs/sop/new-model.md.
+#   (2026-11-05: huihui-iq3s-mtp; 2026-11-22: inkling2-mini-unc). Add a new model/profile per docs/sop/new-model.md.
 
 [defaults]
 port = 8080
@@ -96,6 +98,53 @@ spec_type = "draft-mtp,ngram-map-k4v"
 vision = false
 vram_gib = 22.2
 flags = ["-ub", "256", "--reasoning-effort", "medium", "--cache-ram", "12288"]
+
+# ---------------------------------------------------------------------------
+# Abiray Inkling-2-Mini-Uncensored IQ4_NL (uncensored; opt-in, not the default). GGUF of
+# OpenUncensored/Inkling-2-Mini-Uncensored (rank-2 refusal edit on 20 attention output projections, experts untouched);
+# replaced AtomicChat AD-Q4_K on 2026-11-22 (docs/DECISIONS.md). Experts all IQ4_NL, so the same file also loads in
+# GodGMN's maya-ik2 HIP port. Cards: https://huggingface.co/thinkingmachines/Inkling-2-Mini (generation_config.json
+# sets only temperature 1.0; re-read 2026-11-22) and https://huggingface.co/Abiray/Inkling-2-Mini-Uncensored-GGUF
+# (recommends temp 1.0 + top-p 0.95; top-p is not the vendor's, so it stays unset like top_k; GGUF general.sampling
+# is temp 1.0 only). Vendor warning: may loop in long reasoning; limit output tokens and agent turns.
+# Engine: `hip-inkling` = GodGMN/llama.cpp `inkling-rdna3` cb0e46960. Upstream b12633 cannot hold 262K
+# (12,765 MiB dense relative-bias compute buffer -> MoE offloaded, 4.5 tok/s); the fork computes the
+# bias inside the FA kernel (docs/models/inkling-2-mini.md, results/20261122-inkling-uncensored-ad-q4k/).
+[models.inkling2-mini-unc]
+gguf = "Inkling-2-Mini-Uncensored-Abiray/Inkling-2-Mini-Uncensored-IQ4_NL.gguf"
+backend = "hip-inkling"
+mtp = false  # whether this GGUF carries the checkpoint's MTP head is unchecked
+mmproj = "Inkling-2-Mini-Uncensored-Abiray/mmproj-Inkling-2-Mini-Uncensored-BF16.gguf"
+
+[models.inkling2-mini-unc.sampling]
+temp = 1.0
+min_p = 0.0
+
+# 262K, KV q8_0/q8_0 (2026-11-22, results/20261122-inkling-abiray-iq4nl/): 59.9 tok/s plain decode (code and
+# prose, temperature 0), 21,305 MiB total GPU memory in use after load (KV and compute buffer are allocated at
+# load; no full-context fill measured). q8_0/q8_0 chosen on the AtomicChat file over q8_0/q5_1 (faster, and the
+# fork's own tests do not cover q8_0/q5_1). KV parity against f16 not measured on this fork (open). Text only.
+[models.inkling2-mini-unc.profiles."262k-q8q8"]
+context = 262144
+kv = ["q8_0", "q8_0"]
+vision = false
+vram_gib = 20.8
+
+# 262K on the maya-ik2 HIP port, same file (2026-11-22, results/20261122-inkling-maya-vs-fork/): E4M3 KV in
+# 16-token global pages, --chunk 2048. At 272 W: decode 95 / 63.6 / 51.1 tok/s and prefill 1,894 / 1,292 after
+# 512 / 128K / 262K tokens (the fork profile above: 57.6 / 44.5 / 37.8 and 882 / 599); GSM8K 95/96 vs. 93/96 on
+# the same token IDs; refusals 0/8; tool calls and prefix reuse work. The rest of the env is the port's gfx1100
+# preset (docs/inkling2-mini/ik2-mini-gfx1100.json in the checkout). ROCBLAS_TENSILE_LIBPATH: the port's venv
+# rocBLAS has no gfx1100 kernels; the system ROCm library has them (docs/ENGINES.md). Text only. 20,765 MiB total
+# GPU memory in use after load through launch.py (KV is allocated at load); smoke.py 96.5 tok/s.
+[models.inkling2-mini-unc.profiles."262k-maya"]
+backend = "maya"
+context = 262144
+kv = ["fp8", "fp8"]
+chunk = 2048
+env = { IK2_PAGED_KV = "1", ROCBLAS_TENSILE_LIBPATH = "/opt/rocm/lib/rocblas/library" }
+vision = false
+vram_gib = 20.3
 
 # ---------------------------------------------------------------------------
 # Strata (docs/sop/strata.md): its own engine, clone and run config, not launched by launch.py.

@@ -30,7 +30,8 @@ hash — the difference lives in the shared library, not the file hashed here.
 | `llama-b11160-linux-rocm10-gfx1100-kvmix-vec4` | Discarded (+20% ms/step at depth vs. `kvmix`, see `docs/measurements/speculative.md`) | b11160 / `70c4e1582` + 1-line patch | `3d8565952bcd74cd4e0d3be3a56221619c25da6176d3716972b75b1cc0a34128` (same front-end; patch is in `libggml-hip.so`) |
 | `llama-b11160-linux-rocm-gfx1100-kvmix` | Discarded (~9% slower than the ROCm-10-toolchain build, see `docs/measurements/engines.md`) | b11160 / `70c4e1582`, own build, older ROCm 7.2.4 system toolchain | `7c27f7fd7c0398075b2837a531c98cc6c57766ff107d671c1c7b06c18d6cd1b2` |
 | `llama-rdnaboosts-v16-ebbb18522-rocm10-gfx1100` | Experimental, not adopted (only -2.5% ms/step at depth; not worth maintaining a fork, see `docs/measurements/speculative.md`) | `stew675/llama-cpp-rdna-boosts` v16-`ebbb18522`-r13, 16 patches on llama.cpp `ebbb18522` | `3d8565952bcd74cd4e0d3be3a56221619c25da6176d3716972b75b1cc0a34128` (same front-end) |
-| `llama-inkling-rdna3-cb0e46960-linux-rocm10-gfx1100-kvmix` | **Experimental, Inkling-2-Mini only** (built 2026-11-22; the only engine measured at 262K with that model, [results](../results/20261122-inkling-rdna3-fork/BUILD.md)). Do not point the Qwen default at it: its q8_1 cache and fusion matchers touch every model | `GodGMN/llama.cpp` branch `inkling-rdna3` `cb0e46960` (tag `b12600` + 6 commits), built as published (no local patch) | `fefb558933a11198a35e4a4ec592b243a3d96df0dd56914c1e938b08ace7ae77` (same front end as b12633; `libggml-hip.so` `0734ce9771709d07b75473095cccd93c0b8e549766d0819ebc8aa2dc94367096`) |
+| `maya-inkling-mini-hip` (`build-ik2/maya-ik2`, not a llama.cpp build) | **Experimental, Inkling-2-Mini only** (built 2026-11-22; `launch.py` backend `maya`, profile `inkling2-mini-unc/262k-maya`; [results](../results/20261122-inkling-maya-vs-fork/README.md)) | `GodGMN/maya-inkling-mini` branch `hip-port` `2b31ffeaa` + local cherry-pick of `alesha-pro/maya-inkling-mini` `549d734` (tool-call parser, `serve/` only) | `e142adbb4d7fdee7b9ee7037498936e986bf8beecf62dee461b871d5808b0a92` (`maya-ik2`) |
+| `llama-inkling-rdna3-cb0e46960-linux-rocm10-gfx1100-kvmix` | **Current `hip-inkling`, Inkling-2-Mini only** (built and wired 2026-11-22; the only engine measured at 262K with that model, [results](../results/20261122-inkling-rdna3-fork/BUILD.md)). Do not point the Qwen default at it: its q8_1 cache and fusion matchers touch every model | `GodGMN/llama.cpp` branch `inkling-rdna3` `cb0e46960` (tag `b12600` + 6 commits), built as published (no local patch) | `fefb558933a11198a35e4a4ec592b243a3d96df0dd56914c1e938b08ace7ae77` (same front end as b12633; `libggml-hip.so` `0734ce9771709d07b75473095cccd93c0b8e549766d0819ebc8aa2dc94367096`) |
 
 ## Build recipes
 
@@ -240,6 +241,62 @@ every card can hit the q8_1 input cache (`GGML_CUDA_NO_Q8_CACHE=1` disables it) 
 (`GGML_INK_NO_FUSE=1`); the mmvq table change is RDNA3-only. It is the only engine measured at 262K with
 Inkling-2-Mini (42.0 tok/s, 22,423 MiB) and it is not a candidate for the Qwen default. Details and the
 author's own speed claims: [`results/20261122-inkling-rdna3-fork/BUILD.md`](../results/20261122-inkling-rdna3-fork/BUILD.md).
+
+### `maya-inkling-mini-hip` (`maya-ik2`, experimental, Inkling-2-Mini only)
+
+Not llama.cpp: Project Maya's Inkling-only engine (`alesha-pro/maya-inkling-mini`, CUDA) as ported to gfx1100 by
+`GodGMN/maya-inkling-mini` branch `hip-port`, commit `2b31ffeaa802414a14032a4fdf43b93cf871a20d` (2026-11-22). Built in
+`~/IA/Motores/src/maya-inkling-mini-hip` with our ROCm 10 TheRock venv instead of the author's ROCm 7.2.1 container
+(41 s, no errors):
+
+```bash
+git clone --branch hip-port https://github.com/GodGMN/maya-inkling-mini.git maya-inkling-mini-hip
+curl -fLsS https://codeload.github.com/ggml-org/llama.cpp/tar.gz/3cf03257f219afbe7334045ff7c6a06ac68c627d | tar xz
+source build-env.sh            # ROCm 10 TheRock venv, as for the llama.cpp builds
+cmake -S maya-inkling-mini-hip -B maya-inkling-mini-hip/build-ik2 -G Ninja -DCMAKE_BUILD_TYPE=Release \
+  -DSTRATA_ENABLE_HIP=ON -DSTRATA_PREFILL_MMQ=ON -DSTRATA_BUILD_TESTS=ON \
+  -DCMAKE_HIP_COMPILER=$ROCM_PATH/llvm/bin/clang++ -DCMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH;$ROCM_PATH" \
+  -DCMAKE_HIP_ARCHITECTURES=gfx1100 -DGPU_TARGETS=gfx1100 \
+  -DSTRATA_GGML_DIR=$PWD/llama.cpp-3cf03257f219afbe7334045ff7c6a06ac68c627d
+cmake --build maya-inkling-mini-hip/build-ik2 -j14 --target maya-ik2 ik2_kernels_test ik2_host_ref_test
+```
+
+- **Runtime**: `maya-ik2` links the venv's `libamdhip64`/`hipBLAS`/`rocBLAS` through its RUNPATH, not the system's
+  CachyOS 10.1 build ([install](sop/install.md#known-errors)). **Gotcha**: the venv's rocBLAS has no gfx1100 Tensile
+  files, so the engine dies on the first GEMM (`Cannot read .../rocblas/library/TensileLibrary.dat ... for GPU arch :
+  gfx1100`, exit -14); `ROCBLAS_TENSILE_LIBPATH=/opt/rocm/lib/rocblas/library` (system rocBLAS 10.1, 150 gfx1100
+  files) fixes it.
+- **Python side**: `serve/` and `tools/` need `numpy jinja2 regex pyyaml tqdm requests pillow psutil
+  "jsonschema>=4.18,<5"` (a `.venv` in the checkout); the tokenizer is exported from the GGUF with
+  `tools/strata_tokenizer.py --gguf <gguf> --out ik2 --chat-template tools/ik2/chat_template.jinja --check`
+  (vocab 200,058, 16/16 round trips).
+- **Checks**: `ik2_kernels_test` all passed (31 s, including the 393K attention cases); `ik2_host_ref_test` needs
+  a fixture from the author's oracle environment and was not run.
+- **Python 3.14**: `tests/ik2_retrieval.py` fails at argparse setup (`badly formed help string`: a bare `%` in the
+  `--inventory` help); escape it as `%%` locally before running the retrieval check.
+- **Tuned run config** (2026-11-22, [run](../results/20261122-inkling-maya-vs-fork/README.md)): the radeon preset
+  plus `IK2_PAGED_KV=1` and `--chunk 2048` (decode +29% and prefill +13% at 262K); `IK2_FLASH_WAVES` 2 or 8 and
+  `--chunk 1024` measured no better.
+- **Server defaults**: a request without `temperature` decodes greedily unless the run config has a `sampling`
+  block; `launch.py` writes the model's `[sampling]` there (vendor `temperature 1.0`, `min_p 0.0`).
+- **Launcher wiring**: `local.toml` `engines.maya` points at the checkout (with `build-ik2/` and `.venv/`).
+  `launch.py` writes `_tmp/maya/<alias>.maya.json` from the port's own preset
+  (`docs/inkling2-mini/ik2-mini-gfx1100.json`, so preset updates arrive with `git pull`) plus the profile's
+  `context`, `kv` (-> `IK2_KV`), `chunk` and `env`, then runs `.venv/bin/python serve/server.py --engine maya`
+  on `[defaults].port`: an OpenAI and Anthropic API, so the `local-262k` harness provider works unchanged. The
+  preset's `reasoning_effort` is dropped (vendor default, as on llama-server). Stop it with Ctrl+C in the
+  foreground, or `pkill -INT -f 'serve/server.py --engine maya'` after `--background`: the engine takes up to
+  ~50 s to exit (the server then stops it); `pgrep -x maya-ik2` empty means the VRAM is free, and is what
+  `launch.py` checks before starting. Verified 2026-11-22: launch, a Gentle-Shell-shaped streaming tool call
+  (`model: local-262k`, `bash {"command":"ls -la"}`), stop, and `smoke.py` (96.5 tok/s, no engine left behind).
+- **Updating**: `git -C <checkout> fetch origin && git -C <checkout> log --oneline HEAD..origin/hip-port`, read
+  the new commits, then `git pull`, re-apply the local edits if they conflict (`git stash` first: the
+  `549d734` tool-call fix and the `%%` retrieval fix), rebuild with the `cmake --build` line above, run
+  `ik2_kernels_test`, and re-run `python3 scripts/smoke.py inkling2-mini-unc --profile 262k-maya`. Before
+  keeping a speed change, repeat `tools/ik2_bench.py` on the same tokens
+  ([run](../results/20261122-inkling-maya-vs-fork/README.md)) and the paired GSM8K. Compare with alesha-pro's
+  CUDA `main` (`git fetch alesha`) for fixes the port has not picked up yet.
+- Reads only IQ4_NL, NVFP4 or Q8_0 experts ([why](models/inkling-2-mini.md#engine-and-variant-review-2026-11-22-second-pass)).
 
 ### `llama-rdnaboosts-v16-ebbb18522-rocm10-gfx1100` (experimental)
 

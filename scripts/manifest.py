@@ -16,6 +16,7 @@ Environment variables:
 """
 from __future__ import annotations
 
+import json
 import os
 import pathlib
 import platform
@@ -35,6 +36,14 @@ LOCAL_262K_CONTEXT = 262144  # single source of truth for the local-262k harness
 _HIP_KV_VALID = {("q4_0", "q4_0"), ("q8_0", "q8_0"), ("f16", "f16"), ("bf16", "bf16")}
 # "hip-kvmix" engine: a build compiled with -DGGML_CUDA_FA_QUANTS that adds K q8_0 + V q5_1/q4_1.
 _HIP_KVMIX_VALID = _HIP_KV_VALID | {("q8_0", "q5_1"), ("q8_0", "q4_1")}
+# "hip-inkling" engine: the GodGMN/llama.cpp `inkling-rdna3` fork (Inkling-2-Mini only), built with the
+# same GGML_CUDA_FA_QUANTS list as hip-kvmix (results/20261122-inkling-rdna3-fork/BUILD.md).
+_HIP_KV_BY_BACKEND = {"hip": _HIP_KV_VALID, "hip-kvmix": _HIP_KVMIX_VALID, "hip-inkling": _HIP_KVMIX_VALID}
+# "maya" engine: a checkout of GodGMN/maya-inkling-mini `hip-port` (Inkling-2-Mini only, not llama.cpp; see
+# docs/ENGINES.md). Its server reads a JSON run config built from the port's gfx1100 preset plus the profile;
+# a profile's kv pair maps to IK2_KV (one cache type for K and V).
+MAYA_PRESET = pathlib.Path("docs/inkling2-mini/ik2-mini-gfx1100.json")
+_MAYA_KV = {("fp8", "fp8"): "fp8", ("f16", "f16"): "f16"}
 
 
 class ManifestError(Exception):
@@ -225,12 +234,20 @@ def validate(m: Manifest, model: Model, profile_name: str, profile: dict, backen
         )
 
     k_type, v_type = profile["kv"]
+    if backend == "maya":
+        if (k_type, v_type) not in _MAYA_KV:
+            raise ManifestError(f"{model.alias}/{profile_name}: the maya engine takes kv = "
+                                f"[\"fp8\", \"fp8\"] or [\"f16\", \"f16\"], not {k_type}/{v_type}")
+        if uses_vision(model, profile):
+            raise ManifestError(f"{model.alias}/{profile_name}: the maya backend is wired without vision; "
+                                "set vision = false")
+        return
     valid_types = {"f32", "f16", "bf16", "q8_0", "q4_0", "q4_1", "iq4_nl", "q5_0", "q5_1"}
     if k_type not in valid_types or v_type not in valid_types:
         raise ManifestError(f"{model.alias}/{profile_name}: invalid K/V type ({k_type}/{v_type})")
 
-    if backend in ("hip", "hip-kvmix"):
-        valid = _HIP_KVMIX_VALID if backend == "hip-kvmix" else _HIP_KV_VALID
+    if backend in _HIP_KV_BY_BACKEND:
+        valid = _HIP_KV_BY_BACKEND[backend]
         if (k_type, v_type) not in valid:
             raise ManifestError(
                 f"{model.alias}/{profile_name}: K/V combination {k_type}/{v_type} has no "
@@ -282,6 +299,46 @@ def server_executable(m: Manifest, backend: str) -> pathlib.Path:
     return exe
 
 
+def server_command(m: Manifest, model: Model, profile: dict, backend: str,
+                   config_dir: pathlib.Path) -> tuple[list[str], pathlib.Path]:
+    """(command, cwd) that serves `model`/`profile` on [defaults].port. llama.cpp backends: the binary plus
+    build_argv. maya: writes <config_dir>/<alias>.maya.json and runs the port's OpenAI server on it."""
+    if backend != "maya":
+        exe = server_executable(m, backend)
+        return [str(exe)] + build_argv(m, model, profile), exe.parent
+    engine = m.engines.get("maya")
+    if not engine:
+        raise ManifestError("no 'maya' engine configured in local.toml (engines.maya)")
+    python = engine / ".venv" / "bin" / "python"
+    if not python.exists():
+        raise ManifestError(f"{python} does not exist: create the port's venv (docs/ENGINES.md)")
+    preset = json.loads(_read_text(engine / MAYA_PRESET))
+    sampling = {name: model.sampling[key] for key, name in
+                (("temp", "temperature"), ("top_p", "top_p"), ("top_k", "top_k"), ("min_p", "min_p"))
+                if key in model.sampling}
+    config = {
+        "backend": preset["backend"], "exe": preset["exe"],
+        "args": ["--model", str(model.gguf), "--max-context", str(profile["context"]),
+                 "--chunk", str(profile.get("chunk", 1024))],
+        "env": {**preset["env"], "IK2_KV": _MAYA_KV[tuple(profile["kv"])], **profile.get("env", {})},
+        "tokenizer": preset["tokenizer"], "model_name": preset["model_name"],
+        "sampling": sampling, "cwd": str(engine),
+    }  # the preset's reasoning_effort is dropped: requests get the vendor default, as on llama-server
+    config_dir.mkdir(parents=True, exist_ok=True)
+    path = config_dir / f"{model.alias}.maya.json"
+    path.write_text(json.dumps(config, indent=2) + "\n")
+    return [str(python), "serve/server.py", "--engine", "maya", "--config", str(path),
+            "--port", str(m.default_port), "--tokenizer", config["tokenizer"]], engine
+
+
+def _read_text(path: pathlib.Path) -> str:
+    """Text of an engine-side file; a read failure becomes a ManifestError."""
+    try:
+        return path.read_text()
+    except OSError as e:
+        raise ManifestError(f"failed to read {path}: {e}") from e
+
+
 def gpu_device(drm: pathlib.Path = pathlib.Path("/sys/class/drm")) -> pathlib.Path | None:
     """The amdgpu sysfs device dir (`<drm>/cardN/device`) with the most VRAM, or None (also off Linux).
 
@@ -311,7 +368,7 @@ def free_vram_gib() -> float | None:
 
 
 def running_servers() -> list[int] | None:
-    """PIDs of running llama-server processes; None means process detection failed."""
+    """PIDs of running llama-server or maya-ik2 processes; None means process detection failed."""
     try:
         if IS_WINDOWS:
             out = subprocess.run(
@@ -332,7 +389,7 @@ def running_servers() -> list[int] | None:
                 elif line.strip():
                     return None
             return pids if pids or saw_no_match else None
-        out = subprocess.run(["pgrep", "-x", "llama-server"],
+        out = subprocess.run(["pgrep", "-x", "llama-server|maya-ik2"],
                              capture_output=True, text=True,
                              errors="replace", timeout=20)
         if out.returncode == 1:

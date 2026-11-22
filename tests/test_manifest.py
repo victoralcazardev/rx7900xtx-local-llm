@@ -249,6 +249,13 @@ class TestRunningServers(unittest.TestCase):
         with mock.patch.object(manifest, "IS_WINDOWS", False), \
              mock.patch.object(manifest.subprocess, "run", return_value=result):
             self.assertIsNone(manifest.running_servers())
+    def test_pgrep_also_matches_the_maya_engine(self):
+        result = mock.Mock(returncode=0, stdout="123\n", stderr="")
+        with mock.patch.object(manifest, "IS_WINDOWS", False), \
+             mock.patch.object(manifest.subprocess, "run", return_value=result) as run:
+            self.assertEqual(manifest.running_servers(), [123])
+        self.assertEqual(run.call_args.args[0], ["pgrep", "-x", "llama-server|maya-ik2"])
+
     def test_windows_tasklist_no_match_and_parse_failure_are_distinct(self):
         no_match = mock.Mock(
             returncode=0, stdout="INFO: No tasks are running which match the specified criteria.\n"
@@ -446,6 +453,14 @@ class TestValidate(unittest.TestCase):
         profile = {"context": 131072, "kv": ["q8_0", "q5_1"]}
         manifest.validate(self.m, model, "p", profile, "hip-kvmix")  # no raise
 
+    def test_hip_inkling_uses_kvmix_kv_rules(self):
+        model = self._model()
+        manifest.validate(self.m, model, "p", {"context": 131072, "kv": ["q8_0", "q5_1"]},
+                          "hip-inkling")  # no raise
+        with self.assertRaises(manifest.ManifestError):
+            manifest.validate(self.m, model, "p", {"context": 131072, "kv": ["q4_0", "q5_1"]},
+                              "hip-inkling")
+
     def test_hip_kv_types_still_enforced_under_kvmix(self):
         model = self._model()
         profile = {"context": 131072, "kv": ["q4_0", "q5_1"]}
@@ -462,6 +477,25 @@ class TestValidate(unittest.TestCase):
         model = self._model()
         profile = {"context": 131072, "kv": ["bf16", "bf16"]}
         manifest.validate(self.m, model, "p", profile, "vulkan")  # no raise
+
+    def test_maya_accepts_its_kv_modes_only(self):
+        model = self._model()
+        manifest.validate(self.m, model, "p", {"context": 131072, "kv": ["fp8", "fp8"]}, "maya")  # no raise
+        manifest.validate(self.m, model, "p", {"context": 131072, "kv": ["f16", "f16"]}, "maya")  # no raise
+        for kv in (["q8_0", "q8_0"], ["fp8", "f16"]):
+            with self.assertRaises(manifest.ManifestError):
+                manifest.validate(self.m, model, "p", {"context": 131072, "kv": kv}, "maya")
+
+    def test_fp8_kv_rejected_outside_maya(self):
+        with self.assertRaises(manifest.ManifestError):
+            manifest.validate(self.m, self._model(), "p", {"context": 131072, "kv": ["fp8", "fp8"]}, "hip")
+
+    def test_maya_rejects_vision(self):
+        model = self._model(mmproj=self.mmproj)
+        with self.assertRaises(manifest.ManifestError):
+            manifest.validate(self.m, model, "p", {"context": 131072, "kv": ["fp8", "fp8"]}, "maya")
+        manifest.validate(self.m, model, "p", {"context": 131072, "kv": ["fp8", "fp8"], "vision": False},
+                          "maya")  # no raise
 
 
 class TestBuildArgv(unittest.TestCase):
@@ -555,6 +589,73 @@ class TestServerExecutable(unittest.TestCase):
             engines={"hip": engine_dir}, models={}, allow_low_context=False,
         )
         self.assertEqual(manifest.server_executable(m, "hip"), engine_dir / exe_name)
+
+
+class TestServerCommand(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.root = pathlib.Path(self.tmp.name)
+        self.model = manifest.Model(
+            alias="ink", gguf=self.root / "ink.gguf", backend="maya", mtp=False,
+            sampling={"temp": 1.0, "min_p": 0.0}, mmproj=None, profiles={},
+        )
+        self.profile = {"context": 262144, "kv": ["fp8", "fp8"], "chunk": 2048,
+                        "env": {"IK2_PAGED_KV": "1", "IK2_FLASH_WAVES": "8"}}
+
+    def _maya_engine(self) -> pathlib.Path:
+        engine = self.root / "maya"
+        (engine / "docs" / "inkling2-mini").mkdir(parents=True)
+        (engine / "docs" / "inkling2-mini" / "ik2-mini-gfx1100.json").write_text(
+            '{"backend": "hip", "exe": "build-ik2/maya-ik2", "args": ["--model", "x.gguf"],'
+            ' "env": {"IK2_KV": "f16", "IK2_FLASH_WAVES": "4", "IK2_HOST": "mmap"},'
+            ' "tokenizer": "ik2/tokenizer", "reasoning_effort": "medium", "model_name": "inkling-2-mini"}')
+        (engine / ".venv" / "bin").mkdir(parents=True)
+        (engine / ".venv" / "bin" / "python").write_bytes(b"")
+        return engine
+
+    def _manifest(self, engines) -> manifest.Manifest:
+        return manifest.Manifest(default_port=8080, default_flags=[], models_root=self.root,
+                                 engines=engines, models={}, allow_low_context=False)
+
+    def test_maya_writes_config_from_preset_and_profile(self):
+        engine = self._maya_engine()
+        cmd, cwd = manifest.server_command(self._manifest({"maya": engine}), self.model, self.profile,
+                                           "maya", self.root / "out")
+        cfg_path = self.root / "out" / "ink.maya.json"
+        self.assertEqual(cmd, [str(engine / ".venv" / "bin" / "python"), "serve/server.py", "--engine", "maya",
+                               "--config", str(cfg_path), "--port", "8080", "--tokenizer", "ik2/tokenizer"])
+        self.assertEqual(cwd, engine)
+        cfg = __import__("json").loads(cfg_path.read_text())
+        self.assertEqual(cfg["args"], ["--model", str(self.model.gguf), "--max-context", "262144",
+                                       "--chunk", "2048"])
+        self.assertEqual(cfg["env"], {"IK2_KV": "fp8", "IK2_FLASH_WAVES": "8", "IK2_HOST": "mmap",
+                                      "IK2_PAGED_KV": "1"})
+        self.assertEqual(cfg["sampling"], {"temperature": 1.0, "min_p": 0.0})
+        self.assertEqual(cfg["cwd"], str(engine))
+        self.assertEqual(cfg["exe"], "build-ik2/maya-ik2")
+        self.assertNotIn("reasoning_effort", cfg)  # the vendor default, as on llama-server
+
+    def test_maya_missing_engine_or_venv_raises(self):
+        with self.assertRaises(manifest.ManifestError):
+            manifest.server_command(self._manifest({}), self.model, self.profile, "maya", self.root / "out")
+        engine = self._maya_engine()
+        (engine / ".venv" / "bin" / "python").unlink()
+        with self.assertRaises(manifest.ManifestError):
+            manifest.server_command(self._manifest({"maya": engine}), self.model, self.profile, "maya",
+                                    self.root / "out")
+
+    def test_llama_backend_is_binary_plus_build_argv(self):
+        engine = self.root / "engine"
+        engine.mkdir()
+        exe = engine / ("llama-server.exe" if manifest.IS_WINDOWS else "llama-server")
+        exe.write_bytes(b"")
+        m = self._manifest({"hip": engine})
+        profile = {"context": 131072, "kv": ["q8_0", "q8_0"]}
+        cmd, cwd = manifest.server_command(m, self.model, profile, "hip", self.root / "out")
+        self.assertEqual(cmd, [str(exe)] + manifest.build_argv(m, self.model, profile))
+        self.assertEqual(cwd, engine)
+        self.assertFalse((self.root / "out").exists())
 
 
 class TestGpuDevice(unittest.TestCase):

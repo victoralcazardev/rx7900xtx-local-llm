@@ -44,6 +44,23 @@ class TestLauncherAndSmoke(unittest.TestCase):
             self.assertEqual(launch.main(), 0)
         self.assertIn("'/models/a model.gguf'", output.getvalue())
 
+    def test_maya_dry_run_shows_the_port_server_command_and_cwd(self):
+        m = mock.Mock(default_port=8080, allow_low_context=False)
+        output = io.StringIO()
+        with mock.patch.object(sys, "argv", ["launch.py", "demo", "--dry-run"]), \
+             mock.patch.object(launch, "load", return_value=m), \
+             mock.patch.object(launch, "resolve", return_value=(object(), "p", {"context": 262144})), \
+             mock.patch.object(launch, "backend_for", return_value="maya"), \
+             mock.patch.object(launch, "validate"), \
+             mock.patch.object(launch, "harness_entry", return_value="local-262k"), \
+             mock.patch.object(launch, "server_command",
+                               return_value=(["py", "serve/server.py", "--port", "8080"], pathlib.Path("/maya"))), \
+             mock.patch.object(launch, "free_vram_gib", return_value=None), \
+             contextlib.redirect_stdout(output):
+            self.assertEqual(launch.main(), 0)
+        self.assertIn("command: py serve/server.py --port 8080  (cwd /maya)", output.getvalue())
+        self.assertIn("Harness provider: local-262k", output.getvalue())
+
     def test_dry_run_warns_only_when_free_vram_is_below_profile_need_plus_margin(self):
         profile = {"context": 262144, "vram_gib": 22.0}
         # free < needed + VRAM_MARGIN_GIB (0.5) warns; the boundary itself does not.
@@ -81,11 +98,11 @@ class TestLauncherAndSmoke(unittest.TestCase):
              mock.patch.object(smoke, "resolve", return_value=(model, "default", profile)), \
              mock.patch.object(smoke, "backend_for", return_value="vulkan"), \
              mock.patch.object(smoke, "validate"), \
-             mock.patch.object(smoke, "server_executable", return_value=pathlib.Path("server")), \
+             mock.patch.object(smoke, "server_command", return_value=(["server"], pathlib.Path("."))), \
              mock.patch.object(smoke, "running_servers", return_value=None), \
              contextlib.redirect_stdout(output):
             self.assertEqual(smoke.main(), 2)
-        self.assertIn("could not detect running llama-server", output.getvalue())
+        self.assertIn("could not detect running model servers", output.getvalue())
 
 
 if __name__ == "__main__":

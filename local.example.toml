@@ -12,6 +12,8 @@ models_root = "/path/to/Models"
 vulkan = ""
 hip = ""
 hip-kvmix = ""
+hip-inkling = ""  # optional: GodGMN inkling-rdna3 fork, Inkling-2-Mini only (docs/ENGINES.md)
+maya = ""  # optional: GodGMN maya-inkling-mini hip-port checkout with build-ik2/ and .venv/, Inkling-2-Mini only (docs/ENGINES.md)
 
 # Optional: `scripts/build_engine.py` (docs/sop/update-engine.md "Build a new engine"). One
 # folder per checkout and per build, so nothing is ever overwritten.

@@ -16,6 +16,25 @@ the manifest yet, use `docs/sop/new-model.md` first.
 full VRAM has been observed to hang the machine on resume (see `docs/measurements/coexistence.md`).
 It also warns if free VRAM doesn't cover the profile's `vram_gib` + 0.5 GiB margin.
 
+### Opt-in: Inkling-2-Mini uncensored (`inkling2-mini-unc`)
+
+Two profiles on the same Abiray IQ4_NL file; `--profile` is required. Text only, no vision.
+
+| Profile | Engine | Decode at 512 / 128K / 262K (tok/s, 272 W) | Use |
+|---|---|---|---|
+| `262k-maya` | `maya` (GodGMN `maya-inkling-mini` HIP port, not llama.cpp) | 95 / 63.6 / 51.1 | **Faster**: try this one first |
+| `262k-q8q8` | `hip-inkling` (GodGMN `inkling-rdna3` llama.cpp fork) | 57.6 / 44.5 / 37.8 | llama.cpp features (`/metrics`, n-gram speculation, checkpoints) |
+
+```
+python3 scripts/launch.py inkling2-mini-unc --profile 262k-maya --background
+python3 scripts/smoke.py inkling2-mini-unc --profile 262k-maya     # automated check, starts and stops its own server
+pkill -INT -f 'serve/server.py --engine maya'                        # stop the maya profile (up to ~50 s)
+```
+
+Both serve the `local-262k` harness provider on `:8080`. Evidence:
+[maya vs. fork](../../results/20261122-inkling-maya-vs-fork/README.md); engine setup and updates:
+[ENGINES.md](../ENGINES.md#maya-inkling-mini-hip-maya-ik2-experimental-inkling-2-mini-only).
+
 ### Optional shortcut
 
 `python3 scripts/launch.py <alias> --profile <profile>` is the full command; a short wrapper saves
@@ -91,8 +110,9 @@ shorthand for the `launch.py` invocation below.
 
 ## Known errors
 
-- **`llama-server is already running`**: stop the previous process first (`pkill -x llama-server`
-  or Task Manager on Windows). There's only VRAM for one.
+- **`a model server (llama-server or maya-ik2) is already running`**: stop the previous process first
+  (`pkill -x llama-server`, `pkill -INT -f 'serve/server.py --engine maya'`, or Task Manager on Windows).
+  There's only VRAM for one.
 - **`400 exceed_context`**: your harness's provider entry doesn't match the profile's real `-c`.
   Run `check-sync.py`; if the "harness" block fails, the wiring is out of sync.
 - **`connection refused` when the client tries to use the model**: no server listening on `:8080`

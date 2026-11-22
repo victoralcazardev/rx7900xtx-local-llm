@@ -1,4 +1,4 @@
-"""Launches a model from the manifest with llama-server.
+"""Launches a model from the manifest with llama-server (or, for backend "maya", the maya-ik2 port's server).
 
 Usage:
     python3 scripts/launch.py [alias] [--profile P] [--backend vulkan|hip|cuda]
@@ -28,7 +28,7 @@ import sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from manifest import (  # noqa: E402
     IS_WINDOWS, REPO, ManifestError, backend_for, build_argv, load,
-    harness_entry, resolve, running_servers, server_executable, validate, free_vram_gib,
+    harness_entry, resolve, running_servers, server_command, validate, free_vram_gib,
 )
 
 VRAM_MARGIN_GIB = 0.5  # over the profile's measured `vram_gib` (peak with a full context)
@@ -85,12 +85,20 @@ def main() -> int:
         print(f"ERROR: {e}", file=sys.stderr)
         return 1
 
-    argv = build_argv(m, model, profile)
+    if backend == "maya":
+        try:
+            cmd, cwd = server_command(m, model, profile, backend, REPO / "_tmp" / "maya")
+        except ManifestError as e:
+            print(f"ERROR: {e}", file=sys.stderr)
+            return 1
+        shown = shlex.join(cmd) + f"  (cwd {cwd})"
+    else:
+        shown = shlex.join(["llama-server"] + build_argv(m, model, profile))
     entry = harness_entry(profile["context"]) or (
         "none (no harness entry wired for this context; only local-262k/262144 is wired)"
     )
     print(f"backend: {backend}")
-    print("command:", shlex.join(["llama-server"] + argv))
+    print("command:", shown)
     print(f"Harness provider: {entry}")
 
     needed = profile.get("vram_gib")
@@ -106,18 +114,19 @@ def main() -> int:
         return 0
 
     try:
-        exe = server_executable(m, backend)
+        cmd, cwd = server_command(m, model, profile, backend, REPO / "_tmp" / "maya")
     except ManifestError as e:
         print(f"ERROR: {e}", file=sys.stderr)
         return 1
 
     alive = running_servers()
     if alive is None:
-        print("ERROR: could not detect running llama-server processes; aborting preflight.",
+        print("ERROR: could not detect running model servers; aborting preflight.",
               file=sys.stderr)
         return 1
     if alive:
-        print(f"ERROR: llama-server is already running (PID {alive}). Stop it first.",
+        print(f"ERROR: a model server (llama-server or maya-ik2) is already running (PID {alive}). "
+              "Stop it first.",
               file=sys.stderr)
         return 1
 
@@ -125,18 +134,18 @@ def main() -> int:
     logs.mkdir(parents=True, exist_ok=True)
     stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     log_path = logs / f"{model.alias}-{profile_name}-{stamp}.log"
-    cmd = _without_suspend([str(exe)] + argv)
+    cmd = _without_suspend(cmd)
 
     if args.background:
         with open(log_path, "w") as log:
-            proc = subprocess.Popen(cmd, cwd=str(exe.parent), stdout=log, stderr=log)
+            proc = subprocess.Popen(cmd, cwd=str(cwd), stdout=log, stderr=log)
         _start_gpu_watch(proc.pid, log_path, m.default_port)
         print(f"launched in background, log: {log_path}")
         return 0
 
     print(f"log: {log_path}")
     with open(log_path, "wb") as log:
-        proc = subprocess.Popen(cmd, cwd=str(exe.parent),
+        proc = subprocess.Popen(cmd, cwd=str(cwd),
                                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         _start_gpu_watch(proc.pid, log_path, m.default_port)
         _tee(proc.stdout, sys.stdout.buffer, log)
