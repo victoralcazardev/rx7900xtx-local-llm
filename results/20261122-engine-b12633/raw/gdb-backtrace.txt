@@ -1,0 +1,35 @@
+Backtrace captured with gdb on 2026-11-22, engine llama-b12633-pr30792q51-linux-rocm10-gfx1100-kvmix,
+command: ./test-backend-ops test -b ROCm0 -o FLASH_ATTN_EXT -p 'hsk=256.*type_K=q8_0' -j 1
+
+load_backend: loaded CPU backend from ~/IA/Motores/src/llama.cpp-b12633-pr30792q51/build-rocm10/bin/libggml-cpu-haswell.so
+
+Thread 1 "test-backend-op" received signal SIGSEGV, Segmentation fault.
+0x00007fffe354d5b8 in ?? () from /opt/rocm/lib/libamdhip64.so.7
+=== SIGSEGV ===
+rip            0x7fffe354d5b8      0x7fffe354d5b8
+rax            0x55555673aef8      93825011003128
+rcx            0x0                 0
+rdx            0x0                 0
+rsi            0x555556026630      93825003578928
+rdi            0x55555673ad10      93825011002640
+r8             0x555556738370      93825010991984
+r9             0x1                 1
+r10            0x0                 0
+r11            0x4c0               1216
+=> 0x7fffe354d5b8:	vmovdqa %ymm1,0xc0(%rdi)
+   0x7fffe354d5c0:	vmovdqa %ymm1,0xe0(%rdi)
+   0x7fffe354d5c8:	vmovdqa %ymm1,0x100(%rdi)
+   0x7fffe354d5d0:	vmovdqa %ymm1,0x120(%rdi)
+
+--- second capture (hsk=40 filter), same engine ---
+[Thread 0x7ffeb37fc6c0 (LWP 637837) (id 36) exited]
+
+Thread 1 "test-backend-op" received signal SIGSEGV, Segmentation fault.
+0x00007fffe354d5b8 in ?? () from /opt/rocm/lib/libamdhip64.so.7
+=== CRASH ===
+#0  0x00007fffe354d5b8 in ?? () from /opt/rocm/lib/libamdhip64.so.7
+#1  0x00007fffe35291af in ?? () from /opt/rocm/lib/libamdhip64.so.7
+#2  0x00007fffe350e7dc in ?? () from /opt/rocm/lib/libamdhip64.so.7
+#3  0x00007fffe3345a34 in ?? () from /opt/rocm/lib/libamdhip64.so.7
+#4  0x00007fffe334eb54 in ?? () from /opt/rocm/lib/libamdhip64.so.7
+#5  0x00007fffe3428874 in hipStreamCreateWithFlags () from /opt/rocm/lib/libamdhip64.so.7

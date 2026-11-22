@@ -37,6 +37,10 @@
 - **Zero SSD expert reads (2026-11-20)**: only resident mode avoids them; it stalled here on v0.2.8 and on another
   RX 7900 XTX + 32 GB on v0.2.9, and it is proven with 32 GB only on CUDA. Retest arm, not run:
   [review 2026-11-20](#review-2026-11-20-resident-mode-on-32-gb-ram-v0217).
+- **Retest queued on Strata v0.2.19 (2026-11-22, user choice, not run)**: `strata-engine` 0.1.65 claims
+  1.44-2.10x prefill and +17-22% decode on RDNA3 with no environment variables, which is the release the
+  pause was waiting for; the arm is the abliterated SC117 Flash-Next set at 262K int8, then the coding suite
+  ([review](#review-2026-11-22-v0218-and-v0219)).
 - **Agent quality floor (2026-11-07)**: 2-bit sets fit this machine, but no 2-bit set has an agentic evaluation and the
   field evidence puts the floor for agents at IQ3_S, which does not fit 32 GB without SSD reads
   ([sources](../SOURCES-community.md#flash-next-low-bit-quants-for-agents-2026-11-07)).
@@ -819,4 +823,72 @@ and title source-checked 2026-11-20):
 - v0.2.16 (engine 0.1.62) replaced the ggml/llama.cpp matrix kernels with Strata's own and lists the RX 7000 changes
   as "Not tested"; [#6067](https://github.com/Niko1221/Strata/issues/6067) (closed) reported gfx1100 cold prefill ~40%
   slower than 0.1.59. A/B before trusting 0.1.63 numbers.
-- Strata still lists no Inkling model; Qwen4 is groundwork only (`strata --geometry`, v0.2.13).
+- Strata still lists no Inkling model; Qwen4 is groundwork only (`strata --geometry`, v0.2.13). *(Superseded
+  by v0.2.19, 2026-11-22: `strata-inkling` 0.1.65 ships Inkling-2-Mini packs.)*
+
+## Review 2026-11-22: v0.2.18 and v0.2.19
+
+Desk review of the two releases after the last reviewed version (v0.2.17, [review 2026-11-20](#review-2026-11-20-resident-mode-on-32-gb-ram-v0217)).
+Release notes read from the GitHub API on 2026-11-22; nothing installed, nothing run, no model downloaded.
+
+### v0.2.18 (2026-11-21): Hy4-Flash, nothing for this PC's RAM
+
+- App/terminal 0.2.18; `strata-engine` and the new `strata-hy4` shape engine at **0.1.64**; Control 0.1.64;
+  update feeds 130/126. New 15-package set in `shape_engines`, Linux `hip-rx7900` covers `gfx1100`-`gfx1150`.
+- Adds **Tencent Hy4-Flash** (`strata-hy4` 0.1.64): 220B parameters, 12B active, a 64B Engram lookup, up to
+  1M context, text + vision, with `DFly2` speculative decoding built in.
+- Three packs, all sized for far more RAM than this PC has: **SQ-64 129.61 GB** on disk including
+  `Engram-Q8`, "runs from 64 GiB of RAM with an 8, 12, or 16 GiB GPU"; SQ-96 157.16 GB for 96 GiB systems;
+  SQ-128 181.23 GB ("0.0879 reasoning mean KL") for 128 GiB+. AMD numbers quoted: 62 tok/s on R9700 /
+  RX 9070 XT, 51-60 tok/s on a 128 GB Strix Halo.
+- **Verdict**: no action here. 64 GiB of RAM is twice this machine's 31.25 GiB usable, and the release changes
+  nothing for Qwen3.8-Flash-Next.
+
+### v0.2.19 (2026-11-22): the RDNA3 Flash-Next release, plus native Inkling
+
+- App/terminal 0.2.19; **`strata-engine`, the new `strata-inkling` and the SYCL `strata-hy4` all at 0.1.65**;
+  Control 0.1.65; feeds 131/127.
+- **`strata-engine` 0.1.65, AMD RDNA3 (`gfx1100`-`gfx1151`)**: NVFP4 Wave32 FP16 WMMA prefill ("42-44x lower
+  approximation error"), `native_h11p_kernel` (`PF_F16=2`), discrete `moe_p1a` `FL=3`, `IQ2_XS` and NVFP4
+  single-launch bitwise-exact LDS decode (`em0=8`), `3.10x` Wave32 WMMA `DFlash2`, WDDM coherent host
+  staging, OCuLink `PcieAuto`, Windows `gfx1151` defaults — the release note's claim is **"1.44x-2.10x faster
+  prefill and +17%..+22% faster decode (97.9 tok/s, peak 103.7 tok/s) on RX 7900 XT"**, with "zero
+  environment variables needed".
+- **`strata-inkling` 0.1.65**: native Inkling 2 Mini (26.4B, 3.4B active / 5.4B looped-active across 48
+  virtual layer visits, 1M context, text + image), loading Strata packs, official `safetensors` (+ `mtp.safetensors`)
+  or community `.gguf`, with `--gpus 2` expert parallelism and built-in `W=4` DSpark decoding:
+  - **SQ-10** 10.47 GB (9.75 GiB): 100% in VRAM on 12 GiB cards; **SQ-15** 14.35 GB (13.36 GiB): 16 GiB cards,
+    96.68% top-1 agreement / 0.00889 test KL; **SQ-20** 19.35 GB (18.02 GiB): "bit-exact lossless native
+    `SF4+MX8`" for **24 GiB+ GPUs**, 100.00% top-1 / 0.00000 KL. Vision pack 0.64 GB BF16.
+  - Published speed is CUDA/Metal/Intel plus **Radeon AI PRO R9700 (99.0-106.5 tok/s)** and Strix Halo; **no
+    RX 7900 XTX or XT figure for Inkling is published** (the 97.9 tok/s line is for Flash-Next).
+  - Linux `hip-rx7900` package for `strata-inkling` 0.1.65 is 95,697,377 bytes, i.e. a 96 MB engine download,
+    and the packs are separate.
+- Unchanged assets stay on their old releases: `strata-hy4` 0.1.64 on 0.2.18, the two DFlash2 drafter packs on
+  0.2.16, the frozen DeepSeek 0.1.59 engines on 0.2.13.
+
+### What it changes here
+
+1. **Flash-Next: this is the retest trigger.** A claimed 97.9 tok/s decode on an RX 7900 XT (a smaller card than
+   this XTX) is well above the 59-65 tok/s short-prompt / 36.7 tok/s at 240K measured on v0.2.8, and above the
+   27B profile's 33.2 tok/s at 240K. The claim names no context, KV type or quant, so it is a hypothesis until
+   our arm runs. "Zero environment variables" would also retire the 2026-10-30 `GPU_PINNED_MIN_XFER_SIZE=1048576`
+   workaround, which must be checked first (drop it and confirm a 120K prompt does not stall).
+2. **Inkling on Strata is now possible but unmeasured**: SQ-20 at 18.02 GiB fits a 24 GiB card on paper, leaving
+   about 4-5 GiB for KV, and no gfx1100 latency exists. The measured llama.cpp path (GodGMN fork, 41-42 tok/s at
+   262K) is the number a Strata arm would have to beat; the model is parked
+   ([owner](inkling-2-mini.md#status-parked-2026-11-22-resume-triggers)), so this is not a reason to install anything.
+3. **Hy4-Flash is out of reach** (64 GiB of RAM minimum).
+
+### Next step (planned, not run)
+
+Per the user's choice: **retest the abliterated SC117 Flash-Next set on Strata 0.2.19**, in this order —
+F0 (update/install 0.2.19 + engine 0.1.65, re-check every flag of the 2026-10-30 run config against that
+version, confirm whether the ROCm xfer-size workaround is still needed); confirm the SC117 IQ2_XS file is
+still on disk (the 2026-11-05 cleanup deleted every Flash-Next set, so a ~68 GB download may be required);
+then 262K int8, `--vram-reserve-mib 3072`, `undeclared_tool_calls: "call"`, the 2026-10-30 prompts, a serving
+run of more than 10 minutes ([#6392](https://github.com/Niko1221/Strata/issues/6392)), the coding suite against
+the 27B, and finally the abliteration check (refusal prompts, because a control vector that is not applied
+silently gives the original model). Because v0.2.16 replaced the matrix kernels and early reports had gfx1100
+cold prefill slower ([#6067](https://github.com/Niko1221/Strata/issues/6067)), the arm compares against the
+v0.2.8 numbers above, not against v0.2.11.

@@ -18,6 +18,7 @@ hash — the difference lives in the shared library, not the file hashed here.
 | `llama-b11160-bin-ubuntu-rocm-10.0-x64` | **Current** (`hip` in `local.toml`) | b11160 / `70c4e1582`, official CI | `8c98a329346088d0cdd03195ae5864e29c9a8b11fc293397a723f8730e9492dc` |
 | `llama-b11160-bin-ubuntu-vulkan-x64` | Reference (2-3.5x slower on generation here; still 1.2-1.6x slower with the memory clock pinned, see `docs/measurements/engines.md`) | b11160 / `70c4e1582`, official CI | `ddb272c01521fc81c14ae430a944cd52d8db9c7d237e1b90f77d0b2f33a2c012` |
 | `llama-v0.9.0-pr30792q51-linux-rocm10-gfx1100-kvmix` | **Current** (`hip-kvmix` in `local.toml`, since 2026-11-05, operator choice against a -4.6% decode screen at 64K, [results](../results/20261105-huihui-iq3s-262k/README.md)) | v0.9.0 / `cd959ba` + local `pr30792-q5_1.patch`, own build (recipe below) | `410a809bcd04ffaa46100dd68b29eb5d6d0fb12b84d25bc3c543ce18c7968ac6` (launcher; `libllama-server-impl.so` `523395ca9d4af53609d2a443c302b1e33e2a41560f5f0fdc8cdd4f2dffb47f63`) |
+| `llama-b12633-pr30792q51-linux-rocm10-gfx1100-kvmix` | **Candidate, not adopted** (built 2026-11-22; no 240K A/B and no coding suite: the user deferred the A/B to Qwen4, [DECISIONS](DECISIONS.md) 2026-11-22; FA rerun pending, see [results](../results/20261122-engine-b12633/README.md)) | b12633 / `9c10c94e1` + local `pr30792-q5_1.patch` rebased, own build (recipe below) | `fefb558933a11198a35e4a4ec592b243a3d96df0dd56914c1e938b08ace7ae77` (launcher; `libllama-server-impl.so` `9edc270e068cee19d2f28a28b2aa5a54d5da60166fa7ac4afd73b010a7c697dc`) |
 | `llama-b11846-pr30792q51-linux-rocm10-gfx1100-kvmix` | Previous `hip-kvmix` (rollback; 2026-10-24 to 2026-11-05; 240K A/B vs. b11820 + the same patch and coding suite in [`results/20261024-engine-b11846-240k/`](../results/20261024-engine-b11846-240k/README.md)) | b11846 / `1a24df1` + local `pr30792-q5_1.patch` kernel hunks, own build (recipe below) | `410a809bcd04ffaa46100dd68b29eb5d6d0fb12b84d25bc3c543ce18c7968ac6` (launcher; `libllama-server-impl.so` `6ae92a82ad656b4d02ce9ef621a8034d384f496846bc9134cbefecbbebbf3878`) |
 | `llama-b11820-pr30792q51-linux-rocm10-gfx1100-kvmix` | Previous `hip-kvmix` (rollback; 2026-10-23 to 2026-10-24; 240K A/B vs. plain b11820 and coding suite in [`results/20261023-d1-pr30792q51-240k/`](../results/20261023-d1-pr30792q51-240k/README.md)) | b11820 / `d77256999f21` + local `pr30792-q5_1.patch`, own build (recipe below) | `410a809bcd04ffaa46100dd68b29eb5d6d0fb12b84d25bc3c543ce18c7968ac6` (launcher; `libllama-server-impl.so` `ea6b95ef53e991f3ee49faff2f9b3590ad856500f547c7fc806b005c46301caf`) |
 | `llama-b11820-linux-rocm10-gfx1100-kvmix` | Control arm of the 2026-10-23 A/B (neutral vs. b11718); not used; deleted locally 2026-10-30 | b11820 / `d77256999f21`, own build | `410a809bcd04ffaa46100dd68b29eb5d6d0fb12b84d25bc3c543ce18c7968ac6` (launcher) |
@@ -29,6 +30,7 @@ hash — the difference lives in the shared library, not the file hashed here.
 | `llama-b11160-linux-rocm10-gfx1100-kvmix-vec4` | Discarded (+20% ms/step at depth vs. `kvmix`, see `docs/measurements/speculative.md`) | b11160 / `70c4e1582` + 1-line patch | `3d8565952bcd74cd4e0d3be3a56221619c25da6176d3716972b75b1cc0a34128` (same front-end; patch is in `libggml-hip.so`) |
 | `llama-b11160-linux-rocm-gfx1100-kvmix` | Discarded (~9% slower than the ROCm-10-toolchain build, see `docs/measurements/engines.md`) | b11160 / `70c4e1582`, own build, older ROCm 7.2.4 system toolchain | `7c27f7fd7c0398075b2837a531c98cc6c57766ff107d671c1c7b06c18d6cd1b2` |
 | `llama-rdnaboosts-v16-ebbb18522-rocm10-gfx1100` | Experimental, not adopted (only -2.5% ms/step at depth; not worth maintaining a fork, see `docs/measurements/speculative.md`) | `stew675/llama-cpp-rdna-boosts` v16-`ebbb18522`-r13, 16 patches on llama.cpp `ebbb18522` | `3d8565952bcd74cd4e0d3be3a56221619c25da6176d3716972b75b1cc0a34128` (same front-end) |
+| `llama-inkling-rdna3-cb0e46960-linux-rocm10-gfx1100-kvmix` | **Experimental, Inkling-2-Mini only** (built 2026-11-22; the only engine measured at 262K with that model, [results](../results/20261122-inkling-rdna3-fork/BUILD.md)). Do not point the Qwen default at it: its q8_1 cache and fusion matchers touch every model | `GodGMN/llama.cpp` branch `inkling-rdna3` `cb0e46960` (tag `b12600` + 6 commits), built as published (no local patch) | `fefb558933a11198a35e4a4ec592b243a3d96df0dd56914c1e938b08ace7ae77` (same front end as b12633; `libggml-hip.so` `0734ce9771709d07b75473095cccd93c0b8e549766d0819ebc8aa2dc94367096`) |
 
 ## Build recipes
 
@@ -41,6 +43,21 @@ provided on the library path. Since 2026-11-22 the `kvmix` engine folders carry 
 symlink to Arch's generic 10.1 build: CachyOS's x86-64-v3 build crashes every HIP engine at start
 ([`sop/install.md`](sop/install.md#known-errors)). Own builds use the system toolchain via
 `hipconfig` (ROCm 10.1 since 2026-11-17).
+
+### `llama-b12633-pr30792q51-linux-rocm10-gfx1100-kvmix` (candidate, 2026-11-22, not adopted)
+
+llama.cpp tag `b12633` (`9c10c94e16ebc4f3ed7c06264a93bf7e019c3f26`, `--version` `1.0.0-dev (build 12633)`),
+523 commits after v0.9.0 and the first release past the v1.0.0 tag. Same recipe and patches as the
+v0.9.0 build; the v1.0.0 FA symbol rename did not break the patch, and exactly one hunk (`flash_attn_tile`,
+mask base pointer now includes the per-head offset) was rebased by hand. Build 6 min 21 s.
+`--help`: 336 → 343 long options, nothing `models.toml` uses changed its default; added
+`--moe-cache-cpu-share`, `--ple`/`--shard`, media/tool privacy flags; removed `-dt, --defrag-thold`;
+`--spec-type` gains `draft-dflash2` and `draft-lilicorr`. FA Qwen-shape cases 30/30 on four runs, then
+intermittent `SIGSEGV` inside the system ROCm runtime (pre-existing: pristine b12633 and v0.9.0 die the
+same way, `MUL_MAT_ID` 1077/1077 passes) — the [backend-op tests](../results/20261122-engine-b12633/README.md#backend-op-tests)
+section says what to rerun before trusting it. Inkling-2-Mini at 262K does not fit this build (12,765 MiB of
+compute buffer).
+**Not adopted**: no 240K A/B and no coding suite (deferred to Qwen4); the engine in use stays v0.9.0.
 
 ### `llama-v0.9.0-pr30792q51-linux-rocm10-gfx1100-kvmix` (current `hip-kvmix` engine, 2026-11-05)
 
@@ -203,6 +220,19 @@ cmake --build build-gfx1100 -j 14 --target llama-server llama-bench llama-perple
 Same FA-kernel difference from the official binary as `kvmix` above, but built entirely against the
 older ROCm 7.2.4 toolchain (not just the runtime). **Measured and discarded**: about 9% slower than
 the `kvmix` build that uses the ROCm 10 toolchain — see `docs/measurements/engines.md`.
+
+### `llama-inkling-rdna3-cb0e46960-linux-rocm10-gfx1100-kvmix` (experimental, Inkling-2-Mini only)
+
+`GodGMN/llama.cpp` branch `inkling-rdna3` at `cb0e469607c19b63b3d06a8b654fcebdd76fb889` (2026-11-21): tag
+`b12600` plus an upstream #32704 backport and 5 commits adding an in-kernel relative-bias attention path
+(`GGML_OP_INK_REL_BIAS`, `INK_FA_REL_BIAS`) and fused Inkling HIP kernels (`clip`, `situ`, `conv`, `mix`).
+Built as published with the recipe above and **without** the local `q5_1` patch (8 min 01 s). Checks: 9/9
+`INK_REL_BIAS`, 859/859 `FLASH_ATTN_EXT hsk=128`, 63/63 of the fork's own op cases, `test-ink-rel-bias`
+`PASSED` (196,608 cells identical to the unfused chain). Scope, from the branch's own docs: every model on
+every card can hit the q8_1 input cache (`GGML_CUDA_NO_Q8_CACHE=1` disables it) and the fusion matchers
+(`GGML_INK_NO_FUSE=1`); the mmvq table change is RDNA3-only. It is the only engine measured at 262K with
+Inkling-2-Mini (42.0 tok/s, 22,423 MiB) and it is not a candidate for the Qwen default. Details and the
+author's own speed claims: [`results/20261122-inkling-rdna3-fork/BUILD.md`](../results/20261122-inkling-rdna3-fork/BUILD.md).
 
 ### `llama-rdnaboosts-v16-ebbb18522-rocm10-gfx1100` (experimental)
 

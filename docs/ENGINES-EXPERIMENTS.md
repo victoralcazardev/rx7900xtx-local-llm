@@ -389,6 +389,31 @@ gate/up/down in all 64 layers; the MTP layer is untouched. Its card quotes SWE-b
 39.2% -> 64.7% above: re-check the adapter card before the A/B. The runtime `--lora` arm on our base stays the
 cheapest test.
 
+## Engine alternatives review (2026-11-22, desk review, nothing built)
+
+Question put by the user: does maintaining our own llama.cpp `kvmix` build still make sense, or is
+there a published engine, fork or route that is better, simpler or faster? Read-only review of the
+alternatives recorded in [`SOURCES-community.md`](SOURCES-community.md) and the repositories below;
+no new build, no measurement. The measured baseline it is judged against is the adopted engine:
+`hip-kvmix` at 240K, 33.2 / 54.7 / 22.5 tok/s essay/copy/code ([STATUS](STATUS.md)).
+
+| Route | What it offers | Why it does not replace `hip-kvmix` here | Status |
+|---|---|---|---|
+| Prebuilt llama.cpp binaries (ggml-org release assets, [Unsloth](https://github.com/unslothai/llama.cpp), Lemonade, Arch AUR `llama.cpp-hip`) | No build step at all | None ships the native K `q8_0` + V `q5_1` FlashAttention TILE path: the AUR package enables `FA_ALL_QUANTS` but its base (b10705) predates PR #30792, so a quantized V is converted to `f16` there, and the ggml-org/Unsloth/Lemonade builds have neither that path nor a current base. That pair is worth +18-27% decode at 240K measured ([D1](../results/20261023-d1-pr30792q51-240k/README.md)) and is the whole reason the own build exists | Rejected (no candidate has the kernel) |
+| Upstream [#31234](https://github.com/ggml-org/llama.cpp/pull/31234) (native `q4_0`/`q8_0` KV in `flash_attn_tile`) | Would retire the patch | Still open; its quantized rows exist for gfx1201 only, so gfx1100 compiles empty instances (checked 2026-11-20) | Waiting |
+| [GodGMN/llama.cpp](https://github.com/GodGMN/llama.cpp) `inkling-rdna3` | In-kernel relative-bias FA + fused HIP kernels; the only way to run Inkling-2-Mini at 262K here (42.0 tok/s) | Inkling only, and two of its changes (q8_1 input cache, graph fusion matchers) affect every model; not a base for the Qwen default | Built and measured 2026-11-22 ([results](../results/20261122-inkling-rdna3-fork/BUILD.md)) |
+| [unslothai/llama.cpp PR #386](https://github.com/unslothai/llama.cpp/pull/386) (banded FA + 3 fused kernels) | Fixes quantized KV on Inkling (8-bit KV otherwise used *more* VRAM than f16) | Fork-only and CUDA-benchmarked; not in b12633. Relevant only when the model returns | Not applicable yet |
+| [phoenixhaxor/exllamav3-rocm](https://github.com/phoenixhaxor/exllamav3-rocm) (+ TabbyAPI) | EXL3 at 4.00 bpw measured at 71.6 tok/s after a 51K prompt by a third party on a 7900 XTX | Stale since 2026-09-26, with the RDNA3 work moved to [`SelfRef/exllamav3-rdna`](https://github.com/SelfRef/exllamav3-rdna); Q8 KV caps around 192-196K, so it cannot serve the single 262K provider; EXL3 leaves less VRAM headroom. The user's pointer, [issue #2](https://github.com/phoenixhaxor/exllamav3-rocm/issues/2), was not re-read for this review; the facts above are repository state | Not adopted (deprioritized 2026-09-26) |
+| `ik_llama.cpp`, `mistral.rs` | Different quant/attention stack | Neither has gfx1100 validation; `ik_llama.cpp` documents unofficial ROCm support only | Not pursued |
+| Strata `strata-engine` 0.1.65 | Pack-based engine, now with RDNA3 Flash-Next gains (prefill 1.44-2.10x, decode +17-22%) | A different runtime with its own packs and a RAM-bound install; kept as the optional second engine, not a llama.cpp replacement ([review](models/strata-qwen-flash-next.md#review-2026-11-22-v0218-and-v0219)) | Parked with Strata |
+
+**Conclusion.** The own build still earns its place: one measured 18-27% decode gain at 240K comes
+from a kernel pair that no prebuilt binary and no merged upstream PR provides, and the maintenance
+cost measured on 2026-11-22 was one hand-rebased hunk across 523 upstream commits (v0.9.0 → b12633,
+[results](../results/20261122-engine-b12633/README.md#patch-rebase)). What does *not* earn its place
+is the manual part of the procedure: a versioned `build_engine` script is the next step (user
+choice 2026-11-22, [DECISIONS](DECISIONS.md)), which removes the labour, not the need.
+
 ## Upstream watchlist (2026-09-29)
 
 Upstream items to re-check at each engine update ([`sop/update-engine.md`](sop/update-engine.md)); the pinned build
@@ -413,4 +438,7 @@ is in [`ENGINES.md`](ENGINES.md). Dated per-update checks and the 2026-09-29 pin
 | ROCm 10.2.0 (2026-11-18) | [Release notes](https://rocm.docs.amd.com/en/docs-10.2.0/about/release-notes.html): "Improved fp16 and bf16 NN GEMM performance on gfx1100". Validated kernel is 7.0 (this PC runs 7.3.4). | Candidate: rebuild the current engine on 10.2 and A/B prefill |
 | [#31495](https://github.com/ggml-org/llama.cpp/issues/31495) | Open: `--spec-type draft-mtp` cuts HIP prefill 74-80% (Vulkan +1%), decode +30%; RX 7700 XT (gfx1101), Windows, Swift-1.5 Qwen3.8-27B GSQ-RCO IQ3_XXS-mtp, b843e7dc and b11960 (issue body read 2026-11-20). Not in our measurements. | Measure prefill with and without `--spec-type` on the current build |
 | [#31761](https://github.com/ggml-org/llama.cpp/pull/31761), [#31751](https://github.com/ggml-org/llama.cpp/pull/31751), [#31746](https://github.com/ggml-org/llama.cpp/pull/31746) | Drafts, W7800 (gfx1100), ROCm 10.1, Qwen3.8-27B Q8_0 (bodies read 2026-11-20): #31761 D256 FA staging +13.51% non-speculative decode at 131K; #31751 removes `J=32` MMQ register spills for 11 types incl. IQ3_S (only Q8_0 timed); #31746 D256 MMA FA tuning, F16 K/V. | KV-type coverage of #31761 unknown; #31751 is the one that touches our IQ3_S |
+| [unslothai/llama.cpp PR #386](https://github.com/unslothai/llama.cpp/pull/386) | Banded FlashAttention + fused kernels for a quantized KV cache on Inkling-2-Mini (the kernel otherwise ignored 8-bit KV, which then cost more VRAM than `f16`); CUDA-benchmarked, fork only (read 2026-11-22). | Watch for an upstream proposal; it is the fix any quantized-KV Inkling run needs |
+| GodGMN `inkling-rdna3` kernels | In-kernel relative bias (`INK_REL_BIAS`, `INK_FA_REL_BIAS`) plus fused clip/situ/conv/mix kernels on `b12600`, gfx1100-tested by its author; measured here at 262K ([results](../results/20261122-inkling-rdna3-fork/BUILD.md)). No upstream PR found on 2026-11-22. | If it is proposed upstream, re-check Inkling and the dense-mask compute buffer |
+| `inkling2_loop` support upstream | [#32694](https://github.com/ggml-org/llama.cpp/pull/32694) merged 2026-11-20 (b12591) and [#32704](https://github.com/ggml-org/llama.cpp/pull/32704) (loop-slot re-share after the scale pass) merged 2026-11-21, both in b12633; the 48-block `inkling2` layout with scale tensors still needs a fork. | Model support is settled for `inkling2_loop` files; nothing to do until a model returns |
 | [thefahien/elpis-on-7900xtx](https://github.com/thefahien/elpis-on-7900xtx) | Reference recipe: Qwen3.8-27B EXL3 4.00 bpw + DFlash2 on exllamav3-rocm, 7900 XTX; 71.6 tok/s decode after a 51,491-token prompt, max 131,072 context with Q8 KV, "192k context does not fit" (scout, not re-checked). | Not usable for the 262K provider |

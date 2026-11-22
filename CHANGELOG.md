@@ -7,6 +7,11 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- Upstream llama.cpp **b12633** (`9c10c94e1`) built with the rebased `q5_1` V patch and kept as a **candidate** engine (the 240K A/B and coding suite are deferred to Qwen4): no `models.toml` flag lost its default, FA Qwen-shape cases 30/30, one hunk hand-rebased across 523 commits ([`results/20261122-engine-b12633/`](results/20261122-engine-b12633/README.md), [`docs/ENGINES.md`](docs/ENGINES.md)).
+- GodGMN `inkling-rdna3` fork (`cb0e46960`) built and op-tested as an **experimental, Inkling-only** engine: in-kernel relative-bias FA, 9/9 `INK_REL_BIAS`, 859/859 `hsk=128`, 63/63 of its own cases ([`results/20261122-inkling-rdna3-fork/`](results/20261122-inkling-rdna3-fork/BUILD.md), [`docs/ENGINES.md`](docs/ENGINES.md)).
+- Inkling-2-Mini uncensored AD-Q4_K measured and **parked without a `models.toml` entry**: upstream b12633 cannot fit 262K (12,765 MiB compute buffer for the dense relative-bias mask; the CPU-MoE fallback runs at 4.5 tok/s) while the fork runs 262K at 41-42 tok/s; quant survey updated with the uncensored and abliterated options and resume triggers ([`results/20261122-inkling-uncensored-ad-q4k/`](results/20261122-inkling-uncensored-ad-q4k/README.md), [`docs/models/inkling-2-mini.md`](docs/models/inkling-2-mini.md)).
+- Engine-alternatives review: no prebuilt binary and no merged upstream PR carries the K `q8_0` + V `q5_1` FA pair, so the own build stays; exllamav3-rocm is stale since 2026-09-26 with an ~192-196K Q8 KV cap ([`docs/ENGINES-EXPERIMENTS.md`](docs/ENGINES-EXPERIMENTS.md#engine-alternatives-review-2026-11-22-desk-review-nothing-built)).
+- Strata v0.2.18/v0.2.19 desk review: Hy4-Flash needs 64 GiB of RAM (out of reach), `strata-engine` 0.1.65 claims 1.44-2.10x prefill and +17-22% decode on RDNA3, `strata-inkling` 0.1.65 adds Inkling-2-Mini packs; retest queued (abliterated SC117 on 0.2.19) ([`docs/models/strata-qwen-flash-next.md`](docs/models/strata-qwen-flash-next.md#review-2026-11-22-v0218-and-v0219)).
 - Upstream and reference-repo check (2026-11-20): watchlist rows for #30792, #31234, the RDNA3 D256 FA PRs, v1.0.0, ROCm 10.2, #31495 and the gfx1100 FA/MMQ drafts; decision to wait for Qwen4 and upstream Inkling support ([`docs/ENGINES-EXPERIMENTS.md`](docs/ENGINES-EXPERIMENTS.md#upstream-watchlist-2026-09-29)).
 - Inkling-2-Mini desk review: KV and fit arithmetic (about 21.5 GiB for 4-bit at 262K), GGUF formats per provider and upstream support, quant survey and a resume checklist; nothing run ([`docs/models/inkling-2-mini.md`](docs/models/inkling-2-mini.md)).
 - `--ctx-checkpoints 10` (was 4) for every model: after a ~35% compaction the server keeps the system-prompt checkpoint, cutting the replayed post-compaction prefill from 48,030 tokens / 70 s to 20,025 / 33 s at peak RssAnon 11.5 GiB; `bench/compaction_replay.py` replays a compacting agent session ([`results/20261106-ctx-checkpoints-replay/`](results/20261106-ctx-checkpoints-replay/README.md)).
@@ -149,6 +154,7 @@ All notable changes to this project are documented here. Format follows
 
 ### Fixed
 
+- Every HIP engine SIGSEGV'd at start after the CachyOS `hip-runtime-amd` 10.1 upgrade; the `kvmix` engine folders now symlink Arch's generic `libamdhip64` 10.1 (`$ORIGIN` RUNPATH) and the default profile serves again ([`docs/sop/install.md`](docs/sop/install.md#known-errors), [`docs/DECISIONS.md`](docs/DECISIONS.md)).
 - `bench/summarize.py` and `bench/concurrency_bench.py` report a missing thermal reading as `-`/`null` instead of 0 °C; both now share `depth_bench.telemetry_peaks`/`overall_peak`.
 - `bench/longctx_quality.py` `detect_loop` finds a repeated block at any offset, so short-period loops are flagged; new runs may record `loop_detected` where older runs did not.
 - `BENCH_MAX_HOTSPOT_C` at or below 0 now aborts instead of tripping the thermal guard on the first reading.

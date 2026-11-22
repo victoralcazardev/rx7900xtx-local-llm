@@ -1,0 +1,19 @@
+# Trimmed capture of: ./test-backend-ops test -b ROCm0 -o MUL_MAT_ID
+# Full run printed 1270 case lines (1077 executed, the rest skipped/not supported);
+# only the head and the summary are kept here.
+ggml_cuda_init: found 1 ROCm devices (Total VRAM: 24560 MiB):
+  Device 0: AMD Radeon RX 7900 XTX, gfx1100 (0x1100), VMM: no, Wave Size: 32, VRAM: 24560 MiB
+load_backend: loaded ROCm backend from ~/IA/Motores/llama-b12633-pr30792q51-linux-rocm10-gfx1100-kvmix/libggml-hip.so
+load_backend: loaded CPU backend from ~/IA/Motores/llama-b12633-pr30792q51-linux-rocm10-gfx1100-kvmix/libggml-cpu-haswell.so
+Testing 2 devices
+
+
+[... 1272 lines of per-case output omitted, the run completed ...]
+  MUL_MAT_ID(type_a=f16,type_b=f32,n_mats=4,n_used=4,b=0,m=512,n=64,k=256,m_v=0,ids_offset=0,skip=1): not supported [ROCm0] 
+  MUL_MAT_ID(type_a=f16,type_b=f32,n_mats=1,n_used=1,b=0,m=8,n=16,k=1,m_v=0,ids_offset=0,skip=1): not supported [ROCm0] 
+  1077/1077 tests passed
+  Backend ROCm0: [1;32mOK[0m
+Backend 2/2: CPU
+  Skipping
+2/2 backends passed
+[1;32mOK[0m

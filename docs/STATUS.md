@@ -24,7 +24,9 @@ and `scripts/launch.py`'s default when no alias is given. Opt-in, uncensored: `h
   with FlashAttention kernels for K `q8_0` + V `q5_1`, dequantized natively in the TILE kernel), in use
   since 2026-11-05 by operator choice (-4.6% decode at 64K vs. b11846); rollback b11846. 240K numbers
   below are b11846. ROCm/HIP beats Vulkan 2-3.5x on generation
-  here, Vulkan is reference-only. [`ENGINES.md`](ENGINES.md).
+  here, Vulkan is reference-only. [`ENGINES.md`](ENGINES.md). Every `kvmix` folder carries Arch's generic
+  `libamdhip64` 10.1 symlink, because CachyOS's 10.1 build SIGSEGVs any HIP program
+  ([`DECISIONS.md`](DECISIONS.md), [`sop/install.md`](sop/install.md#known-errors)).
 - Power: 272 W permanent cap (driver minimum; stock 303 W) — [`sop/power-cap.md`](sop/power-cap.md).
 - Harness wiring: one fixed provider `local-262k` on `:8080`, advertised at the full 262144 (provider,
   port and window verified by `python3 scripts/check-sync.py` when `local.toml` has
@@ -102,8 +104,9 @@ Sampling is the Qwen3.8-27B card's own; `--min-p 0.0` is set explicitly because 
   GPU + RAM (file tier 11.5-20.2 GiB; 24-51 GB read from the drive per request) — below the 15 tok/s floor —
   [owner](models/strata-qwen-flash-next.md#current-state-2026-11-05). Best known setup to reinstall when testing
   resumes (Qwen4, new quants or Strata versions): ISTA IQ2_XS on Strata >= 0.2.12, not installed.
-- **Inkling-2-Mini**: desk review only, paused for better quants —
-  [owner](models/inkling-2-mini.md#current-state-2026-11-20-desk-review-nothing-run).
+- **Inkling-2-Mini**: measured 2026-11-22 and parked without a config: upstream b12633 cannot fit 262K
+  (12,765 MiB of compute buffer), the GodGMN fork runs it at 41-42 tok/s at 262K. Resuming needs an
+  upstream in-kernel bias or banded FA — [owner](models/inkling-2-mini.md#status-parked-2026-11-22-resume-triggers).
 
 ## Next steps
 
@@ -115,3 +118,5 @@ Execution order, dependencies and gates: [current plan](ENGINES-EXPERIMENTS.md#c
 2. C1: Qwen4 on day one, gated by the coding suite (27B baseline 6/6 on the current engine:
    [results](../results/20261023-d1-pr30792q51-240k/README.md)); day-one checklist in
    [sop/new-model.md](sop/new-model.md#qwen4-day-one-checklist).
+3. A versioned `build_engine` script for the `kvmix` recipe, then the Flash-Next SC117 retest on Strata 0.2.19
+   ([`DECISIONS.md`](DECISIONS.md), [Strata review](models/strata-qwen-flash-next.md#review-2026-11-22-v0218-and-v0219)).

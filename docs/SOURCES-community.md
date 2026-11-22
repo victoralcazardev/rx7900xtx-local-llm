@@ -193,3 +193,18 @@ AMD or llama.cpp entries at each engine update. Candidates that follow from it:
 | llama.cpp MTP lost to no draft on hard prompts: 36.7 vs. 45.4 tok/s | `references/levers.md:36` | 2026-11-16 | hypothesis (no setup given) | None; see [`speculative.md`](measurements/speculative.md) for MTP here |
 | HIP graphs leaked until crash on ROCm; disabling them was stable at 115.6 tok/s | `references/gotchas.md:46` | 2026-11-16 | not applicable (ExLlama/TabbyAPI, not llama.cpp) | `GGML_HIP_GRAPHS` is on by default here and not a lever — [`depth.md`](measurements/depth.md) |
 | A busy host CPU costs GPU decode on laptops: 107 → 75 tok/s | `references/gotchas.md:47` | 2026-11-16 | hypothesis (laptop, ExLlama) | None |
+
+## Inkling-2-Mini uncensored quants, the GodGMN fork and exllamav3-rocm (2026-11-22)
+
+Model cards read through the Hugging Face API and the GGUF headers read by HTTP range, both on 2026-11-22;
+the fork's documentation was read the same day. Nothing below is a measurement of ours except where it
+says so. Owner docs: the survey in [`models/inkling-2-mini.md`](models/inkling-2-mini.md#quant-survey-2026-11-22)
+and the [engine-alternatives review](ENGINES-EXPERIMENTS.md#engine-alternatives-review-2026-11-22-desk-review-nothing-built).
+
+| Claim | Source | Date | Status | Own test |
+|---|---|---|---|---|
+| AtomicChat's uncensored AD-Q4_K: KLD 0.0115 vs. BF16, 95.6% same top-1, MMLU 80.65 → 79.15. nokeepai Unbound v2: refusals 0.4% / 1.1%, useful answers 78.7% / 83.4%, KLD 0.0318. The heretic file: refusals 100% → 6%, MMLU 78.7 → 78.0, KL 0.049 | [AtomicChat Uncensored](https://huggingface.co/AtomicChat/Inkling-2-Mini-Uncensored-GGUF) card and the two sibling repos' cards | 2026-11-22 | source-checked; KLD references differ per repo, so the three are not rankable against each other | Speed and fit only, no KLD/MMLU/refusal run ([results](../results/20261122-inkling-uncensored-ad-q4k/README.md)) |
+| The same cards' head-to-head ranks AtomicChat's LoRA at 51.6% / 56.3% useful answers against nokeepai's 78.7% / 83.4% | nokeepai card (author-run comparison) | 2026-11-22 | hypothesis (conflict of interest: the comparison is published by a competing quantizer) | Not re-run; this repository has no useful-answer metric |
+| GodGMN `inkling-rdna3`: tg128 64.0 tok/s vs. 31.9 on b12600, pp4096 1,802 vs. 854, 393,216 context with `q4_0` KV at a 23.2 GB peak, 10 of 10 facts retrieved | [fork](https://github.com/GodGMN/llama.cpp) `docs/inkling-rdna3.md` at `cb0e46960` | 2026-11-21 | source-checked (author's own RX 7900 XTX, ROCm 7.2.1, IQ4_NL); not reproduced | Different file, KV type and runtime: 42.0 tok/s at 262K, 48.2 tok/s at 64K `f16` ([BUILD.md](../results/20261122-inkling-rdna3-fork/BUILD.md)) |
+| Inkling's attention kernel ignored a quantized KV cache, so 8-bit KV used more VRAM than `f16`; fixed with banded FA plus three fused CUDA kernels | [unslothai/llama.cpp PR #386](https://github.com/unslothai/llama.cpp/pull/386) | 2026-11-22 | source-checked (fork-only PR, CUDA-benchmarked) | Not measured: that fork is not built here and every arm used `f16` or `q8_0`/`q5_1` KV on the other path |
+| exllamav3-rocm is stale since 2026-09-26, its RDNA3 work moved to `SelfRef/exllamav3-rdna`, and Q8 KV caps around 192-196K | repository state plus [issue #2](https://github.com/phoenixhaxor/exllamav3-rocm/issues/2) (the user's pointer; issue body not re-read) | 2026-11-22 | source-checked (repository state) | Nothing run; no EXL3 model is installed |

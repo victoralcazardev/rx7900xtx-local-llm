@@ -1,0 +1,17 @@
+# Trimmed capture of: ./test-backend-ops support -b ROCm0 -o FLASH_ATTN_EXT
+# Full run printed 5794 "SUPPORTED" case lines; only the head and the summary are kept here.
+# Result: every FLASH_ATTN_EXT case is SUPPORTED on ROCm0, 2/2 backends passed.
+ggml_cuda_init: found 1 ROCm devices (Total VRAM: 24560 MiB):
+  Device 0: AMD Radeon RX 7900 XTX, gfx1100 (0x1100), VMM: no, Wave Size: 32, VRAM: 24560 MiB
+load_backend: loaded ROCm backend from ~/IA/Motores/llama-b12633-pr30792q51-linux-rocm10-gfx1100-kvmix/libggml-hip.so
+load_backend: loaded CPU backend from ~/IA/Motores/llama-b12633-pr30792q51-linux-rocm10-gfx1100-kvmix/libggml-cpu-haswell.so
+Testing 2 devices
+
+
+[... 5797 lines of per-case output omitted, the run completed ...]
+  FLASH_ATTN_EXT(hsk=256,hsv=256,nh=4,nr23=[4,1],kv=1024,nb=75,mask=1,sinks=0,max_bias=0.000000,logit_softcap=0.000000,prec=f32,type_K=bf16,type_V=bf16,permute=[0,1,2,3],kv_view=1,v_is_view_of_k=0,n_kv_max=0,q_head_padding=0,mask_heads=1,q_range=20): [1;32mSUPPORTED[0m
+  Backend ROCm0: [1;32mOK[0m
+Backend 2/2: CPU
+  Skipping
+2/2 backends passed
+[1;32mOK[0m

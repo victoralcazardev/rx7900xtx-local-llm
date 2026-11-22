@@ -1,0 +1,6 @@
+cb0e46960 docs: notes for the Inkling 2 Mini RDNA3 branch
+347fbc7fd tests: review reproducers, flash attention relative bias, rel-bias oracle
+135ae3f88 hip/cuda: review fixes and long-context attention for Inkling 2
+76c528535 tests: INK_REL_BIAS and the fused Inkling 2 graph patterns
+ff59c3a8e hip/cuda: Inkling 2 decode fusions, INK_REL_BIAS op, RDNA3 mmvq tuning
+711dc932f model : inkling2_loop re-share the loop slots after the scale pass
