@@ -31,7 +31,7 @@ fork-cb0e46960-262k-q8q8.log / .json      fork, -c 262144, KV q8_0/q8_0, two tur
 fork-cb0e46960-262k-q8q51.log / .json     fork, -c 262144, KV q8_0/q5_1, two turns.
   Each .json is the second (warm-slot) response; the first turn's numbers are in the .log.
 
-Applied to every file: /home/victor replaced by ~ (docs/STYLE.md section 7 allows path
+Applied to every file: ~ replaced by ~ (docs/STYLE.md section 7 allows path
 normalisation in raw evidence). No other edit. VRAM figures quoted in ../README.md come from the
 runner's per-run readout, not from these logs (the logs are -lv 3, no memory breakdown, for the
 fork arms).
