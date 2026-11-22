@@ -34,6 +34,13 @@ hash — the difference lives in the shared library, not the file hashed here.
 
 ## Build recipes
 
+The own `hip-kvmix` recipes below are what [`scripts/build_engine.py`](../scripts/build_engine.py)
+runs in one command: clone a ref, apply the versioned patches of
+[`engine-patches/`](../engine-patches/README.md), configure and build with these flags, copy the
+result into a new engine folder, add the `libamdhip64.so.7` symlink and run the op tests
+([`sop/update-engine.md`](sop/update-engine.md#build-a-new-engine)). The script is the current
+source of the flags; the sections below record each build's history and the flags that build used.
+
 ### Official binaries (`bin-ubuntu-rocm-10.0-x64`, `bin-ubuntu-vulkan-x64`)
 
 Prebuilt CI artifacts from the `ggml-org/llama.cpp` GitHub release for build `b11160`. No local

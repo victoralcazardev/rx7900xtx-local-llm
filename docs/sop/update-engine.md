@@ -39,7 +39,8 @@ disabled). One single-backend binary per download/build.
      the attention-bandwidth bottleneck in
      [`depth.md`](../measurements/depth.md#why-decode-slows-with-depth-attention-bandwidth-2026-09-26-round-4).
 2. **Only if something relevant changed**: build the new engine following "Build a new engine"
-   below. The custom `GGML_CUDA_FA_QUANTS` build flags are still required for this build — the
+   below ([`scripts/build_engine.py`](../../scripts/build_engine.py) runs the whole recipe in one
+   command). The custom `GGML_CUDA_FA_QUANTS` build flags are still required for this build — the
    official binaries don't ship K q8_0 + V q5_1/q4_1 FlashAttention kernels.
 3. **One quick A/B at 240K** (~30 min under `systemd-inhibit`, nothing else using the GPU): run
    `bench/spec_depth_bench.py --run --depth 240000 --variants n3-map --reps 1 --extra "-ub 256"`
@@ -58,8 +59,53 @@ disabled). One single-backend binary per download/build.
 
 ## Build a new engine
 
-1. **Download the right asset** from the `ggml-org/llama.cpp` release, or build it yourself (see
-   `docs/ENGINES.md` for the exact recipe used for each engine currently in this repository):
+The `hip-kvmix` engine (K `q8_0` + V `q5_1` FlashAttention kernels) is built by one command; the
+recipe — configure flags, targets, post-build checks — lives in
+[`scripts/build_engine.py`](../../scripts/build_engine.py), not outside this repository. Released
+binaries stay an option for every other backend, or when the local patches are not needed.
+
+### Own `hip-kvmix` build: `scripts/build_engine.py`
+
+```bash
+python3 scripts/build_engine.py --ref b12633 \
+  --patch engine-patches/tests-kvmix-cases-b12633.patch \
+  --patch engine-patches/pr30792-q5_1-b12633.patch --dry-run   # print every command, run nothing
+```
+
+Drop `--dry-run` to build. What it does, in order:
+
+1. **Toolchain**: builds with the ROCm toolchain already on `PATH` (`hipconfig`, `ROCM_PATH`,
+   `CMAKE_PREFIX_PATH`). Activate it first when it is not the system ROCm install: the
+   `build-env.sh` of [`docs/ENGINES.md`](../ENGINES.md#llama-b11160-linux-rocm10-gfx1100-kvmix-previous-hip-kvmix-engine)
+   exports those for the ROCm 10.0 TheRock venv. The toolchain in use goes into `BUILD.txt`.
+2. **Source**: `<src_root>/llama.cpp-<ref>`, cloned blobless when missing and reused only when it
+   sits at exactly that ref with no local changes. A dirty checkout is refused, not reset.
+3. **Patches**: `engine-patches/` (see its [README](../../engine-patches/README.md)) apply in the
+   order given, with `git apply` and no fuzz. A patch that does not apply stops the build naming
+   the patch and its files: rebase it onto the new base in a scratch worktree, export the result
+   with `git diff`, add it to `engine-patches/` — a human job, never an automatic merge.
+4. **Engine folder**: `<engines_root>/llama-<ref>[-<patch-tag>]-linux-rocm-gfx1100-kvmix`; the tag
+   comes from the patches that change a kernel (a `tests/`-only patch adds none). An existing
+   engine folder is **refused**, so a published build always stays as the rollback.
+5. **Runtime symlink**: when `[build] hip_runtime_lib` is set in `local.toml`, it is symlinked into
+   the new folder as `libamdhip64.so.7` and `ldd libggml-hip.so` must resolve it inside the folder
+   (the CachyOS ROCm 10.1 workaround,
+   [`install.md`](install.md#known-errors)).
+6. **Checks**: `llama-server --version`, HIP only (no `libggml-vulkan`/`libggml-cuda`),
+   `test-backend-ops test -b ROCm0 -o FLASH_ATTN_EXT -p 'hsk=256.*type_K=q8_0'` with its pass/fail
+   count, and the SHA256 of `llama-server` and `libggml-hip.so`. All of it, plus the ref, commit,
+   toolchain and patch hashes, is written to the engine's `BUILD.txt`. A failed check leaves the
+   folder and `BUILD.txt` in place (evidence) and exits non-zero.
+7. **Adopt**: point `[engines] hip-kvmix` in `local.toml` at the new folder, then run the two steps
+   below. An engine folder from a discarded build is deleted by hand.
+
+Exit codes: `0` built and every check passed, `1` build or check failed, `2` configuration error
+or refused (existing engine folder, missing patch, patch that does not apply).
+
+### Alternative: a released binary
+
+1. **Download the right asset** from the `ggml-org/llama.cpp` release (see
+   `docs/ENGINES.md` for the recipe and the SHA256 of each engine in this repository):
    - Linux ROCm/HIP: `llama-bNNNNN-bin-ubuntu-rocm-10.0-x64.tar.gz`
    - Linux Vulkan: `llama-bNNNNN-bin-ubuntu-vulkan-x64.tar.gz`
    - Windows Vulkan: `llama-bNNNNN-bin-win-vulkan-x64.zip`
@@ -67,9 +113,11 @@ disabled). One single-backend binary per download/build.
 
 2. **Extract into its own folder** under wherever you keep engines (see `local.example.toml`), one
    folder per build — never overwrite an existing engine folder, so you can roll back if the new
-   build regresses something.
+   build regresses something. The ROCm 10.1 runtime symlink of step 5 above applies here too.
 
 3. **Update `local.toml`** (`[engines]`) with the new path for that backend.
+
+### Either way: re-check the flags and smoke-test
 
 4. **Re-check every default flag against the new binary's real `--help`** before assuming
    `[defaults].flags` in `models.toml` still apply (a default can change between versions or
@@ -89,7 +137,9 @@ disabled). One single-backend binary per download/build.
 
 - `python3 scripts/check-sync.py` reports no new PROBLEM (the "engine pending" WARNING disappears
   for the backend you just updated).
-- The step-5 smoke test returns real content and tok/s.
+- The engine's `BUILD.txt` holds the commit, the patches with their SHA256, the flags, the
+  toolchain and the FlashAttention op-test counts.
+- The smoke test of step 5 returns real content and tok/s.
 
 ## Known errors
 

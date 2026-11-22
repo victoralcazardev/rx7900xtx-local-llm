@@ -156,6 +156,7 @@ local.example.toml    # per-machine paths and engines (copy to git-ignored local
 scripts/  bench/  tests/   # launcher and validation, benchmarks, stdlib unittest suite
 docs/                 # see the map below
 results/              # curated result folders, see results/INDEX.md
+engine-patches/       # local llama.cpp patches applied by scripts/build_engine.py
 ```
 
 ## Docs map

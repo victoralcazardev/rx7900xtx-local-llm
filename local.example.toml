@@ -13,6 +13,14 @@ vulkan = ""
 hip = ""
 hip-kvmix = ""
 
+# Optional: `scripts/build_engine.py` (docs/sop/update-engine.md "Build a new engine"). One
+# folder per checkout and per build, so nothing is ever overwritten.
+# [build]
+# src_root = "/path/to/src"          # git checkouts, <src_root>/llama.cpp-<ref>; default: <engines_root>/src
+# engines_root = "/path/to/engines"  # built engines; default: the parent folder of engines.hip-kvmix
+# hip_runtime_lib = ""               # symlinked into each new engine as libamdhip64.so.7
+#                                    # (CachyOS ROCm 10.1 workaround, docs/sop/install.md)
+
 # Optional: verify this launcher is wired into your own coding-agent harness. Off unless
 # harness.enabled = true. Each target's config file is checked for EXACTLY one provider,
 # local-262k, pointing at :8080 with the right contextWindow -- see scripts/check-sync.py
