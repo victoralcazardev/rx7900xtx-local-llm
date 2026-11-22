@@ -60,5 +60,21 @@ full driver checklist.** Windows notes are in [`../hardware/windows.md`](../hard
 - **Linux can't see the Windows NTFS partition, or it looks corrupted**: check that Fast Startup is
   really disabled (not just hibernation) and that Windows shut down cleanly before mounting from
   Linux.
+- **Every HIP engine dies at start with SIGSEGV in `libamdhip64.so.7` (CachyOS, ROCm 10.1)**: CachyOS
+  builds `hip-runtime-amd` 10.1 with `-march=x86-64-v3`, which exposes an upstream HIP alignment bug
+  (aligned AVX store `vmovdqa %ymm` on a 16-byte-aligned object, inside `hipMemsetAsync` /
+  `hipStreamCreateWithFlags`). Rebuilding the engine does not help. Fix without root: unpack Arch's
+  generic package and symlink its library into each engine folder (`libggml-hip.so` has `RUNPATH`
+  `$ORIGIN`, so it wins over `/opt/rocm/lib`):
+  ```
+  curl -LO https://fastly.mirror.pkgbuild.com/extra/os/x86_64/hip-runtime-amd-10.1-2-x86_64.pkg.tar.zst
+  mkdir -p pkg && bsdtar -xf hip-runtime-amd-10.1-2-x86_64.pkg.tar.zst -C pkg
+  ln -sfn "$PWD/pkg/opt/rocm/lib/libamdhip64.so.7.16.0-0000000" <engine-folder>/libamdhip64.so.7
+  ldd <engine-folder>/libggml-hip.so | grep amdhip   # must point into the engine folder
+  ```
+  Or system-wide: `sudo pacman -S extra/hip-runtime-amd` plus `IgnorePkg = hip-runtime-amd`. Remove the
+  symlink once CachyOS ships a fixed build (upstream fix: ROCm/rocm-systems PR #16099). Sources: Strata
+  issue #6513, CachyOS-PKGBUILDS #2143, ROCm/rocm-systems #14003. Seen here 2026-11-22
+  ([DECISIONS](../DECISIONS.md)).
 - **HIP builds without rocblas/hipblas DLLs**: check the PATH before assuming the whole config is
   broken.

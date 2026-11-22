@@ -36,8 +36,11 @@ hash — the difference lives in the shared library, not the file hashed here.
 
 Prebuilt CI artifacts from the `ggml-org/llama.cpp` GitHub release for build `b11160`. No local
 build recipe — downloaded as-is. Runtime dependency: the ROCm binary uses the system's installed
-ROCm runtime libraries (ROCm 7.2.4 packages on this Arch-based system) unless a newer runtime is
-provided on the library path.
+ROCm runtime libraries (ROCm 7.2.4 packages until 2026-11-17, 10.1 since) unless a newer runtime is
+provided on the library path. Since 2026-11-22 the `kvmix` engine folders carry a `libamdhip64.so.7`
+symlink to Arch's generic 10.1 build: CachyOS's x86-64-v3 build crashes every HIP engine at start
+([`sop/install.md`](sop/install.md#known-errors)). Own builds use the system toolchain via
+`hipconfig` (ROCm 10.1 since 2026-11-17).
 
 ### `llama-v0.9.0-pr30792q51-linux-rocm10-gfx1100-kvmix` (current `hip-kvmix` engine, 2026-11-05)
 
