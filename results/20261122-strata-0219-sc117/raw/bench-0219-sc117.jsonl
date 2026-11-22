@@ -1,0 +1,1 @@
+{"label": "v0219-sc117", "request": "short#1", "prompt_new": 82, "prompt_cached": 0, "prefill_tps": 12.3, "gen_n": 800, "gen_tps": 11.4, "drafts": [352, 449], "finish": "length", "wall_s": 77.0, "sha": "921c45bd6d45fc73", "min_mem_avail_gib": 16.79, "max_swap_used_gib": 13.13, "pswpin_delta": 555080, "max_vram_used_gib": 22.06, "max_gtt_used_gib": 0.25}

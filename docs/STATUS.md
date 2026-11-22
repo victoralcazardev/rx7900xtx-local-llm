@@ -99,11 +99,13 @@ Sampling is the Qwen3.8-27B card's own; `--min-p 0.0` is set explicitly because 
   [agent-traffic.md](measurements/agent-traffic.md#open-ab-tests).
 - **KVMem**: not adopted until a real agent run —
   [ENGINES-EXPERIMENTS.md](ENGINES-EXPERIMENTS.md#kvmem-trial-round-2-and-final-round-2026-09-30-not-adopted).
-- **Qwen3.8-Flash-Next via Strata**: paused 2026-11-05, no model installed (clone v0.2.11, engine 0.1.57 kept for
-  Qwen4). Unsloth UD-IQ2_XS decoded at 2.6-8.2 tok/s, 10.8 at best with 131K context, because its experts did not fit
-  GPU + RAM (file tier 11.5-20.2 GiB; 24-51 GB read from the drive per request) — below the 15 tok/s floor —
-  [owner](models/strata-qwen-flash-next.md#current-state-2026-11-05). Best known setup to reinstall when testing
-  resumes (Qwen4, new quants or Strata versions): ISTA IQ2_XS on Strata >= 0.2.12, not installed.
+- **Qwen3.8-Flash-Next via Strata**: measured 2026-11-22 on v0.2.19 + engine 0.1.65 (abliterated SC117 IQ2_XS,
+  262K int8, mapped) and **rejected on speed**: 5.8-12.8 tok/s decode at empty context, 324.2 tok/s prefill and
+  12.8 tok/s at a 69.7K fill — below the 15 tok/s floor and 5-10x under the 2026-10-30 v0.2.8 short decode. Cause is
+  the storage path (file tier 20.3 GiB vs a 15-19 GiB page cache, `page cache held 0.0 MB`, 39-191 GB read per
+  request, dense shard on the HDD priced at 0.15 GB/s), not 0.1.65's kernels; `GPU_PINNED_MIN_XFER_SIZE` is still
+  required (without it the engine died on `verify: timed out at layer 28`) — [owner](models/strata-qwen-flash-next.md#2026-11-22-sc117-on-v0219-measured-below-the-floor).
+  No `[strata.*]` table. Last faster set stays ISTA IQ2_XS on v0.2.8 (59-65 tok/s warm short, 36.7 at 240K).
 - **Inkling-2-Mini**: measured 2026-11-22 and parked without a config: upstream b12633 cannot fit 262K
   (12,765 MiB of compute buffer), the GodGMN fork runs it at 41-42 tok/s at 262K. Resuming needs an
   upstream in-kernel bias or banded FA — [owner](models/inkling-2-mini.md#status-parked-2026-11-22-resume-triggers).
@@ -118,5 +120,7 @@ Execution order, dependencies and gates: [current plan](ENGINES-EXPERIMENTS.md#c
 2. C1: Qwen4 on day one, gated by the coding suite (27B baseline 6/6 on the current engine:
    [results](../results/20261023-d1-pr30792q51-240k/README.md)); day-one checklist in
    [sop/new-model.md](sop/new-model.md#qwen4-day-one-checklist).
-3. A versioned `build_engine` script for the `kvmix` recipe, then the Flash-Next SC117 retest on Strata 0.2.19
-   ([`DECISIONS.md`](DECISIONS.md), [Strata review](models/strata-qwen-flash-next.md#review-2026-11-22-v0218-and-v0219)).
+3. ~~A versioned `build_engine` script for the `kvmix` recipe, then the Flash-Next SC117 retest on Strata 0.2.19~~
+   Done 2026-11-22: the script shipped ([`DECISIONS.md`](DECISIONS.md)); the retest updated Strata to v0.2.19, built
+   engine 0.1.65 and stopped at the install's disk check (needs 15 GB more free on `/home` or a packs folder on
+   another drive) — [results](../results/20261122-strata-0219-sc117/README.md).

@@ -1,0 +1,8 @@
+strata serve: file tier I/O this request: the OS read 25223.6 MB from storage (21914 major faults) for 70842.6 MB of expert reads; page cache held 0.0 MB at the read, not 0.0 MB; io prefetch: 6291 read ahead (9038.6 MB by pread), 13 used, 0 unused, 24 skipped (cached), 0 dropped; decode waited 0.0 ms in 0 fetches; decode gate: c
+[strata] 2026-11-22 18:36:57 native ERR verify: timed out at layer 28; its GPU waits were released but the GPU did not finish within 5 s (#267)
+strata: prefill plan: chunk 24576 -> 16384, ring 96 -> 96: today's choice has a 31.4 GiB file set against a 14.8 GiB page cache (about 67.5 GB read from the drive per 32768-token prompt, 482 s); this one 27.9 GiB, about 60.0 GB read, 431 s. --prefill N keeps your own chunk
+strata: prefill plan inputs: 33.0 GiB experts, 12.7 GiB in the GPU caches, 0.0 GiB RAM copy (0 lend slots kept), file tier 20.3 GiB; 14.8 GiB available for the page cache; PCIe 14.0 GB/s; drive 0.15 GB/s (sda is a rotational disk); a 32768-token prompt
+strata serve: file tier I/O this request: the OS read 87088.8 MB from storage (79094 major faults) for 101201.1 MB of expert reads
+strata serve: file tier I/O this request: the OS read 43911.7 MB from storage (85407 major faults) for 54226.2 MB of expert reads
+strata serve: file tier I/O this request: the OS read 39017.4 MB from storage (142599 major faults) for 55129.0 MB of expert reads
+strata serve: file tier I/O this request: the OS read 191165.3 MB from storage (298105 major faults) for 195890.3 MB of expert reads

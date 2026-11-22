@@ -6,9 +6,15 @@
   7900 XTX at 87-100 tok/s): [`strata-tuning-gfx1100.md`](strata-tuning-gfx1100.md).
 - **Role**: optional second engine on `:8080`, never the default; one of the repository's focus models with
   the 27B and Qwen4 ([`DECISIONS.md`](../DECISIONS.md), 2026-10-29).
-- **Installed: no model.** The Strata clone stays at v0.2.11-3-g9f7d977d with engine 0.1.57 built (ROCm 7.2.4,
-  `/opt/rocm`); no Flash-Next set, pack or drafter is on disk and `models.toml` has no `[strata.*]` table. Paused
-  until new models, new quants or a new engine arrive. Procedure: [`../sop/strata.md`](../sop/strata.md).
+- **Installed but rejected on speed (2026-11-22): the abliterated SC117 IQ2_XS set on v0.2.19 + engine 0.1.65.**
+  Clone at **v0.2.19** (`c6f6427d9`), engine **0.1.65** built from the checkout, pack and `experts.bin` (35.45 GB) on
+  the NVMe, no `[strata.*]` table, run config left in `~/IA/Motores/Strata/terminal/strata-iq2_xs.json`. Measured
+  **5.8-12.8 tok/s decode** (short requests), **324.2 tok/s prefill and 12.8 tok/s decode at a 69.7K fill** — below
+  the 15 tok/s floor and 5-10x under the 2026-10-30 v0.2.8 short decode. Storage-bound, not kernel-bound:
+  `0.0 GiB RAM copy`, file tier 20.3 GiB against a 14.8-18.7 GiB page cache, `page cache held 0.0 MB`, 39-191 GB read
+  per request, and `drive 0.15 GB/s` because the `--native` shard is on the rotational HDD
+  ([section](#2026-11-22-sc117-on-v0219-measured-below-the-floor),
+  [results](../../results/20261122-strata-0219-sc117/README.md)). Procedure: [`../sop/strata.md`](../sop/strata.md).
 - **Last trial (2026-11-05)**: Unsloth UD-IQ2_XS rejected for speed — short decode 2.6-8.2 tok/s, 7.1-10.8 with
   the squeeze arm (131K context, 14 GiB RAM copy), against the user's 15 tok/s floor, with a file tier of 20.2 GiB (base) /
   11.5 GiB (squeeze) that the page cache could not hold: the OS read 24-51 GB (base) / 25-28 GB (squeeze) from the
@@ -37,10 +43,11 @@
 - **Zero SSD expert reads (2026-11-20)**: only resident mode avoids them; it stalled here on v0.2.8 and on another
   RX 7900 XTX + 32 GB on v0.2.9, and it is proven with 32 GB only on CUDA. Retest arm, not run:
   [review 2026-11-20](#review-2026-11-20-resident-mode-on-32-gb-ram-v0217).
-- **Retest queued on Strata v0.2.19 (2026-11-22, user choice, not run)**: `strata-engine` 0.1.65 claims
-  1.44-2.10x prefill and +17-22% decode on RDNA3 with no environment variables, which is the release the
-  pause was waiting for; the arm is the abliterated SC117 Flash-Next set at 262K int8, then the coding suite
-  ([review](#review-2026-11-22-v0218-and-v0219)).
+- **v0.2.19's RDNA3 claims are unmeasured here (2026-11-22)**: the run that reached the server was storage-bound
+  (dense shard on an HDD, nothing resident, 39-191 GB read per request), so it says nothing about 0.1.65's claimed
+  1.44-2.10x prefill / +17-22% decode. A fair A/B needs the dense shard on the NVMe and the file tier inside the page
+  cache. The Arch `libamdhip64` is now applied through the run config's `lib_dirs`
+  ([section](#2026-11-22-sc117-on-v0219-measured-below-the-floor)).
 - **Agent quality floor (2026-11-07)**: 2-bit sets fit this machine, but no 2-bit set has an agentic evaluation and the
   field evidence puts the floor for agents at IQ3_S, which does not fit 32 GB without SSD reads
   ([sources](../SOURCES-community.md#flash-next-low-bit-quants-for-agents-2026-11-07)).
@@ -880,7 +887,7 @@ Release notes read from the GitHub API on 2026-11-22; nothing installed, nothing
    ([owner](inkling-2-mini.md#status-parked-2026-11-22-resume-triggers)), so this is not a reason to install anything.
 3. **Hy4-Flash is out of reach** (64 GiB of RAM minimum).
 
-### Next step (planned, not run)
+### Next step (planned, not run; attempted 2026-11-22 and stopped at the disk check)
 
 Per the user's choice: **retest the abliterated SC117 Flash-Next set on Strata 0.2.19**, in this order —
 F0 (update/install 0.2.19 + engine 0.1.65, re-check every flag of the 2026-10-30 run config against that
@@ -892,3 +899,41 @@ the 27B, and finally the abliteration check (refusal prompts, because a control 
 silently gives the original model). Because v0.2.16 replaced the matrix kernels and early reports had gfx1100
 cold prefill slower ([#6067](https://github.com/Niko1221/Strata/issues/6067)), the arm compares against the
 v0.2.8 numbers above, not against v0.2.11.
+
+Status 2026-11-22: F0 is done and the arm ran; it is below the speed floor and storage-bound, so the rest of the
+list (240K, retrieval, coding suite, refusal check) was not run — see the next section.
+
+## 2026-11-22: SC117 on v0.2.19, measured below the floor
+
+Measurement and full record: [`results/20261122-strata-0219-sc117/`](../../results/20261122-strata-0219-sc117/README.md).
+
+- **Install, and the disk rule it settled**: v0.2.19's mapped mode writes one `experts.bin` of the whole expert arena
+  (`arena_gb + 1` = 36.5 GB for `IQ2_XS`; 35.45 GB written here, 33.02 GiB), and the first session had only 21.96 GB
+  free on `/home`, so setup refused (`not enough free disk space for the low-RAM copy of the experts in
+  …/Strata-data/packs/iq2_xs: it needs about 36 GB and 22 GB are free there.`). The fix that worked: **the GGUFs do not
+  need to be on the NVMe** — with the set on the rotational HDD and `--gguf-dir` pointing there, setup wrote the pack to the
+  NVMe and exited 0. Only the pack (and the n-gram table's shard, read at random per token) must be on the NVMe.
+- **Two sessions, one finding each**:
+  - Without `GPU_PINNED_MIN_XFER_SIZE=1048576` the engine died on the first long answer:
+    `Unrecoverable native verification failure: verify: timed out at layer 28; its GPU waits were released but the GPU
+    did not finish within 5 s (#267)` (exit `-15`, next request `HTTP 503`). 0.1.65's "zero environment variables
+    needed" does not hold here in mapped mode; the 2026-10-30 ROCclr workaround is still required.
+  - With it, 4/4 requests finished: **5.8 / 6.6 / 9.8 tok/s decode** on empty-context requests (800-token cap,
+    temperature 0, 86-92% expert-cache hit) and **324.2 tok/s prefill + 12.8 tok/s decode at a 69,698-token prompt**.
+    All four hit `finish_reason: length` while still thinking.
+- **Why that is 5-10x under v0.2.8's 59-65 tok/s, from the engine's own lines**: `prefill plan inputs: 33.0 GiB
+  experts, 12.7 GiB in the GPU caches, 0.0 GiB RAM copy, file tier 20.3 GiB; 14.8 GiB available for the page cache;
+  drive 0.15 GB/s (sda is a rotational disk)`; every request reports `page cache held 0.0 MB at the read` and
+  39.0-191.2 GB read from storage (298,105 major faults on the 69.7K prompt), with 13-15 GiB in zram and 0.4-4.0M
+  `pswpin` pages per request. The dense `--native` shard is still on the HDD and the engine prices the whole drive from
+  it; mapped mode keeps no RAM copy, so the 20.3 GiB file tier never fits 14.8-18.7 GiB of page cache.
+- **Verdict**: rejected on speed against the 15 tok/s floor; no `[strata.*]` table, no harness wiring. The run says
+  nothing about 0.1.65's kernels — it measures the storage path. To make a kernel A/B meaningful the dense shard must
+  be on the NVMe (41 GB) and the file tier must fit the page cache (a resident copy needs 18-20 GiB, which does not
+  coexist with the desktop on 31 GiB).
+- **Not run**: 240K fill, 240K retrieval, the coding suite against the 27B (6/6 baseline), the abliteration refusal
+  check.
+- **History (kept)**: the first session's block was the disk check above; the all-in-RAM alternative installed but
+  could not serve (36 GB of experts on 31.25 GiB) and its config was removed. `scripts/strata.py update` still calls
+  the `update.sh` that v0.2.19 deleted, and `local.linux.toml`'s `strata_dir` still points above `terminal/`; both are
+  listed as open follow-ups in [`../sop/strata.md`](../sop/strata.md#update-strata).

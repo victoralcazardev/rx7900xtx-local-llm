@@ -1,10 +1,11 @@
 # SOP: Strata with Qwen3.8-Flash-Next
 
 Run [Strata](https://github.com/Niko1221/Strata) with a Qwen3.8-Flash-Next GGUF as an alternative to the default
-llama.cpp profile, on the same port. **State (2026-11-05): the clone stays at v0.2.11 with engine 0.1.57 built and no
-model is installed.** The last set, Unsloth UD-IQ2_XS, decoded below the 15 tok/s floor and was deleted with every
-other Flash-Next set ([`../../results/20261105-strata-unsloth-ud-iq2xs/`](../../results/20261105-strata-unsloth-ud-iq2xs/README.md));
-the steps below are what the next install repeats. Background, upstream claims and measurements:
+llama.cpp profile, on the same port. **State (2026-11-22): the clone is at v0.2.19 with engine 0.1.65 built; the
+abliterated SC117 IQ2_XS set is installed (262K int8, mapped) and rejected on speed — 5.8-12.8 tok/s against the
+15 tok/s floor, storage-bound.** Full record: [`../../results/20261122-strata-0219-sc117/`](../../results/20261122-strata-0219-sc117/README.md).
+**Free disk is the first gate, before RAM or VRAM** (the pack alone is 36.5 GB for IQ2_XS); the rest of the steps below
+are unchanged. Background, upstream claims and measurements:
 [`../models/strata-qwen-flash-next.md`](../models/strata-qwen-flash-next.md). Settings this repo tracks:
 `[strata.*]` in [`../../models.toml`](../../models.toml) (none today), applied with `scripts/strata.py`.
 
@@ -14,11 +15,11 @@ Only one engine serves `:8080` at a time: Strata and `llama-server` both need ne
 
 | What | Where (example) | Size |
 |---|---|---|
-| Strata clone (tracks upstream `main`; never edit tracked files, `update.sh` refuses to pull over them) | `<strata_dir>` (`local.toml`) | ~0.7 GB + engine |
+| Strata clone (tracks upstream `main`; never edit tracked files, the update refuses to pull over them). Since **v0.2.19** the runnable tree is `<strata_dir>/terminal/` (`setup.py`, `engine/`, `data/`, `.venv`) and `update.sh` is gone | `<strata_dir>` (`local.toml`) | ~0.7 GB + engine (1.1 GB after a source build) |
 | Model shards (must be on NVMe; an HDD stalls, upstream #605) | `<models_root>/Qwen3.8-Flash-Next-<size>/` | 68-76 GB per Unsloth set (one shard is the shared 28.8 GB n-gram table) |
-| Pack: the converted non-expert weights (1.4 GB); ISTA sets add `experts.bin` (~25 GB), Unsloth sets keep their experts in the shards | `<strata_data>/packs/<model>/` (setup default: next to the clone) | 1.4-33 GB |
+| Pack: the converted non-expert weights (`dense.bin` 1.54 GB); ISTA sets add `experts.bin` = `arena_gb + 1` (36.5 GB for IQ2_XS, 33.02 GiB measured 2026-10-30); Unsloth sets keep their experts in the shards | `<strata_data>/packs/<model>/` (setup default: next to the clone) | 1.5-36.5 GB |
 | MTP layer and DFlash2 drafter | `<strata_data>/mtp/`, `<strata_data>/dflash2/` | ~5 GB / 800 MiB of VRAM |
-| Run config written by setup | `<strata_dir>/strata-<model>.json`, start script `run-<model>.sh`, log `strata-<model>.log` | — |
+| Run config written by setup | `<strata_dir>/terminal/strata-<model>.json` since v0.2.19 (`<strata_dir>/` before it), start script `run-<model>.sh`, log `strata-<model>.log` | — |
 | Backups made by `scripts/strata.py update` | `<strata_dir>/../strata-backups/<version>-<time>/` | small |
 
 `<strata_data>/mtp/tensors` (4.9 GB) is the source of the MTP layer; setup verifies it, so keep it when the model
@@ -37,10 +38,27 @@ git clone https://github.com/Niko1221/Strata ~/IA/Motores/Strata && cd ~/IA/Moto
 python3 scripts/strata.py apply        # from this repo: the tracked settings into the run config
 ```
 
-Setup compiles the engine for gfx1100 against the system ROCm 7 in `/opt/rocm` (10-20 min, once), builds the
-pack and the MTP layer, and writes the run config. `./setup.sh --check --backend hip` lists what fits and what
-does not, but its RAM arithmetic is optimistic: it counts a resident mode the engine may then find unfittable
-(2026-10-30) and it does not subtract `--vram-reserve-mib`.
+Setup compiles the engine for gfx1100 against the system ROCm in `/opt/rocm` (10-20 min, once), builds the pack and
+the MTP layer, and writes the run config. A source checkout with `terminal/build-hip` **always compiles**; the
+ready-made package is for the Terminal install (`strata update --check` names it: 0.1.65
+`linux-x86_64-hip-rx7900`, 271 MB). `./setup.sh --check --backend hip` lists what fits and what does not, but its
+RAM arithmetic is optimistic: it counts a resident mode the engine may then find unfittable (2026-10-30) and it
+does not subtract `--vram-reserve-mib`.
+
+**The GGUFs do not have to be on the NVMe (2026-11-22).** `--gguf-dir` may point at a folder on a rotational HDD: setup
+reads it once to build the pack and the pack is what the engine uses at run time. What must be on the NVMe is the pack
+(`packs/<model>/`, `experts.bin` included) and the **n-gram table's shard** (shard 2; it is read at random, a few rows
+per token, `--ple-io direct`), which is why setup warns `the model is on a rotational disk` and the engine prices its
+drive from it. A dense shard left on the HDD (`--native`) is priced at that drive's speed too: measured 0.15 GB/s and
+5.8-12.8 tok/s decode on 2026-11-22, so copy the dense shard (or the tensors the pack lacks) to the NVMe before judging
+speed.
+
+**Check the disk before anything else (2026-11-22).** In the low-RAM mode setup writes one `experts.bin` of the
+whole expert arena into `<strata_data>/packs/<model>/`, sized `MODELS[model]["arena_gb"] + 1` (36.5 GB for IQ2_XS,
+43.9 for IQ3_XXS, 24.4 for the Coder) on the model's own drive, and refuses before writing anything with `not
+enough free disk space for the low-RAM copy of the experts in <pack>: it needs about N GB and M GB are free there.`
+The alternative it prints ("run without the copy") is every expert in RAM, which IQ2_XS cannot do on 31 GiB. Read
+`arena_gb` from `terminal/setup.py`'s `MODELS` and require `arena_gb + 1 + 5` GB free.
 
 **Some sets have no `experts.bin`.** For Unsloth Dynamic v3.1 sets setup says `--low-ram mmap does not apply to
 <set>: it always reads part of its experts from the files` and writes no pack of experts: the engine reads them in
@@ -60,9 +78,14 @@ stays in `args` until deleted by hand (seen 2026-10-30 with `--resident-budget-g
 compare `args` with what you intend and check the live command line with `pgrep -af engine/strata`.
 
 Setup builds the engine only when its source hash changes. Installing a library afterwards (e.g. `pacman -S
-hipblaslt`) does not trigger a rebuild, and CMake keeps `hipblaslt_DIR-NOTFOUND` in `build-hip/CMakeCache.txt`:
-setup still writes `STRATA_HIPBLASLT_TUNING` into `env`, but an engine without hipBLASLt ignores it. Check with
-`ldd engine/strata | grep hipblaslt` (verified 2026-10-30).
+hipblaslt`) does not trigger a rebuild, and CMake keeps `hipblaslt_DIR-NOTFOUND` in
+`terminal/build-hip/CMakeCache.txt`: setup still writes `STRATA_HIPBLASLT_TUNING` into `env`, but an engine without
+hipBLASLt ignores it. Check with `ldd terminal/engine/strata | grep hipblaslt` (verified 2026-10-30).
+
+**The engine links the system `libamdhip64` (2026-11-22).** A source build records `"lib_dirs": ["/opt/rocm/lib"]`
+in `terminal/engine/BUILD.json`, and `ldd terminal/engine/strata` resolves `libamdhip64.so.7` to `/opt/rocm/lib`,
+i.e. CachyOS's 10.1 build, not a bundled TheRock runtime. Put Arch's library into `terminal/engine/` before the
+first start, exactly as for the `kvmix` engines (owner: [`install.md`](install.md#known-errors)).
 
 **AMD stall with experts read from host memory (`GPU_PINNED_MIN_XFER_SIZE`).** ROCclr copies a pageable source of
 1 MiB or more by locking its pages as a GPU userptr; expert blobs are 1.1-1.5 MB. When the kernel reclaims those
@@ -143,6 +166,16 @@ python3 scripts/strata.py status            # how far behind; skip the update if
 python3 scripts/strata.py update            # backup, ./update.sh, re-apply models.toml, print config changes
 qwen-flash && curl -s localhost:8080/v1/models
 ```
+
+**v0.2.19 changed this (2026-11-22).** `update.sh` was deleted and the tree moved into `terminal/`; the supported
+command is `cd <strata_dir> && ./setup.sh --update` (pull, engine install or compile, Python packages, saved
+settings). `scripts/strata.py update` still calls `./update.sh`, so on v0.2.19 it can only do the pull it wraps:
+it works once, when the old `update.sh` is still in the tree, and fails after that — use `setup.sh --update` until
+the script learns the new entry point. v0.2.18/v0.2.19 have no `docs/release-notes-*.md`, so read their notes on the
+GitHub release page. Once the clone is on v0.2.19, point `local.toml`'s `strata_dir` at `<strata_dir>/terminal`:
+that is where `strata-*.json`, `run-*.sh`, `engine/` and `serve/server.py` now live. Both are open follow-ups (not
+fixed 2026-11-22): `scripts/strata.py update` still calls the removed `./update.sh`, and this machine's
+`local.linux.toml` still points `strata_dir` at the clone root.
 
 `update` refuses while Strata runs, backs up every `strata-*.json` and `run-*.sh`, runs `./update.sh` (git pull
 + engine rebuild when its source changed; model files untouched), prints what the update changed in each run
