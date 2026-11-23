@@ -60,6 +60,7 @@ Radeon RX 7900 XTX (24 GB, RDNA3, gfx1100)** with `llama-server` (ROCm/HIP; Vulk
 - Quantized KV (`q8_0`, `q4_0` or the mixed pairs the engine supports) is the default policy;
   re-verify parity against `f16` per backend.
 - A config is good when real inference works, not when the model loads.
+- Strata runs and measurements read every model file from the NVMe, never from the HDD (`docs/sop/strata.md`).
 - Measure `--mlock` before using it: it has been reported to freeze a Windows host under memory
   pressure (MoE model, small-VRAM card).
 

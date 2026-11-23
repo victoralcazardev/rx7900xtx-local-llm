@@ -48,13 +48,14 @@ ready-made package is for the Terminal install (`strata update --check` names it
 RAM arithmetic is optimistic: it counts a resident mode the engine may then find unfittable (2026-10-30) and it
 does not subtract `--vram-reserve-mib`.
 
-**The GGUFs do not have to be on the NVMe (2026-11-22).** `--gguf-dir` may point at a folder on a rotational HDD: setup
-reads it once to build the pack and the pack is what the engine uses at run time. What must be on the NVMe is the pack
-(`packs/<model>/`, `experts.bin` included) and the **n-gram table's shard** (shard 2; it is read at random, a few rows
-per token, `--ple-io direct`), which is why setup warns `the model is on a rotational disk` and the engine prices its
-drive from it. A dense shard left on the HDD (`--native`) is priced at that drive's speed too: measured 0.15 GB/s and
-5.8-12.8 tok/s decode on 2026-11-22, so copy the dense shard (or the tensors the pack lacks) to the NVMe before judging
-speed.
+**Every Strata file lives on the NVMe, never on the HDD (2026-11-23).** Copy the whole GGUF set (every shard), the pack
+(`packs/<model>/`, `experts.bin` included) and the MTP layer to the NVMe before setup, and only then run, measure or
+judge it. Setup can build the pack from a `--gguf-dir` on a rotational HDD, but the run then still reads that drive:
+the n-gram table's shard (shard 2) is read at random, a few rows per token (`--ple-io direct`), and a dense shard left
+there (`--native`) makes the engine price its drive at that speed. The 2026-11-22 SC117 run read shard 1 from the HDD:
+the engine priced the drive at 0.15 GB/s and decoded 5.8-12.8 tok/s, a number of the HDD, not of Strata. If the NVMe
+lacks the space, free it first; do not install or measure from the HDD. The SC117 IQ2_XS set needs about 104 GB
+(shards 39.7 + 28.8 GB, `experts.bin` about 36 GB).
 
 **Check the disk before anything else (2026-11-22).** In the low-RAM mode setup writes one `experts.bin` of the
 whole expert arena into `<strata_data>/packs/<model>/`, sized `MODELS[model]["arena_gb"] + 1` (36.5 GB for IQ2_XS,

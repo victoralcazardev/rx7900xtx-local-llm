@@ -406,9 +406,9 @@ Measurement and full record: [`results/20261122-strata-0219-sc117/`](../../resul
 - **Install, and the disk rule it settled**: v0.2.19's mapped mode writes one `experts.bin` of the whole expert arena
   (`arena_gb + 1` = 36.5 GB for `IQ2_XS`; 35.45 GB written here, 33.02 GiB), and the first session had only 21.96 GB
   free on `/home`, so setup refused (`not enough free disk space for the low-RAM copy of the experts in
-  …/Strata-data/packs/iq2_xs: it needs about 36 GB and 22 GB are free there.`). The fix that worked: **the GGUFs do not
-  need to be on the NVMe** — with the set on the rotational HDD and `--gguf-dir` pointing there, setup wrote the pack to the
-  NVMe and exited 0. Only the pack (and the n-gram table's shard, read at random per token) must be on the NVMe.
+  …/Strata-data/packs/iq2_xs: it needs about 36 GB and 22 GB are free there.`). The workaround used then: with the set on the rotational HDD and `--gguf-dir` pointing there, setup wrote the pack to
+  the NVMe and exited 0. It left shard 1 on the HDD, which made the numbers below a measure of the HDD; the rule since
+  2026-11-23 is every file on the NVMe ([SOP](../sop/strata.md)).
 - **Two sessions, one finding each**:
   - Without `GPU_PINNED_MIN_XFER_SIZE=1048576` the engine died on the first long answer:
     `Unrecoverable native verification failure: verify: timed out at layer 28; its GPU waits were released but the GPU
