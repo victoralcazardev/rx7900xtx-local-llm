@@ -29,7 +29,7 @@
 port = 8080
 flags = ["-fa", "on", "-np", "1", "--ctx-checkpoints", "10", "-ngl", "all", "--metrics"]
 default_alias = "inkling2-mini-unc-q8d"
-default_profile = "262k-maya"
+default_profile = "315k-maya"
 
 # ---------------------------------------------------------------------------
 # Qwen3.8-27B GSQ-RCO IQ3_S-mtp, stock ISTA-DASLab quant (native NextN head): the measured reference,
@@ -191,4 +191,15 @@ vram_gib = 21.6
 # 24-51 GB read from the drive per request), and every Flash-Next set was then deleted
 # (results/20261105-strata-unsloth-ud-iq2xs/). The clone and its engine stay for Qwen4; add a table back per
 # docs/sop/strata.md when a model is installed again.
-
+# 315,392 (2026-11-23, results/20261123-inkling-315k/): same file and env as 262k-maya; FP8 KV grows 16 KiB/token.
+# Peak 22,874 MiB on the whole device (desktop included) of 24,560 during a 315,136-token cold prefill (~1.6 GiB
+# free; 352,256 peaked at 23,577, ~1.0 GiB free, so it was not adopted); retrieval exact at 5% (prefill 271 s);
+# 50%/95% pending. omp wires local-262k at contextWindow 315392 and compacts it at 75% (DECISIONS.md, 2026-11-23).
+[models.inkling2-mini-unc-q8d.profiles."315k-maya"]
+backend = "maya"
+context = 315392
+kv = ["fp8", "fp8"]
+chunk = 2048
+env = { IK2_PAGED_KV = "1", ROCBLAS_TENSILE_LIBPATH = "/opt/rocm/lib/rocblas/library" }
+vision = false
+vram_gib = 22.4

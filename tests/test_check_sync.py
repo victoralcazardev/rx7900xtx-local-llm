@@ -104,6 +104,15 @@ class TestValidateHarness(unittest.TestCase):
         self.assertEqual(len(problems), 1)
         self.assertIn("context_window=300000 is above the server context 262144", problems[0])
 
+    def test_context_window_up_to_the_largest_profile_context_is_accepted(self):
+        entries = self._entries(
+            ("p1", "local-262k", 315392, "http://127.0.0.1:8080/v1"),
+        )
+        self.assertEqual(check_sync.validate_harness("t", entries, context_window=315392,
+                                                     server_context=315392), [])
+        problems = check_sync.validate_harness("t", entries, context_window=315393, server_context=315392)
+        self.assertIn("context_window=315393 is above the server context 315392", problems[0])
+
     def test_context_window_override_not_positive_int_reported(self):
         entries = self._entries(
             ("p1", "local-262k", 131072, "http://127.0.0.1:8080/v1"),
@@ -163,7 +172,7 @@ class TestValidateHarness(unittest.TestCase):
         with mock.patch.object(check_sync, "validate_manifest", return_value=([], [])), \
              mock.patch.object(check_sync, "_harness_targets", return_value=targets), \
              mock.patch.object(check_sync, "_harness_entries", return_value=(entries, None)), \
-             mock.patch.object(check_sync, "load", return_value=mock.Mock(default_port=18080)), \
+             mock.patch.object(check_sync, "load", return_value=mock.Mock(default_port=18080, models={})), \
              contextlib.redirect_stdout(output):
             self.assertEqual(check_sync.main(), 0)
         self.assertIn("on :18080", output.getvalue())

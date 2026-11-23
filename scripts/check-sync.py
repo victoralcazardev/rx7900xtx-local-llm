@@ -8,7 +8,7 @@ Two independent checks:
   2. If your local machine config has a `[harness]` table with `targets`, each
      config file is checked for EXACTLY the local provider (local-262k) with
      the right port and contextWindow (262144, or the target's optional
-     `context_window`, which moves that harness's compaction trigger), optionally local-flash-262k (Strata,
+     `context_window`, up to the largest profile context in models.toml), optionally local-flash-262k (Strata,
      same port, docs/sop/strata.md), and no other provider pointing at
      127.0.0.1 (an orphan from an earlier setup). This check is off by
      default -- see local.example.toml.
@@ -114,10 +114,11 @@ def _is_local(base_url: str) -> bool:
 
 
 def validate_harness(name: str, entries, expected_port: int = EXPECTED_PORT,
-                     context_window: int | None = None) -> list[str]:
+                     context_window: int | None = None,
+                     server_context: int = LOCAL_262K_CONTEXT) -> list[str]:
     """`context_window` overrides the contextWindow expected for local-262k (a target's
-    `context_window` in local.toml): a smaller advertised window moves the harness's
-    compaction trigger for the local model only. It may not exceed the server context."""
+    `context_window` in local.toml), e.g. the window of a larger profile. It may not exceed
+    `server_context`, the largest profile context in models.toml."""
     problems = []
     local = [e for e in entries if _is_local(e[3])]
     seen = {e[1] for e in local}
@@ -126,9 +127,9 @@ def validate_harness(name: str, entries, expected_port: int = EXPECTED_PORT,
         if type(context_window) is not int or context_window <= 0:
             problems.append(f"{name}: context_window must be a positive integer, got {context_window!r}.")
             return problems
-        if context_window > LOCAL_262K_CONTEXT:
+        if context_window > server_context:
             problems.append(f"{name}: context_window={context_window} is above the server context "
-                            f"{LOCAL_262K_CONTEXT} -> 400 exceed_context.")
+                            f"{server_context} -> 400 exceed_context.")
             return problems
         expected["local-262k"] = context_window
 
@@ -203,9 +204,12 @@ def main() -> int:
         harness_problems.append(str(e))
         print(f"  PROBLEM: {e}")
     try:
-        port = load().default_port
+        m = load()
+        port = m.default_port
+        server_context = max([LOCAL_262K_CONTEXT] + [p.get("context", 0) for model in m.models.values()
+                                                      for p in model.profiles.values()])
     except ManifestError:
-        port = EXPECTED_PORT
+        port, server_context = EXPECTED_PORT, LOCAL_262K_CONTEXT
     if targets is None and not harness_problems:
         print("  disabled (set harness.enabled = true and harness.targets in your local config to check).")
     elif targets == []:
@@ -217,7 +221,8 @@ def main() -> int:
                 print(f"  WARNING: {error} (skipped)")
                 continue
             probs = validate_harness(target["name"], entries, expected_port=port,
-                                     context_window=target.get("context_window"))
+                                     context_window=target.get("context_window"),
+                                     server_context=server_context)
             if probs:
                 harness_problems.extend(probs)
                 for p in probs:
