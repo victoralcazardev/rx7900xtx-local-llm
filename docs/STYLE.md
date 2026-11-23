@@ -105,6 +105,8 @@ owner instead of restating it. The README headline table is the only sanctioned 
 - Word budgets: `README.md` ≤ 1,000; `AGENTS.md` ≤ 900; `docs/STATUS.md` ≤ 1,000;
   `docs/TRIED.md` ≤ 1,200. A measurement doc that passes ~5,000 words gets split by sub-topic
   into a new doc, with a pointer section left under the old heading.
+- `CHANGELOG.md` keeps `Unreleased` plus the current month; older months go to
+  `docs/archive/changelog-<year>.md`.
 - Moving a section keeps its old heading as a one-line pointer, so existing anchors keep working.
 - Before committing documentation, grep for the numbers you changed (`git grep -n "<number>"`)
   and fix or link every other copy.
