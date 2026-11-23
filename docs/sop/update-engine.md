@@ -57,6 +57,56 @@ disabled). One single-backend binary per download/build.
    `docs/ENGINES.md` (commit, flags, SHA256) and `models.toml`. Keep the A/B run's output under
    `results/` -- immutable, never overwritten in place (see `docs/STYLE.md` §7).
 
+## Publish a release
+
+Publishing is part of adoption, not a later chore: **when an engine becomes the current one
+(adopted in `docs/DECISIONS.md`), publish it as a GitHub release the same day.** The README quick
+start, `docs/ENGINES.md` and GitHub's `Latest` marker all point at released assets; an adopted engine
+with no release forces every reader to rebuild it. Existing examples:
+`engine-b11846-rocm10-gfx1100-kvmix`, `engine-v0.9.0-rocm10-gfx1100-kvmix`,
+`maya-ik2-f472e94-rocm10-gfx1100`.
+
+1. **Assemble the archive** from the engine folder as it runs: the binaries and shared libraries,
+   the Python side where the engine has one (`serve/`, `tools/`), and the run config it reads. Do
+   **not** bundle the ROCm runtime: the archive links the system runtime, and the
+   `libamdhip64.so.7` symlink of [`install.md`](install.md#known-errors) is a per-machine workaround,
+   not a deliverable. Add:
+   - the **exact source patches** that are not upstream, exported one area at a time with `git diff`
+     (e.g. `pr30792-q5_1.patch`, `tests-kvmix-cases.patch`, `server-sigterm-watchdog.patch`), so the
+     build is reproducible without this repository's history;
+   - the upstream `LICENSE`;
+   - `BUILD.txt`.
+2. **`BUILD.txt` must state**: upstream ref and full commit, toolchain (compiler and ROCm version),
+   CMake/configure flags, every patch with its sha256, the check counts (`--version`, backend-op
+   cases, the engine's own tests), and the sha256 of the main libraries — e.g. `libggml-hip.so` and
+   `libllama-server-impl.so`, not only the thin `llama-server` front end. `scripts/build_engine.py`
+   already writes the ref, commit, flags, patch hashes and checks; add the library hashes by hand.
+3. **No personal path inside a binary.** A published build must not embed the builder's home
+   directory:
+   ```bash
+   readelf -d <engine>/libggml-hip.so | grep -E 'RPATH|RUNPATH'   # expect $ORIGIN-relative entries only
+   strings <engine>/libllama-server-impl.so | grep -m1 "$HOME"    # expect no output
+   ```
+   If a checkout path appears, rebuild with `-DCMAKE_SKIP_RPATH=ON` (the loader then needs
+   `LD_LIBRARY_PATH`, so say so in the release notes) and repeat the checks.
+4. **Create the release**, with the notes file in the repository so they are reviewable:
+   ```bash
+   gh release create engine-v0.9.0-rocm10-gfx1100-kvmix \
+     llama-v0.9.0-pr30792q51-sigterm-rocm10-gfx1100-kvmix-linux-x64.tar.gz \
+     --title "llama.cpp v0.9.0 + q5_1 V TILE + SIGTERM watchdog (ROCm 10, gfx1100)" \
+     --notes-file <notes.md>
+   ```
+   Naming: tag `engine-<ref>-rocm<ver>-gfx1100-<recipe>`, asset `<same>-linux-x64.tar.gz`; a
+   non-llama.cpp engine uses its own tag (`maya-ik2-f472e94-rocm10-gfx1100`).
+5. **`Latest` for an engine in use.** No setup is the default, so mark the release of the engine the
+   launcher falls back to (or name the adopted setup in its notes) and un-mark the others:
+   ```bash
+   gh release edit <engine-tag> --latest
+   gh release edit <other-engine-tag> --latest=false
+   ```
+6. **Record it**: tag, asset name and sha256 in the engine's section of `docs/ENGINES.md`, one line
+   in `CHANGELOG.md`, then the README/About refresh of [`publish-sync.md`](publish-sync.md).
+
 ## Build a new engine
 
 The `hip-kvmix` engine (K `q8_0` + V `q5_1` FlashAttention kernels) is built by one command; the

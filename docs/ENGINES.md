@@ -17,7 +17,7 @@ hash — the difference lives in the shared library, not the file hashed here.
 |---|---|---|---|
 | `llama-b11160-bin-ubuntu-rocm-10.0-x64` | **Current** (`hip` in `local.toml`) | b11160 / `70c4e1582`, official CI | `8c98a329346088d0cdd03195ae5864e29c9a8b11fc293397a723f8730e9492dc` |
 | `llama-b11160-bin-ubuntu-vulkan-x64` | Reference (2-3.5x slower on generation here; still 1.2-1.6x slower with the memory clock pinned, see `docs/measurements/engines.md`) | b11160 / `70c4e1582`, official CI | `ddb272c01521fc81c14ae430a944cd52d8db9c7d237e1b90f77d0b2f33a2c012` |
-| `llama-v0.9.0-pr30792q51-linux-rocm10-gfx1100-kvmix` | **Current** (`hip-kvmix` in `local.toml`, since 2026-11-05, operator choice against a -4.6% decode screen at 64K, [results](../results/20261105-huihui-iq3s-262k/README.md)) | v0.9.0 / `cd959ba` + local `pr30792-q5_1.patch`, own build (recipe below) | `410a809bcd04ffaa46100dd68b29eb5d6d0fb12b84d25bc3c543ce18c7968ac6` (launcher; `libllama-server-impl.so` `523395ca9d4af53609d2a443c302b1e33e2a41560f5f0fdc8cdd4f2dffb47f63`) |
+| `llama-v0.9.0-pr30792q51-linux-rocm10-gfx1100-kvmix` | **Current** (`hip-kvmix` in `local.toml`, since 2026-11-05, operator choice against a -4.6% decode screen at 64K, [results](../results/20261105-huihui-iq3s-262k/README.md)); published release below | v0.9.0 / `cd959ba` + local `pr30792-q5_1.patch`, own build (recipe below) | `410a809bcd04ffaa46100dd68b29eb5d6d0fb12b84d25bc3c543ce18c7968ac6` (launcher; `libllama-server-impl.so` `523395ca9d4af53609d2a443c302b1e33e2a41560f5f0fdc8cdd4f2dffb47f63`) |
 | `llama-b12633-pr30792q51-linux-rocm10-gfx1100-kvmix` | **Candidate, not adopted** (built 2026-11-22; no 240K A/B and no coding suite: the user deferred the A/B to Qwen4, [DECISIONS](DECISIONS.md) 2026-11-22; FA rerun pending, see [results](../results/20261122-engine-b12633/README.md)) | b12633 / `9c10c94e1` + local `pr30792-q5_1.patch` rebased, own build (recipe below) | `fefb558933a11198a35e4a4ec592b243a3d96df0dd56914c1e938b08ace7ae77` (launcher; `libllama-server-impl.so` `9edc270e068cee19d2f28a28b2aa5a54d5da60166fa7ac4afd73b010a7c697dc`) |
 | `llama-b11846-pr30792q51-linux-rocm10-gfx1100-kvmix` | Previous `hip-kvmix` (rollback; 2026-10-24 to 2026-11-05; 240K A/B vs. b11820 + the same patch and coding suite in [`results/20261024-engine-b11846-240k/`](../results/20261024-engine-b11846-240k/README.md)) | b11846 / `1a24df1` + local `pr30792-q5_1.patch` kernel hunks, own build (recipe below) | `410a809bcd04ffaa46100dd68b29eb5d6d0fb12b84d25bc3c543ce18c7968ac6` (launcher; `libllama-server-impl.so` `6ae92a82ad656b4d02ce9ef621a8034d384f496846bc9134cbefecbbebbf3878`) |
 | `llama-b11820-pr30792q51-linux-rocm10-gfx1100-kvmix` | Previous `hip-kvmix` (rollback; 2026-10-23 to 2026-10-24; 240K A/B vs. plain b11820 and coding suite in [`results/20261023-d1-pr30792q51-240k/`](../results/20261023-d1-pr30792q51-240k/README.md)) | b11820 / `d77256999f21` + local `pr30792-q5_1.patch`, own build (recipe below) | `410a809bcd04ffaa46100dd68b29eb5d6d0fb12b84d25bc3c543ce18c7968ac6` (launcher; `libllama-server-impl.so` `ea6b95ef53e991f3ee49faff2f9b3590ad856500f547c7fc806b005c46301caf`) |
@@ -31,7 +31,7 @@ hash — the difference lives in the shared library, not the file hashed here.
 | `llama-b11160-linux-rocm-gfx1100-kvmix` | Discarded (~9% slower than the ROCm-10-toolchain build, see `docs/measurements/engines.md`) | b11160 / `70c4e1582`, own build, older ROCm 7.2.4 system toolchain | `7c27f7fd7c0398075b2837a531c98cc6c57766ff107d671c1c7b06c18d6cd1b2` |
 | `llama-rdnaboosts-v16-ebbb18522-rocm10-gfx1100` | Experimental, not adopted (only -2.5% ms/step at depth; not worth maintaining a fork, see `docs/measurements/speculative.md`) | `stew675/llama-cpp-rdna-boosts` v16-`ebbb18522`-r13, 16 patches on llama.cpp `ebbb18522` | `3d8565952bcd74cd4e0d3be3a56221619c25da6176d3716972b75b1cc0a34128` (same front-end) |
 | `maya-inkling-mini-hip` (`build-ik2/maya-ik2`, not a llama.cpp build) | **Experimental, Inkling-2-Mini only** (built 2026-11-22; `launch.py` backend `maya`, profile `inkling2-mini-unc/262k-maya`; [results](../results/20261122-inkling-maya-vs-fork/README.md)). **In use since 2026-11-23: `hip-port` `f472e94`** in the worktree `maya-inkling-mini-hip-f472e94` ([round 3](../results/20261123-inkling-round/README.md#round-3-2026-11-23-evening-hip-port-f472e94-dspark-loads-ik2_kvfp4-global)); the `2b31ffeaa` checkout stays as rollback | `GodGMN/maya-inkling-mini` branch `hip-port` `f472e94` (was `2b31ffeaa`) + local cherry-pick of `alesha-pro/maya-inkling-mini` `549d734` (tool-call parser, `serve/` only) | `a064a1e059191d8ff8cafd9d9cc0354a3fa784fc55529d69d1b946d7649e92f0` (`maya-ik2` `f472e94`); rollback `e142adbb4d7fdee7b9ee7037498936e986bf8beecf62dee461b871d5808b0a92` (`2b31ffeaa`) |
-| `llama-inkling-rdna3-cb0e46960-linux-rocm10-gfx1100-kvmix` | **Current `hip-inkling`, Inkling-2-Mini only** (built and wired 2026-11-22; the only engine measured at 262K with that model, [results](../results/20261122-inkling-rdna3-fork/BUILD.md)). Do not point the Qwen default at it: its q8_1 cache and fusion matchers touch every model | `GodGMN/llama.cpp` branch `inkling-rdna3` `cb0e46960` (tag `b12600` + 6 commits), built as published (no local patch) | `fefb558933a11198a35e4a4ec592b243a3d96df0dd56914c1e938b08ace7ae77` (same front end as b12633; `libggml-hip.so` `0734ce9771709d07b75473095cccd93c0b8e549766d0819ebc8aa2dc94367096`) |
+| `llama-inkling-rdna3-cb0e46960-linux-rocm10-gfx1100-kvmix` | **Current `hip-inkling`, Inkling-2-Mini only** (built and wired 2026-11-22; the only engine measured at 262K with that model, [results](../results/20261122-inkling-rdna3-fork/BUILD.md)). Do not point the Qwen setup at it: its q8_1 cache and fusion matchers touch every model | `GodGMN/llama.cpp` branch `inkling-rdna3` `cb0e46960` (tag `b12600` + 6 commits), built as published (no local patch) | `fefb558933a11198a35e4a4ec592b243a3d96df0dd56914c1e938b08ace7ae77` (same front end as b12633; `libggml-hip.so` `0734ce9771709d07b75473095cccd93c0b8e549766d0819ebc8aa2dc94367096`) |
 
 ## Build recipes
 
@@ -73,8 +73,18 @@ llama.cpp tag v0.9.0 (commit `cd959ba`, `--version` `0.9.0-dev (build 1)`), 313 
 recipe and patches as b11846 below (`tests-kvmix-cases.patch` offsets 325 and 410; `pr30792-q5_1.patch`
 clean; PR #30792 still open). `--help` adds only `--models-memory-margin`. FA Qwen-shape cases 30/30 OK.
 At 64K fill: decode -4.6% on identical greedy text, prefill -2.2%, same VRAM
-([results](../results/20261105-huihui-iq3s-262k/README.md)). Adopted by operator choice as the latest release despite that screen; not
-published as a release. Not in v0.9.0: #30137 (ref-counted checkpoints) and #31660 (MTP conv snapshots), both
+([results](../results/20261105-huihui-iq3s-262k/README.md)). Adopted by operator choice as the latest release despite that screen.
+
+**Prebuilt download** (published 2026-11-23): GitHub release
+[`engine-v0.9.0-rocm10-gfx1100-kvmix`](https://github.com/victoralcazardev/rx7900xtx-local-llm/releases/tag/engine-v0.9.0-rocm10-gfx1100-kvmix),
+`llama-v0.9.0-pr30792q51-sigterm-rocm10-gfx1100-kvmix-linux-x64.tar.gz`, sha256
+`a24c7aa6c472db89f9815aeb304488b74ff3189cc1d5d523991ab0e441983de0` (`libggml-hip.so`
+`f8370f3271403eaf7759d7f585d2c944048dae90762487572ff9984464528304`, `libllama-server-impl.so`
+`6abd77ae452cb9bddd8b2725ce046d59129dcb93bf85cdf455a7fd25da06cb85`). The archive adds the local
+`server-sigterm-watchdog.patch` (alarm(15) after the first SIGINT/SIGTERM, `_exit` on the second),
+which is why `libllama-server-impl.so` was rebuilt on 2026-11-08 after a shutdown hang; not
+separately measured. The `libllama-server-impl.so` hash in the table above is that pre-patch build,
+so a local folder and the release asset differ only in that library. Not in v0.9.0: #30137 (ref-counted checkpoints) and #31660 (MTP conv snapshots), both
 merged on 2026-11-05 after the tag; #30141 (MTP hidden state save/restore) is in.
 
 ### `llama-b11846-pr30792q51-linux-rocm10-gfx1100-kvmix` (`hip-kvmix` engine 2026-10-24 to 2026-11-05, rollback)
@@ -239,7 +249,7 @@ Built as published with the recipe above and **without** the local `q5_1` patch 
 `PASSED` (196,608 cells identical to the unfused chain). Scope, from the branch's own docs: every model on
 every card can hit the q8_1 input cache (`GGML_CUDA_NO_Q8_CACHE=1` disables it) and the fusion matchers
 (`GGML_INK_NO_FUSE=1`); the mmvq table change is RDNA3-only. It is the only engine measured at 262K with
-Inkling-2-Mini (42.0 tok/s, 22,423 MiB) and it is not a candidate for the Qwen default. Details and the
+Inkling-2-Mini (42.0 tok/s, 22,423 MiB) and it is not a candidate for the Qwen setup. Details and the
 author's own speed claims: [`results/20261122-inkling-rdna3-fork/BUILD.md`](../results/20261122-inkling-rdna3-fork/BUILD.md).
 
 ### `maya-inkling-mini-hip` (`maya-ik2`, experimental, Inkling-2-Mini only)
@@ -275,6 +285,14 @@ cmake --build maya-inkling-mini-hip/build-ik2 -j14 --target maya-ik2 ik2_kernels
   production checkout's local diff applied, `ik2/` tokenizer and `ik2-abiray-paged.json` copied, `.venv` symlinked,
   then the same `cmake` lines with that source and build dir (45 s); `local.toml` `engines.maya` points at the worktree.
   Same speed, GSM8K and VRAM; the server's loop guard now handles reasoning segments ([round 3](../results/20261123-inkling-round/README.md#round-3-2026-11-23-evening-hip-port-f472e94-dspark-loads-ik2_kvfp4-global)).
+- **Published release** (2026-11-23): GitHub release tag `maya-ik2-f472e94-rocm10-gfx1100`, asset
+  `maya-ik2-f472e94-rocm10-gfx1100-linux-x64.tar.gz` (the `maya-ik2` binary, our local `serve/` patch, LICENSE and
+  BUILD.txt; no ROCm runtime, no model; decode 104.5 / 90.0 tok/s at 512 / 32K vs. 105.9 / 89.9 for the production
+  build), sha256
+  `2d23cd5151ce8c39c89ee7446643157e63ad4feef9d26325a70a009efe2c9401`. Same day as adoption, per [`sop/update-engine.md`](sop/update-engine.md#publish-a-release).
+  The packaged `maya-ik2` was rebuilt without a RUNPATH
+  (`7ca635e47ca07d88ff5dafcf54e3b5789b4ea644ce40a799be67a35cb99a50c2`), so its notes carry the
+  release's `LD_LIBRARY_PATH` line.
 - **Python side**: `serve/` and `tools/` need `numpy jinja2 regex pyyaml tqdm requests pillow psutil
   "jsonschema>=4.18,<5"` (a `.venv` in the checkout); the tokenizer is exported from the GGUF with
   `tools/strata_tokenizer.py --gguf <gguf> --out ik2 --chat-template tools/ik2/chat_template.jinja --check`
