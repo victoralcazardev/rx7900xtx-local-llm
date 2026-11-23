@@ -31,15 +31,15 @@ from pathlib import Path
 
 import numpy as np
 
-GGUF_PY = Path('/home/victor/IA/Motores/src/llama.cpp-inkling-rdna3/gguf-py')
+GGUF_PY = Path.home() / 'IA/Motores/src/llama.cpp-inkling-rdna3/gguf-py'
 sys.path.insert(0, str(GGUF_PY))
 
 import gguf  # noqa: E402
 from gguf import GGMLQuantizationType as QType  # noqa: E402
 from gguf.quants import dequantize, quantize, quant_shape_to_byte_shape  # noqa: E402
 
-DEFAULT_SRC = Path('/home/victor/IA/Modelos/Inkling-2-Mini-Uncensored-Abiray/Inkling-2-Mini-Uncensored-IQ4_NL.gguf')
-DEFAULT_DST = Path('/home/victor/IA/rx7900xtx-local-llm/_tmp/maya/r23/model/Inkling-2-Mini-Uncensored-IQ4_NL-q8dense.gguf')
+DEFAULT_SRC = Path.home() / 'IA/Modelos/Inkling-2-Mini-Uncensored-Abiray/Inkling-2-Mini-Uncensored-IQ4_NL.gguf'
+DEFAULT_DST = Path.home() / 'IA/rx7900xtx-local-llm/_tmp/maya/r23/model/Inkling-2-Mini-Uncensored-IQ4_NL-q8dense.gguf'
 
 # float32 elements converted per slab; bounds the dequantize/quantize peak at ~256 MiB
 CHUNK_ELEMS = 64 * 1024 * 1024

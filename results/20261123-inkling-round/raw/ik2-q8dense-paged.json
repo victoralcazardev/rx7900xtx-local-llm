@@ -3,7 +3,7 @@
   "exe": "build-ik2/maya-ik2",
   "args": [
     "--model",
-    "/home/victor/IA/Modelos/Inkling-2-Mini-Uncensored-Abiray-q8dense/Inkling-2-Mini-Uncensored-IQ4_NL-q8dense.gguf",
+    "~/IA/Modelos/Inkling-2-Mini-Uncensored-Abiray-q8dense/Inkling-2-Mini-Uncensored-IQ4_NL-q8dense.gguf",
     "--max-context",
     "262144",
     "--chunk",
@@ -45,5 +45,5 @@
     "temperature": 1.0,
     "min_p": 0.0
   },
-  "cwd": "/home/victor/IA/Motores/src/maya-inkling-mini-hip"
+  "cwd": "~/IA/Motores/src/maya-inkling-mini-hip"
 }
