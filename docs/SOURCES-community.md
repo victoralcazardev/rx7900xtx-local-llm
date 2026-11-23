@@ -261,3 +261,24 @@ new-model bring-up, read its `CHANGELOG.md` since the commit pinned above, recor
 | Final resident engine, FP8 KV, 344K window: decode 128.7 / 105.6 / 62.3 tok/s at 47 / 64K / 340K tokens | `cases/inkling-2-mini.md` | 2026-11-21 | source-checked (author's numbers) | None |
 | A short benchmark promised +27% decode; real generation gave +2% | `README.md` | 2026-11-21 | source-checked (no setup given in the README) | Consistent with our policy of 240K pairs and real traffic ([`BENCHMARK-FORMAT.md`](BENCHMARK-FORMAT.md)) |
 | A drafter change matched on 4,400 tokens of the first turn and broke the second turn | `README.md` | 2026-11-21 | hypothesis for llama.cpp MTP | None; argues for multi-turn checks in [`speculative.md`](measurements/speculative.md) |
+
+## Intel XPU inference-optimisation skill and the B70 Inkling posts (2026-11-23)
+
+[SergiioB/intel-xpu-inference-optimisation-skill](https://github.com/SergiioB/intel-xpu-inference-optimisation-skill)
+(pushed 2026-11-23T10:35Z) is the Intel Arc B60/B70 (Xe2) adaptation of the
+[sybil-solutions skill](#inference-optimisation-agent-skill-2026-11-20) (that one is still at `fda968e`, pushed
+2026-11-16: nothing new). Same layout (`skills/intel-xpu-inference-optimisation/SKILL.md`, `references/`), plus
+`kv-and-context.md`, `quantization.md`, `kernels-xe2.md` and a do-not-repeat list (`DNR-*`). Its Inkling numbers
+are vLLM XPU + `vllm-inkling2-xpu` (B70); none are AMD. A post by @VeidtKV (2026-11-23, read through an X mirror)
+reports Inkling-2-Mini Q4_K_M running on a B70 with llama.cpp Vulkan, no numbers, drafter still being worked on.
+
+**How to use it here.** A prior for KV and drafter decisions, never a value: re-read `kv-and-context.md` and
+`levers.md` when changing the KV policy or when a drafter runs on gfx1100, and record new rows that touch
+`maya-ik2`, llama.cpp HIP/Vulkan or Inkling.
+
+| Claim | Source | Date | Status | Own test |
+|---|---|---|---|---|
+| llama.cpp disables flash attention automatically for models with an additive attention bias (`kq_b`), "like Inkling" | `references/kv-and-context.md:63` | 2026-11-23 | source-checked (quote); mechanism not re-checked in llama.cpp source | Our production engine for Inkling is `maya-ik2`, not llama.cpp; [`models/inkling-2-mini.md`](models/inkling-2-mini.md) |
+| `q4_0` K cache: mean KLD ~5.5 "regardless of V precision" | `references/kv-and-context.md:22` | 2026-11-23 | source-checked (quote; B70 SYCL, model not stated in that row) | Our KV policy and measurements: [`measurements/kv-quality.md`](measurements/kv-quality.md) |
+| Inkling 2 Mini on B70: vLLM XPU + DSpark k=7, 57.2 -> 80.4 tok/s card sampling, 8/8 PASS | `references/levers.md:12,47` | 2026-11-23 | source-checked (author's numbers; Intel-only stack) | not applicable (DSpark does not load on our HIP build: [round](../results/20261123-inkling-round/README.md)) |
+| llama.cpp SYCL graph replay on Inkling: +34.1% short / +26.6% at 8K, 5/5 greedy identical | `references/levers.md:23` | 2026-11-23 | source-checked (SYCL-only flag) | not applicable: `maya-ik2` already replays one graph per decode step (engine log) |

@@ -1,37 +1,27 @@
-== window 0
-{"case": "copy", "repeat": 1, "exact": true, "prompt": 614, "generated": 582, "finish": "stop", "prefill_s": 0.902, "decode_s": 5.795, "decode_tok_s": 100.26}
-{"case": "edit", "repeat": 1, "exact": true, "prompt": 621, "generated": 583, "finish": "stop", "prefill_s": 0.258, "decode_s": 5.548, "decode_tok_s": 104.9}
-{"case": "copy", "repeat": 2, "exact": true, "prompt": 614, "generated": 582, "finish": "stop", "prefill_s": 0.241, "decode_s": 5.543, "decode_tok_s": 104.82}
-{"case": "edit", "repeat": 2, "exact": true, "prompt": 621, "generated": 583, "finish": "stop", "prefill_s": 0.244, "decode_s": 5.611, "decode_tok_s": 103.72}
-{"case": "copy", "repeat": 3, "exact": true, "prompt": 614, "generated": 582, "finish": "stop", "prefill_s": 0.244, "decode_s": 5.568, "decode_tok_s": 104.35}
-{"case": "edit", "repeat": 3, "exact": true, "prompt": 621, "generated": 583, "finish": "stop", "prefill_s": 0.245, "decode_s": 5.586, "decode_tok_s": 104.19}
-== window 64
-~/IA/rx7900xtx-local-llm/_tmp/maya/r23/suffix/inventory/copy-64.log:suffix verification: up to 64 inputs per target forward
-{"case": "copy", "repeat": 1, "exact": true, "prompt": 614, "generated": 582, "finish": "stop", "prefill_s": 0.735, "decode_s": 1.075, "decode_tok_s": 540.47}
-{"case": "edit", "repeat": 1, "exact": true, "prompt": 621, "generated": 583, "finish": "stop", "prefill_s": 0.261, "decode_s": 1.255, "decode_tok_s": 463.75}
-{"case": "copy", "repeat": 2, "exact": true, "prompt": 614, "generated": 582, "finish": "stop", "prefill_s": 0.244, "decode_s": 0.957, "decode_tok_s": 607.11}
-{"case": "edit", "repeat": 2, "exact": true, "prompt": 621, "generated": 583, "finish": "stop", "prefill_s": 0.246, "decode_s": 1.255, "decode_tok_s": 463.75}
-{"case": "copy", "repeat": 3, "exact": true, "prompt": 614, "generated": 582, "finish": "stop", "prefill_s": 0.241, "decode_s": 0.959, "decode_tok_s": 605.84}
-{"case": "edit", "repeat": 3, "exact": true, "prompt": 621, "generated": 583, "finish": "stop", "prefill_s": 0.247, "decode_s": 1.255, "decode_tok_s": 463.75}
-== window 128
-~/IA/rx7900xtx-local-llm/_tmp/maya/r23/suffix/inventory/copy-128.log:suffix verification: up to 128 inputs per target forward
-{"case": "copy", "repeat": 1, "exact": true, "prompt": 614, "generated": 582, "finish": "stop", "prefill_s": 0.606, "decode_s": 0.747, "decode_tok_s": 777.78}
-{"case": "edit", "repeat": 1, "exact": true, "prompt": 621, "generated": 583, "finish": "stop", "prefill_s": 0.245, "decode_s": 1.089, "decode_tok_s": 534.44}
-{"case": "copy", "repeat": 2, "exact": true, "prompt": 614, "generated": 582, "finish": "stop", "prefill_s": 0.245, "decode_s": 0.68, "decode_tok_s": 854.41}
-{"case": "edit", "repeat": 2, "exact": true, "prompt": 621, "generated": 583, "finish": "stop", "prefill_s": 0.244, "decode_s": 1.091, "decode_tok_s": 533.46}
-{"case": "copy", "repeat": 3, "exact": true, "prompt": 614, "generated": 582, "finish": "stop", "prefill_s": 0.254, "decode_s": 0.684, "decode_tok_s": 849.42}
-{"case": "edit", "repeat": 3, "exact": true, "prompt": 621, "generated": 583, "finish": "stop", "prefill_s": 0.509, "decode_s": 1.101, "decode_tok_s": 528.61}
-== window 0
-{"case": "python_edit", "repeat": 1, "exact": true, "prompt": 936, "generated": 886, "finish": "stop", "prefill_s": 0.703, "decode_s": 8.547, "decode_tok_s": 103.55}
-{"case": "python_edit", "repeat": 2, "exact": true, "prompt": 936, "generated": 886, "finish": "stop", "prefill_s": 0.337, "decode_s": 8.527, "decode_tok_s": 103.79}
-{"case": "python_edit", "repeat": 3, "exact": true, "prompt": 936, "generated": 886, "finish": "stop", "prefill_s": 0.364, "decode_s": 8.548, "decode_tok_s": 103.53}
-== window 64
-~/IA/rx7900xtx-local-llm/_tmp/maya/r23/suffix/python/copy-64.log:suffix verification: up to 64 inputs per target forward
-{"case": "python_edit", "repeat": 1, "exact": true, "prompt": 936, "generated": 886, "finish": "stop", "prefill_s": 0.576, "decode_s": 2.084, "decode_tok_s": 424.66}
-{"case": "python_edit", "repeat": 2, "exact": true, "prompt": 936, "generated": 886, "finish": "stop", "prefill_s": 0.354, "decode_s": 1.884, "decode_tok_s": 469.75}
-{"case": "python_edit", "repeat": 3, "exact": true, "prompt": 936, "generated": 886, "finish": "stop", "prefill_s": 0.353, "decode_s": 1.882, "decode_tok_s": 470.24}
-== window 128
-~/IA/rx7900xtx-local-llm/_tmp/maya/r23/suffix/python/copy-128.log:suffix verification: up to 128 inputs per target forward
-{"case": "python_edit", "repeat": 1, "exact": true, "prompt": 936, "generated": 886, "finish": "stop", "prefill_s": 0.514, "decode_s": 1.919, "decode_tok_s": 461.18}
-{"case": "python_edit", "repeat": 2, "exact": true, "prompt": 936, "generated": 886, "finish": "stop", "prefill_s": 0.363, "decode_s": 1.766, "decode_tok_s": 501.13}
-{"case": "python_edit", "repeat": 3, "exact": true, "prompt": 936, "generated": 886, "finish": "stop", "prefill_s": 0.35, "decode_s": 1.766, "decode_tok_s": 501.13}
+{"window": 0, "args": "--direct-answer --repeats 3", "case": "copy", "repeat": 1, "exact": true, "prompt": 614, "generated": 582, "finish": "stop", "prefill_s": 0.902, "decode_s": 5.795, "decode_tok_s": 100.26}
+{"window": 0, "args": "--direct-answer --repeats 3", "case": "edit", "repeat": 1, "exact": true, "prompt": 621, "generated": 583, "finish": "stop", "prefill_s": 0.258, "decode_s": 5.548, "decode_tok_s": 104.9}
+{"window": 0, "args": "--direct-answer --repeats 3", "case": "copy", "repeat": 2, "exact": true, "prompt": 614, "generated": 582, "finish": "stop", "prefill_s": 0.241, "decode_s": 5.543, "decode_tok_s": 104.82}
+{"window": 0, "args": "--direct-answer --repeats 3", "case": "edit", "repeat": 2, "exact": true, "prompt": 621, "generated": 583, "finish": "stop", "prefill_s": 0.244, "decode_s": 5.611, "decode_tok_s": 103.72}
+{"window": 0, "args": "--direct-answer --repeats 3", "case": "copy", "repeat": 3, "exact": true, "prompt": 614, "generated": 582, "finish": "stop", "prefill_s": 0.244, "decode_s": 5.568, "decode_tok_s": 104.35}
+{"window": 0, "args": "--direct-answer --repeats 3", "case": "edit", "repeat": 3, "exact": true, "prompt": 621, "generated": 583, "finish": "stop", "prefill_s": 0.245, "decode_s": 5.586, "decode_tok_s": 104.19}
+{"window": 64, "args": "--direct-answer --repeats 3", "case": "copy", "repeat": 1, "exact": true, "prompt": 614, "generated": 582, "finish": "stop", "prefill_s": 0.735, "decode_s": 1.075, "decode_tok_s": 540.47}
+{"window": 64, "args": "--direct-answer --repeats 3", "case": "edit", "repeat": 1, "exact": true, "prompt": 621, "generated": 583, "finish": "stop", "prefill_s": 0.261, "decode_s": 1.255, "decode_tok_s": 463.75}
+{"window": 64, "args": "--direct-answer --repeats 3", "case": "copy", "repeat": 2, "exact": true, "prompt": 614, "generated": 582, "finish": "stop", "prefill_s": 0.244, "decode_s": 0.957, "decode_tok_s": 607.11}
+{"window": 64, "args": "--direct-answer --repeats 3", "case": "edit", "repeat": 2, "exact": true, "prompt": 621, "generated": 583, "finish": "stop", "prefill_s": 0.246, "decode_s": 1.255, "decode_tok_s": 463.75}
+{"window": 64, "args": "--direct-answer --repeats 3", "case": "copy", "repeat": 3, "exact": true, "prompt": 614, "generated": 582, "finish": "stop", "prefill_s": 0.241, "decode_s": 0.959, "decode_tok_s": 605.84}
+{"window": 64, "args": "--direct-answer --repeats 3", "case": "edit", "repeat": 3, "exact": true, "prompt": 621, "generated": 583, "finish": "stop", "prefill_s": 0.247, "decode_s": 1.255, "decode_tok_s": 463.75}
+{"window": 128, "args": "--direct-answer --repeats 3", "case": "copy", "repeat": 1, "exact": true, "prompt": 614, "generated": 582, "finish": "stop", "prefill_s": 0.606, "decode_s": 0.747, "decode_tok_s": 777.78}
+{"window": 128, "args": "--direct-answer --repeats 3", "case": "edit", "repeat": 1, "exact": true, "prompt": 621, "generated": 583, "finish": "stop", "prefill_s": 0.245, "decode_s": 1.089, "decode_tok_s": 534.44}
+{"window": 128, "args": "--direct-answer --repeats 3", "case": "copy", "repeat": 2, "exact": true, "prompt": 614, "generated": 582, "finish": "stop", "prefill_s": 0.245, "decode_s": 0.68, "decode_tok_s": 854.41}
+{"window": 128, "args": "--direct-answer --repeats 3", "case": "edit", "repeat": 2, "exact": true, "prompt": 621, "generated": 583, "finish": "stop", "prefill_s": 0.244, "decode_s": 1.091, "decode_tok_s": 533.46}
+{"window": 128, "args": "--direct-answer --repeats 3", "case": "copy", "repeat": 3, "exact": true, "prompt": 614, "generated": 582, "finish": "stop", "prefill_s": 0.254, "decode_s": 0.684, "decode_tok_s": 849.42}
+{"window": 128, "args": "--direct-answer --repeats 3", "case": "edit", "repeat": 3, "exact": true, "prompt": 621, "generated": 583, "finish": "stop", "prefill_s": 0.509, "decode_s": 1.101, "decode_tok_s": 528.61}
+{"window": 0, "args": "--workload python --direct-answer --repeats 3", "case": "python_edit", "repeat": 1, "exact": true, "prompt": 936, "generated": 886, "finish": "stop", "prefill_s": 0.703, "decode_s": 8.547, "decode_tok_s": 103.55}
+{"window": 0, "args": "--workload python --direct-answer --repeats 3", "case": "python_edit", "repeat": 2, "exact": true, "prompt": 936, "generated": 886, "finish": "stop", "prefill_s": 0.337, "decode_s": 8.527, "decode_tok_s": 103.79}
+{"window": 0, "args": "--workload python --direct-answer --repeats 3", "case": "python_edit", "repeat": 3, "exact": true, "prompt": 936, "generated": 886, "finish": "stop", "prefill_s": 0.364, "decode_s": 8.548, "decode_tok_s": 103.53}
+{"window": 64, "args": "--workload python --direct-answer --repeats 3", "case": "python_edit", "repeat": 1, "exact": true, "prompt": 936, "generated": 886, "finish": "stop", "prefill_s": 0.576, "decode_s": 2.084, "decode_tok_s": 424.66}
+{"window": 64, "args": "--workload python --direct-answer --repeats 3", "case": "python_edit", "repeat": 2, "exact": true, "prompt": 936, "generated": 886, "finish": "stop", "prefill_s": 0.354, "decode_s": 1.884, "decode_tok_s": 469.75}
+{"window": 64, "args": "--workload python --direct-answer --repeats 3", "case": "python_edit", "repeat": 3, "exact": true, "prompt": 936, "generated": 886, "finish": "stop", "prefill_s": 0.353, "decode_s": 1.882, "decode_tok_s": 470.24}
+{"window": 128, "args": "--workload python --direct-answer --repeats 3", "case": "python_edit", "repeat": 1, "exact": true, "prompt": 936, "generated": 886, "finish": "stop", "prefill_s": 0.514, "decode_s": 1.919, "decode_tok_s": 461.18}
+{"window": 128, "args": "--workload python --direct-answer --repeats 3", "case": "python_edit", "repeat": 2, "exact": true, "prompt": 936, "generated": 886, "finish": "stop", "prefill_s": 0.363, "decode_s": 1.766, "decode_tok_s": 501.13}
+{"window": 128, "args": "--workload python --direct-answer --repeats 3", "case": "python_edit", "repeat": 3, "exact": true, "prompt": 936, "generated": 886, "finish": "stop", "prefill_s": 0.35, "decode_s": 1.766, "decode_tok_s": 501.13}

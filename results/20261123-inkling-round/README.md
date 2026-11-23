@@ -122,3 +122,38 @@ Window 128 left 3,310 MiB free before graph capture at 262K (3,498 without). Not
 session close): decode on novel text with the window on, greedy and temperature 1.0, and the window through
 `serve/server.py`. Next: `IK2_SUFFIX=128 bench_m.sh ... 512,8192,32768,131072 3` with and without
 `--temperature 1.0`, then an HTTP copy/edit request; wire into `262k-maya` only if prose decode stays within noise.
+
+## Round 2 (2026-11-23, afternoon)
+
+Plan and log: `odd/tasks/inkling-round2-2026-11-23.md` (local only). Same machine, engine build (`2b31ffeaa`), env
+and 272 W cap as above, unless a section says otherwise.
+
+### `raw/suffix-run.sh` review fixes
+
+- Default windows were `"${@:-0 8 64 128}"`, one word, so a call without windows ran a single invalid
+  `IK2_SUFFIX="0 8 64 128"`; now an array `(0 8 64 128)`.
+- The out dir is made absolute before the script `cd`s into the engine tree (a relative one wrote under the engine).
+- A failed engine run or scoring now makes the script exit 1 (it reported nothing and exited 0).
+- `raw/suffix-scores.jsonl` mixed `== window` headers and `grep` lines with the JSON rows; it is now 27 JSON objects
+  with `window` and `args` (workload) fields, rewritten from the same rows (no number changed), and the script
+  appends in that format.
+
+### Upstream recheck (DSpark retest trigger): not triggered
+
+Checked 2026-11-23 ~13:10 UTC.
+
+- `mw00/project-maya#1154` (GGUF DSpark drafter, Q8_0 head fold in chunks): **open**, 18 commits, last update
+  2026-11-23T10:38Z, not merged.
+- `GodGMN/maya-inkling-mini` `hip-port`: 32 commits after our `2b31ffeaa`, head `4f2b2ff`. None touches
+  `src/ik2/ik2_draft*` and no message mentions the drafter. Source changes (5 files, +292/-68): `IK2_KV=fp4-global`
+  (E2M1 global KV, E4M3 sliding), `--lora` for GGUF attention-output adapters (`e5f1a1b`), multi-slot fixes, and the
+  server loop guard now recognizes reasoning and tool segments (`fe01a42`, possibly the cause of the q8dense
+  refusal-prompt-5 cut above; not tested).
+- `alesha-pro/maya-inkling-mini` `main`: last commit `fcd523f` (2026-11-23, merge of `IK2_SLOT_KEEP`), nothing new
+  on HIP.
+- Two scout leads on our `hipErrorInvalidImage` ruled out locally: the Tensile library is flat (150 `gfx1100`
+  files in `/opt/rocm/lib/rocblas/library`, no per-arch subfolder), and `rocminfo` shows only `gfx1100` (no iGPU to
+  mask). A scout claim that mixed projection types drop `maya-ik2` off the resident path (project-maya #1173) does
+  not apply here: every q8dense log says "tokens take the resident path, one graph replay per decode step".
+
+So DSpark was not retested.
