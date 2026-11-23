@@ -2,6 +2,13 @@
 
 ## Current state (2026-11-22, wired on the GodGMN fork)
 
+- **Recommended since 2026-11-23: `inkling2-mini-unc-q8d` / `262k-maya`** — the Abiray file with its head and
+  non-expert attention/conv matrices re-typed to Q8_0 (experts byte-identical), so `maya-ik2` takes its planar Q8
+  decode path: decode 106.1 / 98.2 / 90.0 / 68.9 tok/s at 512 / 8K / 32K / 128K (+7-11%), 1.3 GiB more VRAM,
+  GSM8K 187/192 vs. 188/192. DSpark still fails (rocBLAS `hipErrorInvalidImage`). Launch:
+  `python3 scripts/launch.py inkling2-mini-unc-q8d --profile 262k-maya`
+  ([round](../../results/20261123-inkling-round/README.md)). To rebuild the file from a new Abiray release:
+  `python3 -I results/20261123-inkling-round/raw/retype_q8.py` (paths at the top of the script).
 - **Two profiles since 2026-11-22 (second pass)**: `262k-maya` on the `maya` backend (GodGMN's `maya-ik2` HIP
   port of `alesha-pro/maya-inkling-mini`) is the faster one: decode 95 / 63.6 / 51.1 tok/s and prefill
   1,894 / 1,292 at 512 / 128K / 262K, GSM8K 95/96, 262K retrieval 3/3, tool calls and prefix reuse working

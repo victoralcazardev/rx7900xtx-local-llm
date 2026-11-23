@@ -45,7 +45,8 @@ SECRET_PATTERNS = [
 EMAIL_RE = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b")
 # Addresses that are deliberately public in this repo (e.g. a maintainer contact address).
 # Empty by default: nothing has earned a place here yet.
-EMAIL_ALLOWLIST: set[str] = set()
+# Reserved RFC 2606 `.example` address quoted by a model answer in a refusal-check raw file.
+EMAIL_ALLOWLIST: set[str] = {"security@first-national-bank-secure.example"}
 
 # Common Spanish words this project's own writing tends to leak (see docs/STYLE.md §1/§4).
 SPANISH_WORDS = (

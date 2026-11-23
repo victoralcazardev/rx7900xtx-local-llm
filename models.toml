@@ -146,6 +146,30 @@ env = { IK2_PAGED_KV = "1", ROCBLAS_TENSILE_LIBPATH = "/opt/rocm/lib/rocblas/lib
 vision = false
 vram_gib = 20.3
 
+# The same Abiray file with the output head and the 176 non-expert attention/conv matrices re-typed to Q8_0
+# (2026-11-23, results/20261123-inkling-round/raw/retype_q8.py; experts and token_embd byte-identical, sha256
+# 375eea1b...). maya-ik2 then takes its planar Q8 decode path, like the port author's ggml-org file. At 272 W, same
+# bench: decode 106.1 / 98.2 / 90.0 / 68.9 tok/s at 512 / 8K / 32K / 128K vs. 95.7 / 88.2 / 82.3 / 64.2 (+7-11%),
+# prefill +2-3%; 1.3 GiB more VRAM; GSM8K 187/192 vs. 188/192, refusals 0/8, tool call + prefix reuse OK
+# (results/20261123-inkling-round/). Not llama.cpp-tested; the DSpark drafter still fails in rocBLAS on this build.
+[models.inkling2-mini-unc-q8d]
+gguf = "Inkling-2-Mini-Uncensored-Abiray-q8dense/Inkling-2-Mini-Uncensored-IQ4_NL-q8dense.gguf"
+backend = "maya"
+mtp = false
+
+[models.inkling2-mini-unc-q8d.sampling]
+temp = 1.0
+min_p = 0.0
+
+[models.inkling2-mini-unc-q8d.profiles."262k-maya"]
+backend = "maya"
+context = 262144
+kv = ["fp8", "fp8"]
+chunk = 2048
+env = { IK2_PAGED_KV = "1", ROCBLAS_TENSILE_LIBPATH = "/opt/rocm/lib/rocblas/library" }
+vision = false
+vram_gib = 21.6
+
 # ---------------------------------------------------------------------------
 # Strata (docs/sop/strata.md): its own engine, clone and run config, not launched by launch.py.
 # `python3 scripts/strata.py apply` writes each `[strata.<model>]` table into <strata_dir>/<config> (local.toml has
