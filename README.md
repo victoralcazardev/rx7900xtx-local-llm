@@ -170,7 +170,7 @@ engine-patches/       # local llama.cpp patches applied by scripts/build_engine.
 | [`docs/measurements/`](docs/measurements/) | Benchmark results by topic |
 | [`docs/ENGINES.md`](docs/ENGINES.md), [`docs/ENGINES-EXPERIMENTS.md`](docs/ENGINES-EXPERIMENTS.md), [`docs/hardware/`](docs/hardware/), [`docs/models/`](docs/models/) | Engine builds, engine trials and watchlist, GPU/driver specs, model and quant provenance |
 | [`docs/BENCHMARK-FORMAT.md`](docs/BENCHMARK-FORMAT.md) | How every number was produced |
-| [`docs/sop/`](docs/sop/) | Procedures: install, launch, add a model, update the engine, measure, and more |
+| [`docs/sop/`](docs/sop/) | Procedures: install, launch, add a model, update the engine, measure, watch upstream sources, and more |
 | [`docs/STYLE.md`](docs/STYLE.md) | Language, units, naming, evidence rules |
 | `scripts/check-repo.py`, `tests/`, [`CONTRIBUTING.md`](CONTRIBUTING.md), `.github/` | Hygiene check, unittest suite, contributing guide, CI and templates |
 
