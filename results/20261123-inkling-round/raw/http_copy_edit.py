@@ -37,9 +37,10 @@ def cases(lines: int) -> list[tuple[str, str, str]]:
     copy_q = "Copy the following archive inventory verbatim. Return only the inventory, with every line."
     edit_q = ("Return this inventory verbatim with exactly one change: replace 'box 46' with "
               "'box forty-six'.")
-    expected_edit = text.replace("box 46", "box forty-six")
+    target = "box 46 storing"  # the whole number: a bare "box 46" also matches box 460-469 at 52+ lines
+    expected_edit = text.replace(target, "box forty-six storing")
     # Self-check: the edit text differs from the original in exactly one line and nowhere else.
-    assert text.count("box 46") == 1, f"inventory must contain 'box 46' exactly once, found {text.count('box 46')}"
+    assert text.count(target) == 1, f"inventory must contain {target!r} exactly once, found {text.count(target)}"
     original_lines, edited_lines = text.splitlines(), expected_edit.splitlines()
     assert len(original_lines) == len(edited_lines) == lines, (len(original_lines), len(edited_lines), lines)
     changed = [i for i, (a, b) in enumerate(zip(original_lines, edited_lines)) if a != b]
