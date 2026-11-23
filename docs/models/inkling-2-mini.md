@@ -379,6 +379,12 @@ Read by scouts from the primary repos; author numbers, not re-measured here unle
    when the port takes project-maya's newer drafter code, or #32218 lands.
 4. **Strata**: only after a gfx1100 Inkling number exists.
 5. Upstream llama.cpp: on the [triggers](#status-parked-2026-11-22-resume-triggers).
+6. **~350K on maya (2026-11-23, plan, not measured)**: FP8 KV grows 16 KiB per token (only the 8 global layer passes
+   grow), so 352,256 adds ~1.4 GiB over 262K: about 22.2 GiB for `inkling2-mini-unc` and 23.4 GiB for `-q8d`
+   (whole device, desktop included) on a 24 GiB card. Measure before adding a profile: start at 352,256 with
+   `--chunk 2048 IK2_PAGED_KV=1`, read `resident: every expert in VRAM` and the free VRAM, run a retrieval check near
+   the end of the window and decode at 262K/340K. Then raise `LOCAL_262K_CONTEXT`'s check in `check-sync.py`
+   and omp's `contextWindow`; omp already compacts the local model at a fixed 210K (`DECISIONS.md`, 2026-11-23).
 
 ## Status: parked (2026-11-22, resume triggers)
 

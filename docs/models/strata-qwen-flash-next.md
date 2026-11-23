@@ -14,7 +14,10 @@ list and recommended settings.
   7900 XTX at 87-100 tok/s): [`strata-tuning-gfx1100.md`](strata-tuning-gfx1100.md).
 - **Role**: optional second engine on `:8080`, never the default; one of the repository's focus models with
   the 27B and Qwen4 ([`DECISIONS.md`](../DECISIONS.md), 2026-10-29).
-- **Installed but rejected on speed (2026-11-22): the abliterated SC117 IQ2_XS set on v0.2.19 + engine 0.1.65.**
+- **Not installed (2026-11-23).** The SC117 set below was measured with its dense shard on the HDD, which is not a
+  valid Strata measurement ([NVMe rule](../sop/strata.md)); its pack was removed afterwards and the GGUF set is kept
+  on the HDD until it is copied to the NVMe and measured again.
+- **Measured on the HDD (2026-11-22): the abliterated SC117 IQ2_XS set on v0.2.19 + engine 0.1.65.**
   Clone at **v0.2.19** (`c6f6427d9`), engine **0.1.65** built from the checkout, pack and `experts.bin` (35.45 GB) on
   the NVMe, no `[strata.*]` table, run config left in `~/IA/Motores/Strata/terminal/strata-iq2_xs.json`. Measured
   **5.8-12.8 tok/s decode** (short requests), **324.2 tok/s prefill and 12.8 tok/s decode at a 69.7K fill** — below

@@ -58,7 +58,8 @@ Flash-Next runs on one 24 GB card with Strata, experts streamed from host RAM/SS
 quants upstream. On this 32 GiB host the experts did not all fit, so our last sets read them from the SSD
 at 2.6-12.8 tok/s: our numbers measure that limit, not Strata. Follow
 [Strata](https://github.com/Niko1221/Strata)'s latest release, quants and recommended settings. No set
-installed here since 2026-11-05 ([watch list](sop/upstream-watch.md),
+installed here: the 2026-11-22 SC117 run read its dense shard from the HDD, which is not a valid measurement (every
+file must be on the NVMe, [SOP](sop/strata.md)) ([watch list](sop/upstream-watch.md),
 [history](models/strata-qwen-flash-next.md#current-state-2026-11-05)).
 
 ## Headline numbers

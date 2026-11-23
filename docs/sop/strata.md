@@ -4,9 +4,11 @@ Run [Strata](https://github.com/Niko1221/Strata) with a Qwen3.8-Flash-Next GGUF 
 llama.cpp setups, on the same port. Strata runs this MoE model on one 24 GB card by streaming experts from host RAM
 and SSD, and upstream publishes many quants plus its own recommended settings: start from its latest
 [release](https://github.com/Niko1221/Strata/releases) and quant list before installing — this folder only records
-what worked and what did not on one 32 GiB host. **State (2026-11-22): the clone is at v0.2.19 with engine 0.1.65
-built; the abliterated SC117 IQ2_XS set is installed (262K int8, mapped) and rejected on speed — 5.8-12.8 tok/s
-against the 15 tok/s floor, storage-bound.** Full record: [`../../results/20261122-strata-0219-sc117/`](../../results/20261122-strata-0219-sc117/README.md).
+what worked and what did not on one 32 GiB host. **State (2026-11-23): the clone is at v0.2.19 with engine 0.1.65
+built; no set is installed. The abliterated SC117 IQ2_XS set was installed and measured on 2026-11-22 (5.8-12.8 tok/s)
+with its dense shard on the HDD, so that number measures the HDD, not Strata; the pack was then removed and the GGUF
+set is kept on the HDD. Copy it to the NVMe (about 104 GB, see the placement rule below) before installing or
+measuring it again.** Full record: [`../../results/20261122-strata-0219-sc117/`](../../results/20261122-strata-0219-sc117/README.md).
 **Free disk is the first gate, before RAM or VRAM** (the pack alone is 36.5 GB for IQ2_XS); the rest of the steps below
 are unchanged. Background, upstream claims and measurements:
 [`../models/strata-qwen-flash-next.md`](../models/strata-qwen-flash-next.md). Settings this repo tracks:

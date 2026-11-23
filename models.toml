@@ -185,7 +185,8 @@ vram_gib = 21.6
 # `python3 scripts/strata.py apply` writes each `[strata.<model>]` table into <strata_dir>/<config> (local.toml has
 # strata_dir): keys replace the run config's, `env` is merged. `user_args` is Strata's list of hand-set engine
 # options, applied by every setup run and start on top of setup's generated `args`.
-# No Strata model is installed (2026-11-05). The Unsloth UD-IQ2_XS trial on v0.2.11 decoded at 2.6-8.2 tok/s (7.1-10.8
+# No Strata model is installed (2026-11-23; the SC117 run of 2026-11-22 read a shard from the HDD and was removed:
+# results/20261122-strata-0219-sc117/; reinstall on the NVMe per docs/sop/strata.md). The Unsloth UD-IQ2_XS trial on v0.2.11 decoded at 2.6-8.2 tok/s (7.1-10.8
 # with the squeeze arm), below the 15 tok/s floor, because its experts did not fit GPU + RAM (file tier 20.2 / 11.5 GiB,
 # 24-51 GB read from the drive per request), and every Flash-Next set was then deleted
 # (results/20261105-strata-unsloth-ud-iq2xs/). The clone and its engine stay for Qwen4; add a table back per
