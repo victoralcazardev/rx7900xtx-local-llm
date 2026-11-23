@@ -5,7 +5,7 @@ CTX=$1; P=$2; D=$((CTX-256))
 O=$(cd "$(dirname "$0")" && pwd); G=~/IA/rx7900xtx-local-llm/_tmp/maya/gsm
 M=~/IA/Modelos/Inkling-2-Mini-Uncensored-Abiray-q8dense/Inkling-2-Mini-Uncensored-IQ4_NL-q8dense.gguf
 cd ~/IA/Motores/src/maya-inkling-mini-hip-f472e94
-eval "$(.venv/bin/python -c 'import json,shlex;e=json.load(open("/home/victor/IA/rx7900xtx-local-llm/_tmp/maya/inkling2-mini-unc-q8d.maya.json"))["env"];print("\n".join(f"export {k}={shlex.quote(v)}" for k,v in e.items()))')"
+eval "$(.venv/bin/python -c 'import json,shlex;e=json.load(open(__import__("os").path.expanduser("~/IA/rx7900xtx-local-llm/_tmp/maya/inkling2-mini-unc-q8d.maya.json")))["env"];print("\n".join(f"export {k}={shlex.quote(v)}" for k,v in e.items()))')"
 needle() { .venv/bin/python tests/ik2_retrieval.py --tokenizer ik2/tokenizer --data $G/gsm8k-test.jsonl --depths $D --percent "$1" --direct-answer --max-tokens 200 "${@:2}"; }
 VR=$(ls /sys/class/drm/card*/device/mem_info_vram_used | head -1)
 ( while sleep 2; do echo "$(date +%s) $(cat $VR)"; done ) > $O/vram-$CTX-$P.txt &

@@ -384,7 +384,7 @@ Read by scouts from the primary repos; author numbers, not re-measured here unle
    (whole device, desktop included) on a 24 GiB card. Measure before adding a profile: start at 352,256 with
    `--chunk 2048 IK2_PAGED_KV=1`, read `resident: every expert in VRAM` and the free VRAM, run a retrieval check near
    the end of the window and decode at 262K/340K. Then raise `LOCAL_262K_CONTEXT`'s check in `check-sync.py`
-   and omp's `contextWindow`; omp already compacts the local model at a fixed 210K (`DECISIONS.md`, 2026-11-23).
+   and omp's `contextWindow`. Done the same day: omp advertises 315,392 and compacts the local model at 75% (`DECISIONS.md`).
 
 ## Status: parked (2026-11-22, resume triggers)
 

@@ -15,7 +15,7 @@ Goal: the largest context that keeps about 1.5 GiB of the 24 GiB card free, for 
 |---|---|---|---|---|---|
 | 352,256 | 50% | exact | 328.6 s | 23,577 MiB | 983 MiB |
 | 315,392 | 5% | exact | 271.2 s | 22,874 MiB | 1,686 MiB |
-| 315,392 | 50% | see below | | | |
+| 315,392 | 50% | exact | 271.7 s | 22,874 MiB | 1,686 MiB |
 
 Decision: 315,392 (`315k-maya`, the launcher default); 352,256 leaves about 1.0 GiB, under the 1.5 GiB target.
-Not measured: decode speed at 300K+, the 95% depth, and any task quality beyond literal retrieval.
+Not measured: decode speed at 300K+, the 95% depth (the run was cut by the scheduled shutdown), and any task quality beyond literal retrieval.
