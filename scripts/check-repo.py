@@ -1,4 +1,5 @@
-"""Checks every tracked file before pushing this public repo: broken relative Markdown links,
+"""Checks every tracked file before pushing this public repo: broken relative Markdown links
+(including links to git-ignored files, which exist only locally),
 oversized files, personal absolute paths, secret-looking strings and Spanish-language leftovers.
 
 Runs over `git ls-files` (only tracked files -- nothing git-ignored is scanned). Stdlib only,
@@ -95,6 +96,22 @@ def tracked_files() -> list[pathlib.Path]:
         ["git", "ls-files", "-z"], cwd=REPO, capture_output=True, text=True, check=True
     )
     return [REPO / p for p in out.stdout.split("\0") if p]
+
+
+_ignored_cache: set[pathlib.Path] | None = None
+
+
+def ignored_paths() -> set[pathlib.Path]:
+    """Untracked paths .gitignore keeps out of the repo (ignored dirs collapsed to the dir).
+    They exist on disk here but never on GitHub, so a link to them passes locally and fails CI."""
+    global _ignored_cache
+    if _ignored_cache is None:
+        out = subprocess.run(
+            ["git", "ls-files", "-z", "-o", "-i", "--exclude-standard", "--directory"],
+            cwd=REPO, capture_output=True, text=True, check=True,
+        )
+        _ignored_cache = {(REPO / p.rstrip("/")).resolve() for p in out.stdout.split("\0") if p}
+    return _ignored_cache
 
 
 def strip_markdown_code(text: str) -> str:
@@ -215,6 +232,12 @@ def check_links(path: pathlib.Path, rel: str, text: str, problems: dict[str, lis
         target_path = (path.parent / file_part).resolve()
         if not target_path.exists():
             problems.setdefault(rel, []).append(f"line {lineno}: broken link -> {target}")
+            continue
+        ignored = ignored_paths()
+        if target_path in ignored or any(parent in ignored for parent in target_path.parents):
+            problems.setdefault(rel, []).append(
+                f"line {lineno}: broken link -> {target} (git-ignored, absent on GitHub)"
+            )
             continue
         if anchor and target_path.suffix == ".md" and anchor not in heading_slugs(target_path):
             problems.setdefault(rel, []).append(

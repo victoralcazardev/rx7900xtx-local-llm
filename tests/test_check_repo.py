@@ -222,5 +222,38 @@ class TestTrackedFiles(unittest.TestCase):
                 self.assertIn("personal path", report)
                 self.assertIn("looks like a", report)
 
+
+class TestCheckLinksIgnored(unittest.TestCase):
+    """A link to a file that exists only locally because .gitignore keeps it out of the repo
+    is broken on GitHub; CI caught two such links (results/20261122-strata-0219-sc117) that
+    the local run passed."""
+
+    def run_links(self, ignored):
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            (root / "raw").mkdir()
+            (root / "raw" / "engine.log").write_text("log\n")
+            (root / "raw" / "bench.jsonl").write_text("{}\n")
+            doc = root / "README.md"
+            text = "[log](raw/engine.log) and [bench](raw/bench.jsonl)\n"
+            doc.write_text(text)
+            problems: dict[str, list[str]] = {}
+            with mock.patch.object(check_repo, "ignored_paths",
+                                   return_value={(root / p).resolve() for p in ignored}):
+                check_repo.check_links(doc, "README.md", text, problems)
+            return problems
+
+    def test_link_to_ignored_file_is_broken(self):
+        problems = self.run_links({"raw/engine.log"})
+        self.assertEqual(problems, {"README.md": ["line 1: broken link -> raw/engine.log (git-ignored, absent on GitHub)"]})
+
+    def test_link_into_ignored_directory_is_broken(self):
+        problems = self.run_links({"raw"})
+        self.assertEqual(len(problems["README.md"]), 2)
+
+    def test_link_to_tracked_file_still_passes(self):
+        self.assertEqual(self.run_links(set()), {})
+
 if __name__ == "__main__":
     unittest.main()

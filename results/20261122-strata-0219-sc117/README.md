@@ -122,10 +122,10 @@ cp <hdd>/…-00002-of-00002.gguf ~/IA/Modelos/…-SC117/    # PLE shard on the N
 STRATA_DIR=~/IA/Motores/Strata/engine python3 strata_bench.py --out <file.jsonl> 2 65536   # after 2 shorts
 ```
 
-Logs: [`raw/setup-sc117-mmap.log`](raw/setup-sc117-mmap.log) (the install that worked),
+Logs: `raw/setup-sc117-mmap.log` (the install that worked; local only, `*.log` is git-ignored),
 [`raw/bench-0219-sc117.jsonl`](raw/bench-0219-sc117.jsonl) (session 1, engine death),
 [`raw/bench-0219-sc117-pin.jsonl`](raw/bench-0219-sc117-pin.jsonl) (session 2, 4 requests),
-[`raw/engine-0219-sc117.log`](raw/engine-0219-sc117.log) (engine start, plan, per-request file-tier I/O),
+`raw/engine-0219-sc117.log` (engine start, plan, per-request file-tier I/O; local only),
 [`raw/plan-and-io.txt`](raw/plan-and-io.txt), [`raw/strata-iq2_xs.json`](raw/strata-iq2_xs.json),
 [`raw/run-iq2_xs.sh`](raw/run-iq2_xs.sh), plus the session-1 files (`setup-sc117-attempt.log`,
 `setup-sc117-all-in-ram.log`, `engine-0.1.65-probe.log`, `disk-before.txt`, `disk-after.txt`).
