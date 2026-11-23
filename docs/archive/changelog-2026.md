@@ -1,6 +1,6 @@
 # Changelog archive (2026)
 
-Dated releases of [`CHANGELOG.md`](../CHANGELOG.md) from before the current cycle, moved here on 2026-11-23: the
+Dated releases of [`CHANGELOG.md`](../../CHANGELOG.md) from before the current cycle, moved here on 2026-11-23: the
 live file keeps `Unreleased` and the current month ([STYLE.md](../STYLE.md) §8). Frozen: the entries are verbatim
 from that move and are never edited again; a later change is a new entry in the live file.
 
