@@ -61,6 +61,9 @@ def retype_kind(tensor) -> str | None:
     """Return why a tensor is re-typed to Q8_0, or None to copy it unchanged."""
     if tensor.name == 'output.weight':
         return 'head'
+    # maya-ik2 rejects K-quant expert rows ("a row is not whole Q6_K blocks"), e.g. bartowski's Unbound layers 0-4
+    if '_exps' in tensor.name and tensor.tensor_type in (QType.Q4_K, QType.Q5_K, QType.Q6_K):
+        return 'kquant-experts'
     if tensor.tensor_type != QType.IQ4_NL:
         return None
     if len(tensor.shape) != 2:
@@ -174,6 +177,8 @@ def check(src_reader: gguf.GGUFReader, dst_reader: gguf.GGUFReader, retype: dict
     print(f'check: {len(retype)} tensors are Q8_0 with unchanged shapes')
 
     for name in BYTE_IDENTICAL:
+        if name in retype:  # re-typed on purpose (K-quant experts)
+            continue
         src, dst = src_by_name[name], dst_by_name[name]
         assert src.tensor_type == dst.tensor_type, \
             f'{name}: type {src.tensor_type.name} -> {dst.tensor_type.name}'

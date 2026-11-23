@@ -305,6 +305,53 @@ The OpenUncensored edit is `W' = W - s Q Q^T W` on 20 BF16 matrices; on a GGUF i
 `attn_output` tensors, apply the rank-2 delta, requantize to their original type. The tensor-name mapping
 (`attn.wo_ud` -> GGUF) and their type in the ggml-org file are not checked yet.
 
+### Hugging Face survey (2026-11-23)
+
+All `base_model:` derivatives (quantized ~300, finetune ~30, adapter 14, merge 0) plus name searches, filtered for
+files this engine can read: `maya-ik2` HIP takes IQ4_NL, Q8_0 and NVFP4 experts (NVFP4 kernels exist,
+`src/ik2/ik2_main.cu:3193`, but were only tested on generated weights, `docs/HIP-PORT.md` "NVFP4 expert WMMA on
+RDNA3"); it rejects K-quant expert rows (`a row is not whole Q6_K blocks`, measured) and has no F8_E4M3 type.
+Numbers are each publisher's own, on different harnesses (not reproduced here unless stated).
+
+| Candidate | Size | Experts | Edit and published quality | Here |
+|---|---|---|---|---|
+| Abiray IQ4_NL (OpenUncensored), ours | 13.90 GB | IQ4_NL | rank-2 on `attn.wo_ud` L4-23, s 4.0/2.5; nokeep table: useful 34.3/43.0%, refused 1.4/0.7%, KLD 0.0228 | in use (q8dense re-type) |
+| bartowski `nokeepai_Inkling-2-Mini-Unbound-IQ4_NL` (Unbound v1.0) | 16.11 GB | IQ4_NL, but `gate_up` L0 Q6_K + L1-4 Q5_K; head/attn Q8_0 (header read) | conv-aware norm-preserving, same 20 tensors, s 3; useful 51.6/62.1%, refused 0/0, KLD 0.0102 | loads only after re-typing the 5 K-quant tensors to Q8_0 (17.29 GB, 1.9 GiB free at 262K) |
+| nokeepai Unbound v2 GGUFs | 11.2-27.8 GB | K-quants / IQ3_M | v1.0 + r16 self-distill on 120 tensors; useful 78.7/83.4%, KLD 0.0318, refused 0.4/1.1% | not readable; would need a self-built IQ4_NL from BF16 (`edit.pt` published) |
+| onemunanoyo Abliterated v2 Balanced / Aggressive | 16.6-17.6 GB | Unsloth UD mix (NVFP4 + Q8_0 `down`, K-quant `gate_up`) | KLD 0.062 / 0.071 vs. its UD base, MMLU -2 to -3 pp | not readable (K-quant `gate_up`, unverified by header) |
+| IndrasMirror XQ-Uncensored | 13.93 GB | 13 layers original NVFP4, rest Q2_0/IQ3/IQ4 | Unbound v2 edit | not readable (Q2_0/IQ3) |
+| AtomicChat, dealignai, JoaoZaokk Heretic, Kujira CHiPS, SC117, KookiesXy | 13-17.6 GB | K-quant / IQ3 / Q4_0 | AtomicChat KLD 0.0078 (lowest drift, but edits experts) | not readable |
+
+Format quality (Xylolabs, one harness, KLD vs. BF16 on WikiText-2): NVFP4-XL 0.0026, NVFP4-Lite 0.0030, plain
+IQ4_NL 0.0087 (ggml-org card: 0.0095). So the IQ4_NL experts every readable uncensored file uses cost ~3x the KLD of
+the vendor-native NVFP4 bits, and no uncensored file with all-NVFP4 experts exists. Field caveat: one independent
+review (note.com/sakusakujapan, 2026-11-22) found the base model already refuses 0/30 of its prompts and that the
+OpenUncensored edit did not change usefulness; nokeep's "useful" rate is measured by a judge that also picked v2's
+training data. Best path to higher quality: an uncensored edit applied to the vendor's NVFP4 experts (no such file yet)
+or a self-built Unbound file.
+
+### Reference repos and engine updates (2026-11-23)
+
+Read by scouts from the primary repos; author numbers, not re-measured here unless stated.
+
+- **GodGMN (port author) runs our engine and preset**, with the stock ggml-org IQ4_NL (not uncensored), 393,216
+  positions and `--chunk 1024`; decode 117.11 / 107.47 / 93.70 tok/s at 512 / 8K / 32K (`docs/HIP-PORT.md`, commit
+  `9a0f164`). No power cap is documented, so the gap to our 106.1 / 98.2 / 90.0 at 272 W is probably power
+  (unverified; a 303 W run is outside the user's cap).
+- **`IK2_SUFFIX` prompt lookup** (no drafter, verified against the model): author's copy 105 -> 271 tok/s and single
+  edit 106 -> 197 at window 64, identical final answers. Present in our build (`src/ik2/ik2_main.cu:5098`, off with
+  `--draft`, window capped at `--chunk` and 128). Measured here: [round](../../results/20261123-inkling-round/README.md).
+- **`IK2_KV=fp8-global`** (sliding layers FP16, global E4M3): author GSM8K 188/192 vs. 184/192, prefill at 512 -17%,
+  KV 6.31 vs. 6.16 GiB. Untested here.
+- **`IK2_CACHE_SLOTS=2`**: warm follow-ups 0.3 s vs. 130 s cold, but the reserved context is split (2 x 131K at 262K).
+- **DSpark on AMD**: project-maya ships it disabled on AMD (`--drafting auto` measured the drafter at -1.0, #1163);
+  open PR mw00/project-maya#1154 loads a GGUF drafter and folds the Q8_0 head in chunks (no FP16 copy), CUDA-tested
+  only. Our `hipErrorInvalidImage` is in that fold's `cublasSgemv`, so #1154 is the retest trigger.
+- **Strata v0.2.20** (`strata-inkling` 0.1.66): no IQ4_NL in its lossless list; a field report shows 52 -> 47 tok/s on
+  a 7900 XTX for another model (#6791); the gfx11 prefill/KV-snapshot work of #6685 is unmerged. Not tried.
+- **llama.cpp b12651**: #32752 (chunked mask) and #32740 (FA compact bias) open; #32218 (DSpark) has changes
+  requested; #32773 (DSpark 16 GB) works on Vulkan/RADV only. The GodGMN fork already computes the bias in-kernel.
+
 ### Ranked path
 
 1. **`maya-ik2` HIP port: done (2026-11-22)**, on Abiray IQ4_NL with our ROCm 10 build (no container needed).

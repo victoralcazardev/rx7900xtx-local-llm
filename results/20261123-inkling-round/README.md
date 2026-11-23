@@ -86,3 +86,39 @@ python3 scripts/launch.py inkling2-mini-unc-q8d --profile 262k-maya
 - llama.cpp b12651: the two changes that matter (#32752 chunked mask, #32740 FA compact bias) are still open PRs.
 - Side-request state keeping: alesha-pro `IK2_SLOT_KEEP` (merged 2026-11-23) does not merge cleanly into the HIP
   port (conflicts in 6 files); the port's `IK2_CACHE_SLOTS` divides the reserved context evenly (2 x 131K at 262K).
+
+## Candidate: bartowski `nokeepai_Inkling-2-Mini-Unbound-IQ4_NL` (not adopted)
+
+The best-rated uncensored file the engine can almost read (Hugging Face survey in
+[`inkling-2-mini.md`](../../docs/models/inkling-2-mini.md#hugging-face-survey-2026-11-23)): Unbound v1.0 edit, head and
+attention already Q8_0. File 16.11 GB, sha256 `06a81628ae3dea0e5b2275adf770d86d620f488bc31578addf7da132f42a7215`.
+
+- As published it does not load: `maya-ik2: blk.0.ffn_gate_up_exps.weight: a row is not whole Q6_K blocks`
+  (`gate_up` of layers 0-4 are Q6_K / Q5_K). `retype_q8.py` now also re-types K-quant expert tensors to Q8_0:
+  17,293,833,632 bytes, sha256 `420b084a69993955c566620091eb15d0b00ba3dfca2caccc8c60d73c2ae078c8`; experts 14.4 GiB,
+  **1,886 MiB free before graph capture** at 262K (our q8dense: 3,498).
+- Same bench, medians: decode 103.5 / 96.8 / 89.5 / 68.6 tok/s at 512 / 8K / 32K / 128K (q8dense 106.1 / 98.2 / 90.0 /
+  68.9); prefill 1,454 / 3,090 / 2,295 / 1,206, with 128K repeats at 1,206 / 622 / 1,771 (q8dense 1,929, stable).
+- GSM8K greedy: 93/96 (0-95) + 92/96 (96-191) = **185/192** (Abiray 188, q8dense 187).
+- Verdict: no better on anything this repo measures, and prefill at depth is slower and unstable with little VRAM
+  margin. Its advantage (useful answers 51.6/62.1% vs. 34.3/43.0%) is the publisher's own judge, not reproduced here.
+  File kept on disk until the user decides.
+
+## `IK2_SUFFIX` prompt lookup (q8dense, partial: prose regression not measured)
+
+The engine proposes a continuation from the request's own tokens and verifies it with the target model (no drafter).
+`raw/suffix-run.sh`: the port's `tests/ik2_copy_edit.py --direct-answer --repeats 3` (inventory copy and single edit;
+`--workload python` renames one function and returns the whole file), production env, `--ctx 262144 --chunk 2048`,
+q8dense file, greedy. Every answer was exact at every window. Median decode tok/s (all rows:
+`raw/suffix-scores.jsonl`):
+
+| Window | Inventory copy | Inventory edit | Python rename |
+|---:|---:|---:|---:|
+| 0 (off) | 104.35 | 104.19 | 103.55 |
+| 64 | 605.84 | 463.75 | 469.75 |
+| 128 (cap) | **849.42** | **533.46** | **501.13** |
+
+Window 128 left 3,310 MiB free before graph capture at 262K (3,498 without). Not yet measured (bench stopped at
+session close): decode on novel text with the window on, greedy and temperature 1.0, and the window through
+`serve/server.py`. Next: `IK2_SUFFIX=128 bench_m.sh ... 512,8192,32768,131072 3` with and without
+`--temperature 1.0`, then an HTTP copy/edit request; wire into `262k-maya` only if prose decode stays within noise.
