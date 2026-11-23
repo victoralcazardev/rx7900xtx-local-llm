@@ -167,23 +167,19 @@ before it). Its logic, so it can be rebuilt:
 ```bash
 qwen-flash stop
 python3 scripts/strata.py status            # how far behind; skip the update if 0 commits
-python3 scripts/strata.py update            # backup, ./update.sh, re-apply models.toml, print config changes
+python3 scripts/strata.py update            # backup, ./setup.sh --update, re-apply models.toml, print config changes
 qwen-flash && curl -s localhost:8080/v1/models
 ```
 
-**v0.2.19 changed this (2026-11-22).** `update.sh` was deleted and the tree moved into `terminal/`; the supported
-command is `cd <strata_dir> && ./setup.sh --update` (pull, engine install or compile, Python packages, saved
-settings). `scripts/strata.py update` still calls `./update.sh`, so on v0.2.19 it can only do the pull it wraps:
-it works once, when the old `update.sh` is still in the tree, and fails after that — use `setup.sh --update` until
-the script learns the new entry point. v0.2.18/v0.2.19 have no `docs/release-notes-*.md`, so read their notes on the
-GitHub release page. Once the clone is on v0.2.19, point `local.toml`'s `strata_dir` at `<strata_dir>/terminal`:
-that is where `strata-*.json`, `run-*.sh`, `engine/` and `serve/server.py` now live. Both are open follow-ups (not
-fixed 2026-11-22): `scripts/strata.py update` still calls the removed `./update.sh`, and this machine's
-`local.linux.toml` still points `strata_dir` at the clone root.
+**v0.2.19 layout (2026-11-22).** `update.sh` was deleted and the runnable tree moved into `terminal/`
+(`strata-*.json`, `run-*.sh`, `engine/`, `serve/server.py`). `local.toml`'s `strata_dir` stays the clone root (the
+git checkout); `scripts/strata.py` reads and writes the run configs in `terminal/` when the clone has it, and
+`update` runs `./setup.sh --update` (pull, engine install or compile, Python packages, saved settings). v0.2.18 and
+v0.2.19 have no `docs/release-notes-*.md`, so read their notes on the GitHub release page.
 
-`update` refuses while Strata runs, backs up every `strata-*.json` and `run-*.sh`, runs `./update.sh` (git pull
-+ engine rebuild when its source changed; model files untouched), prints what the update changed in each run
-config, then re-applies `models.toml`. Arguments after `--` go to `update.sh`.
+`update` refuses while Strata runs or when the clone's git revision cannot be read, backs up every `strata-*.json`
+and `run-*.sh`, runs `./setup.sh --update` (model files untouched), prints what the update changed in each run
+config, then re-applies `models.toml`. Arguments after `--` go to `setup.sh`.
 
 After an update, before trusting it:
 

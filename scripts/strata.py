@@ -1,6 +1,7 @@
 """Keeps a Strata install (docs/sop/strata.md) on the settings tracked in models.toml across Strata updates.
 
-Strata is not llama-server: it has its own clone, setup and run config (`<strata_dir>/strata-<model>.json`).
+Strata is not llama-server: it has its own clone, setup and run config (`<strata_dir>/terminal/strata-<model>.json`
+since v0.2.19, `<strata_dir>/strata-<model>.json` before).
 `models.toml` holds this repo's settings for each installed Strata model in a `[strata.<model>]` table;
 `local.toml` holds `strata_dir`. Each key of the table except `config` replaces the same key of the run config,
 except `env`, which is merged (setup writes its own env keys). `user_args` is Strata's own list of hand-set
@@ -8,7 +9,7 @@ engine options, re-applied by every setup run and start on top of the generated 
 
   python3 scripts/strata.py status            # local vs. upstream version, settings drift
   python3 scripts/strata.py apply [--dry-run] # write the tracked settings into the run configs
-  python3 scripts/strata.py update [-- ARGS]  # back up configs, ./update.sh ARGS, apply, show what changed
+  python3 scripts/strata.py update [-- ARGS]  # back up configs, ./setup.sh --update ARGS, apply, show what changed
 
 Exit: 0 = OK (status: no drift), 1 = drift or failure, 2 = configuration error or Strata running.
 """
@@ -71,9 +72,15 @@ def git(strata: pathlib.Path, *args: str) -> str:
     return subprocess.run(["git", "-C", str(strata), *args], capture_output=True, text=True).stdout.strip()
 
 
+def work_dir(strata: pathlib.Path) -> pathlib.Path:
+    """Where setup writes the run configs and the server lives: terminal/ since v0.2.19, the clone root before."""
+    terminal = strata / "terminal"
+    return terminal if (terminal / "setup.py").is_file() else strata
+
+
 def running(strata: pathlib.Path) -> bool:
     # setup writes the resolved clone path into its launcher; pgrep -f takes a regex
-    return subprocess.run(["pgrep", "-f", re.escape(str(strata / "serve" / "server.py"))],
+    return subprocess.run(["pgrep", "-f", re.escape(str(work_dir(strata) / "serve" / "server.py"))],
                           capture_output=True).returncode == 0
 
 
@@ -81,7 +88,7 @@ def apply_all(strata: pathlib.Path, tables: dict, dry_run: bool) -> tuple[int, i
     """Applies every table; returns (configs that differed, configs missing). A missing config is not created."""
     differed = missing = 0
     for name, tracked in tables.items():
-        path = strata / tracked["config"]
+        path = work_dir(strata) / tracked["config"]
         if not path.is_file():
             print(f"[strata.{name}] {path} does not exist: install the model with setup first (docs/sop/strata.md)")
             missing += 1
@@ -115,20 +122,24 @@ def cmd_update(strata: pathlib.Path, tables: dict, extra: list[str]) -> int:
         print("Strata is running: stop it first (qwen-flash stop).")
         return 2
     before, before_rev = git(strata, "describe", "--tags"), git(strata, "rev-parse", "HEAD")
+    if not before_rev:
+        print(f"could not read the clone's git revision in {strata}: is it a git clone?")
+        return 2
     backup = strata.parent / "strata-backups" / f"{before}-{time.strftime('%Y%m%d-%H%M%S')}"
     backup.mkdir(parents=True)
-    configs = sorted(strata.glob("strata-*.json")) + sorted(strata.glob("run-*.sh"))
+    work = work_dir(strata)
+    configs = sorted(work.glob("strata-*.json")) + sorted(work.glob("run-*.sh"))
     for f in configs:
         shutil.copy2(f, backup / f.name)
     print(f"backed up {len(configs)} file(s) to {backup}")
-    if subprocess.run(["./update.sh", *extra], cwd=strata).returncode != 0:
-        print(f"./update.sh failed; configs are unchanged or restorable from {backup}")
+    if subprocess.run(["./setup.sh", "--update", *extra], cwd=strata).returncode != 0:
+        print(f"./setup.sh --update failed; configs are unchanged or restorable from {backup}")
         return 1
     print(f"\n{before} -> {git(strata, 'describe', '--tags')}")
     notes = git(strata, "diff", "--name-only", before_rev, "HEAD", "--", "docs/release-notes-*.md")
     print("release notes to read:" + ("".join(f"\n  {strata / n}" for n in notes.splitlines()) or " none"))
     for f in sorted(backup.glob("strata-*.json")):
-        now = strata / f.name
+        now = work_dir(strata) / f.name
         if now.is_file():
             diff = changes(json.loads(f.read_text()), json.loads(now.read_text()))
             print(f"{f.name} changed by the update: " + ("nothing" if not diff else ""))
@@ -147,7 +158,7 @@ def main() -> int:
     sub.add_parser("status", help="versions, server state, settings drift")
     p = sub.add_parser("apply", help="write the models.toml [strata.*] settings into the run configs")
     p.add_argument("--dry-run", action="store_true")
-    p = sub.add_parser("update", help="back up, ./update.sh, apply; arguments after -- go to update.sh")
+    p = sub.add_parser("update", help="back up, ./setup.sh --update, apply; arguments after -- go to setup.sh")
     p.add_argument("extra", nargs=argparse.REMAINDER)
     a = ap.parse_args()
     try:
@@ -155,7 +166,7 @@ def main() -> int:
     except ManifestError as e:
         print(f"error: {e}", file=sys.stderr)
         return 2
-    if not (strata / "update.sh").is_file():
+    if not (strata / "setup.sh").is_file():
         print(f"error: {strata} is not a Strata clone", file=sys.stderr)
         return 2
     if a.cmd == "status":

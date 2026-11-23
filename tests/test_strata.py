@@ -9,6 +9,7 @@ import shutil
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
@@ -92,6 +93,39 @@ class LoadSettingsTest(unittest.TestCase):
         _, tables = strata.load_settings(REPO_ROOT / "models.toml", local)
         for name, table in tables.items():
             self.assertIn("config", table, name)
+
+
+class LayoutTest(unittest.TestCase):
+    """v0.2.19 moved the runnable tree into terminal/ and replaced update.sh with setup.sh --update."""
+
+    def setUp(self):
+        self.dir = pathlib.Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.dir)
+
+    def test_run_configs_live_in_terminal_when_the_clone_has_it(self):
+        self.assertEqual(strata.work_dir(self.dir), self.dir)
+        (self.dir / "terminal").mkdir()
+        (self.dir / "terminal" / "setup.py").write_text("")
+        self.assertEqual(strata.work_dir(self.dir), self.dir / "terminal")
+
+    def test_update_runs_setup_update_and_refuses_without_a_git_revision(self):
+        calls = []
+        def fake_run(cmd, **kw):
+            calls.append(cmd)
+            return mock.Mock(returncode=1, stdout="")
+        with mock.patch.object(strata, "running", return_value=False), \
+             mock.patch.object(strata, "git", return_value=""), \
+             mock.patch.object(strata.subprocess, "run", side_effect=fake_run), \
+             contextlib.redirect_stdout(io.StringIO()) as out:
+            self.assertEqual(strata.cmd_update(self.dir, {}, []), 2)
+        self.assertEqual(calls, [])
+        self.assertIn("could not read the clone's git revision", out.getvalue())
+        with mock.patch.object(strata, "running", return_value=False), \
+             mock.patch.object(strata, "git", return_value="abc"), \
+             mock.patch.object(strata.subprocess, "run", side_effect=fake_run), \
+             contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(strata.cmd_update(self.dir, {}, ["--yes"]), 1)
+        self.assertEqual(calls, [["./setup.sh", "--update", "--yes"]])
 
 
 if __name__ == "__main__":
