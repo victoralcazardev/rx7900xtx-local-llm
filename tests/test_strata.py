@@ -109,6 +109,8 @@ class LayoutTest(unittest.TestCase):
         self.assertEqual(strata.work_dir(self.dir), self.dir / "terminal")
 
     def test_update_runs_setup_update_and_refuses_without_a_git_revision(self):
+        clone = self.dir / "clone"   # update writes its backups into the clone's parent
+        clone.mkdir()
         calls = []
         def fake_run(cmd, **kw):
             calls.append(cmd)
@@ -117,14 +119,15 @@ class LayoutTest(unittest.TestCase):
              mock.patch.object(strata, "git", return_value=""), \
              mock.patch.object(strata.subprocess, "run", side_effect=fake_run), \
              contextlib.redirect_stdout(io.StringIO()) as out:
-            self.assertEqual(strata.cmd_update(self.dir, {}, []), 2)
+            self.assertEqual(strata.cmd_update(clone, {}, []), 2)
         self.assertEqual(calls, [])
         self.assertIn("could not read the clone's git revision", out.getvalue())
         with mock.patch.object(strata, "running", return_value=False), \
              mock.patch.object(strata, "git", return_value="abc"), \
              mock.patch.object(strata.subprocess, "run", side_effect=fake_run), \
              contextlib.redirect_stdout(io.StringIO()):
-            self.assertEqual(strata.cmd_update(self.dir, {}, ["--yes"]), 1)
+            self.assertEqual(strata.cmd_update(clone, {}, ["--yes"]), 1)
+        self.assertTrue((self.dir / "strata-backups").is_dir())   # backups stay next to the clone
         self.assertEqual(calls, [["./setup.sh", "--update", "--yes"]])
 
 
