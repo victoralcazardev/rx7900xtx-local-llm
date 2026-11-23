@@ -104,6 +104,25 @@ class TestLauncherAndSmoke(unittest.TestCase):
             self.assertEqual(smoke.main(), 2)
         self.assertIn("could not detect running model servers", output.getvalue())
 
+    def test_smoke_aborts_when_the_port_is_already_served(self):
+        model = object()
+        profile = {"context": 131072}
+        m = mock.Mock(allow_low_context=False, default_port=8080)
+        output = io.StringIO()
+        with mock.patch.object(sys, "argv", ["smoke.py", "demo"]), \
+             mock.patch.object(smoke, "load", return_value=m), \
+             mock.patch.object(smoke, "resolve", return_value=(model, "default", profile)), \
+             mock.patch.object(smoke, "backend_for", return_value="vulkan"), \
+             mock.patch.object(smoke, "validate"), \
+             mock.patch.object(smoke, "server_command", return_value=(["server"], pathlib.Path("."))), \
+             mock.patch.object(smoke, "running_servers", return_value=[]), \
+             mock.patch.object(smoke, "port_in_use", return_value=True), \
+             mock.patch.object(smoke.subprocess, "Popen") as popen, \
+             contextlib.redirect_stdout(output):
+            self.assertEqual(smoke.main(), 2)
+        popen.assert_not_called()
+        self.assertIn("port 8080 is already in use", output.getvalue())
+
 
 
 class TestStopAndWait(unittest.TestCase):

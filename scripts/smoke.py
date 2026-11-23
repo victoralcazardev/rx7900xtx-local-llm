@@ -24,7 +24,7 @@ import urllib.request
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from manifest import (  # noqa: E402
     REPO, ManifestError, backend_for, load, server_command, resolve,
-    running_servers, validate,
+    port_in_use, running_servers, validate,
 )
 
 LOAD_WAIT_S = 600  # 10-17 GB from disk, on an engine not yet benchmarked
@@ -98,6 +98,9 @@ def main() -> int:
         return 2
     if alive:
         print(f"ABORTED: a model server (llama-server or maya-ik2) is already alive (PID {alive}). Stop it first.")
+        return 2
+    if port_in_use(m.default_port):
+        print(f"ABORTED: port {m.default_port} is already in use by another server. Stop it first.")
         return 2
 
     print(f">> {args.alias}/{profile_name} (:{m.default_port}, backend={backend}) ...")

@@ -50,6 +50,17 @@ class TestGgufInfoErrors(unittest.TestCase):
                 self.assertFalse(gguf_info.describe(path))
             self.assertIn("python3 -m pip install gguf", output.getvalue())
 
+    def test_mmproj_file_counts_as_success(self):
+        field = mock.Mock(contents=mock.Mock(return_value="mmproj"))
+        field.name = "general.type"
+        fake_gguf = mock.Mock(GGUFReader=mock.Mock(return_value=mock.Mock(fields={"t": field})))
+        with tempfile.TemporaryDirectory() as tmp:
+            path = pathlib.Path(tmp) / "mmproj.gguf"
+            path.write_bytes(b"x")
+            with mock.patch.dict(sys.modules, {"gguf": fake_gguf}), \
+                 contextlib.redirect_stdout(io.StringIO()):
+                self.assertTrue(gguf_info.describe(path))
+
 
 if __name__ == "__main__":
     unittest.main()

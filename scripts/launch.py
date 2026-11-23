@@ -34,7 +34,7 @@ import urllib.request
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from manifest import (  # noqa: E402
     IS_WINDOWS, REPO, ManifestError, backend_for, build_argv, load,
-    harness_entry, resolve, running_servers, server_command, validate, free_vram_gib,
+    harness_entry, port_in_use, resolve, running_servers, server_command, validate, free_vram_gib,
 )
 
 VRAM_MARGIN_GIB = 0.5  # over the profile's measured `vram_gib` (peak with a full context)
@@ -193,6 +193,10 @@ def main() -> int:
     if alive:
         print(f"ERROR: a model server (llama-server or maya-ik2) is already running (PID {alive}). "
               "Stop it first.",
+              file=sys.stderr)
+        return 1
+    if port_in_use(m.default_port):
+        print(f"ERROR: port {m.default_port} is already in use by another server. Stop it first.",
               file=sys.stderr)
         return 1
 

@@ -64,7 +64,7 @@ def describe(path: pathlib.Path) -> bool:
             mods.append("AUDIO")
         print(f"  >>> This is an MMPROJ (projector), NOT a model. Modalities: {', '.join(mods) or '?'}")
         print("      Pass it with --mmproj ALONGSIDE the main model.")
-        return
+        return True
 
     n_layer = kv.get(f"{arch}.block_count")
     ctx = kv.get(f"{arch}.context_length")

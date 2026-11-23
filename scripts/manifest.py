@@ -20,6 +20,7 @@ import json
 import os
 import pathlib
 import platform
+import socket
 import subprocess
 import tomllib
 from dataclasses import dataclass
@@ -399,3 +400,15 @@ def running_servers() -> list[int] | None:
         return [int(p) for p in out.stdout.split()]
     except (OSError, ValueError, subprocess.SubprocessError):
         return None
+
+
+def port_in_use(port: int) -> bool:
+    """True if something already accepts connections on 127.0.0.1:<port>.
+
+    Catches servers that running_servers() cannot name (Strata, maya's Python server).
+    """
+    try:
+        with socket.create_connection(("127.0.0.1", port), timeout=1):
+            return True
+    except OSError:
+        return False
