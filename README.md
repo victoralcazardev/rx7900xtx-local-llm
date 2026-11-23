@@ -25,6 +25,7 @@ number reproducible. Not a multi-GPU, NVIDIA/CUDA, vLLM/Ollama or harness-wiring
 |---|---|---|---|
 | Qwen3.8-27B GSQ-RCO `IQ3_S-mtp` | llama.cpp `hip-kvmix` (ROCm) | **Default**, numbers below | [`STATUS.md`](docs/STATUS.md) |
 | Qwen3.8-Flash-Next (no set installed since 2026-11-05) | Strata v0.2.11 (engine 0.1.57) | Optional second engine, paused: its last set, UD-IQ2_XS, decoded below 15 tok/s because of host RAM | [`strata-qwen-flash-next.md`](docs/models/strata-qwen-flash-next.md#current-state-2026-11-05) |
+| Inkling-2-Mini uncensored (Abiray IQ4_NL, head and attention re-typed to Q8_0) | `maya-ik2` HIP port (GodGMN `hip-port` `f472e94`) | Opt-in: 106 / 90 / 69 tok/s at 512 / 32K / 128K, GSM8K 187/192, tool calls | [`inkling-2-mini.md`](docs/models/inkling-2-mini.md) |
 | Qwen4 | — | Planned when released; 27B tuning paused until then | [`DECISIONS.md`](docs/DECISIONS.md) |
 
 Only one engine serves `:8080` at a time; each needs nearly all of the 24 GB.

@@ -9,7 +9,7 @@ model list. Skip it for changes that touch none of those.
 | Surface | Must match | Check |
 |---|---|---|
 | Repo description (About) | README "Models" and "Default profile" tables (speed, recall, engine, power) | `gh repo view --json description --jq .description` |
-| Repo topics | Hardware, engines and techniques actually used | `gh repo view --json repositoryTopics` |
+| Repo topics | Hardware, engines, models and techniques actually used | `gh repo view --json repositoryTopics` |
 | README "Models", "Default profile" and "Tested setup" | `docs/STATUS.md`, plus the Strata owner doc for its row | Compare the tables line by line |
 | Latest release | Engine pinned in STATUS and `docs/ENGINES.md` | `gh release list -L 3` |
 | `CHANGELOG.md` | One line per user-visible change | `git log --oneline` since the last entry |
@@ -18,8 +18,10 @@ model list. Skip it for changes that touch none of those.
 
 1. Read the README "Models" and "Default profile" tables and `docs/STATUS.md` headline numbers.
    They are the source.
-2. Rewrite the About text so every number in it appears in those tables. Pattern:
-   `262K-context local LLMs on one RX 7900 XTX: Qwen3.8-27B on llama.cpp ROCm (<tok/s> at 240K fill, <recall> recall), <other engines>. Configs, launcher, benchmarks.`
+2. Rewrite the About text so every number in it appears in those tables. The repository covers several models and
+   engines and keeps growing, so the text names the card and the setups in use, not one model. Pattern:
+   `262K-context local LLMs on one RX 7900 XTX (gfx1100, 272 W): <model> on <engine> (<headline numbers>), <model> on <engine> (<numbers>). Configs, launcher, benchmarks.`
+   GitHub caps the description at 350 characters.
    `gh repo edit --description "<text>"`
 3. Upstream contributions are not listed in the README; record them in `CHANGELOG.md` only.
 4. Confirm the release tagged `Latest` is the engine named in STATUS. If the engine changed,
