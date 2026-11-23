@@ -257,3 +257,133 @@ Ranked by expected gain per effort for this setup. Scout claims are leads until 
 Ruled out: per-arch Tensile folder (flat here), iGPU masking (none), the project-maya #1173 resident-path issue
 (resident path confirmed), `HIP_FORCE_DEV_KERNARG` (already the default), `GPU_MAX_HW_QUEUES` > 4 (documented as
 unpredictable), `IK2_BATCH_PREFILL` changes (AMD builds use their own batched path), DSpark until #1154 or a HIP fix.
+
+## Round 3 (2026-11-23, evening): `hip-port` `f472e94`, DSpark loads, `IK2_KV=fp4-global`
+
+Plan and log: `odd/tasks/inkling-round3-2026-11-23.md` (local only). Same machine, 272 W cap, q8dense file
+(`inkling2-mini-unc-q8d`), production env (`ik2-abiray-paged.json`) unless a section says otherwise. Bench rows:
+`raw/bench.jsonl`, variants `r3-*`; GSM8K per question: `raw/gsm8k-r3-{N,ND,N4}-{0,96}.jsonl` (N new binary,
+ND with the drafter, N4 fp4-global); medians of 3 repeats.
+
+### New engine build: `hip-port` `f472e94` (equal speed and quality, better loop guard)
+
+**Build.** `git fetch` showed `hip-port` at `f472e94` (2026-11-23 15:50Z, 35 commits after production `2b31ffeaa`;
+`4f2b2ff` was the head at round 2). Built as a separate worktree, production binary untouched:
+
+```bash
+git -C maya-inkling-mini-hip worktree add --detach ../maya-inkling-mini-hip-f472e94 f472e94
+# + the production checkout's local diff (549d734 tool-call parser, %% retrieval fix), ik2/ tokenizer, .venv link, preset json
+cmake -S maya-inkling-mini-hip-f472e94 -B maya-inkling-mini-hip-f472e94/build-ik2 <the flags in docs/ENGINES.md>
+cmake --build maya-inkling-mini-hip-f472e94/build-ik2 -j14 --target maya-ik2 ik2_kernels_test ik2_host_ref_test
+```
+
+45 s, no errors; `maya-ik2` sha256 `a064a1e059191d8ff8cafd9d9cc0354a3fa784fc55529d69d1b946d7649e92f0`;
+`ik2_kernels_test` all passed (37 s). `maya-ik2` has no `--help` ("unknown argument --help"), so the flags were
+checked in the source: every CLI flag the scripts pass and every `IK2_*` variable of the preset is still read, no
+default changed in the diff, one new variable (`IK2_CAPTURE_PREFILL_RESIDUALS`). The port's preset
+(`docs/inkling2-mini/ik2-mini-gfx1100.json`) and `CMakeLists.txt` did not change. `raw/bench_m.sh` and
+`raw/gsm8k-pair.sh` now take `ENGINE=<binary>` (default: the production build), so both builds run with the same
+tools, request streams and env.
+
+**A/B, interleaved** (2026-11-23 16:09-16:36 UTC), `ENGINE=<new> MODEL=<q8dense> raw/bench_m.sh r3-new-g 2048 262144
+512,8192,32768,131072 3 [--temperature 1.0]` between two production-binary controls:
+
+| Decode, tok/s | old (a) | **new** | old (b) | old t=1 (a) | **new t=1** | old t=1 (b) |
+|---:|---:|---:|---:|---:|---:|---:|
+| 512 | 106.49 | **105.87** | 105.79 | 105.18 | **105.09** | 105.09 |
+| 8,192 | 97.71 | **96.82** | 97.49 | 96.53 | **96.60** | 96.60 |
+| 32,768 | 89.57 | **89.89** | 89.89 | 89.20 | **89.14** | 89.01 |
+| 131,072 | 68.93 | **68.34** | 68.82 | 68.45 | **68.16** | 68.34 |
+
+Prefill (new greedy) 2,370 / 3,432 / 2,985 / 1,927 tok/s vs. controls 2,317-2,349 / 3,425-3,428 / 2,854-2,991 /
+1,914-1,927. 3,508 MiB free before graph capture in all six runs. Greedy decode at 8K and 128K sits ~0.8% below both
+controls; at temperature 1.0 (production sampling) no difference.
+
+**Quality.** GSM8K greedy on the round's request streams (`ENGINE=<new> LABEL=N raw/gsm8k-pair.sh <q8dense> 0|96
+<abs>/gsm-0|96 96`): 94 + 93 = **187/192**, wrong {40, 93} / {100, 119, 161}: the same set as the production binary
+in round 2. Tool call over HTTP (`LOCAL_MANIFEST=<local toml pointing maya at the new worktree> launch.py
+inkling2-mini-unc-q8d --profile 262k-maya --background`, then `agent_check.py 8080 docs/models/inkling-2-mini.md`,
+15,061-token prompt, t=1.0): valid `read_file` call, second turn with 15,125 of 15,162 prompt tokens cached, correct
+answer (`raw/agent-r3-new.txt`). Device VRAM with the server loaded at 262K: 22,029 MiB used (rocm-smi; round 2
+measured 22,304 MiB on the old server, other desktop load not controlled).
+
+**Refusal prompt 5** (`raw/refusal_one.py 8080 raw/refusal-q8dense.json 5`, temperature 0, 4,096 cap): complete
+answer, 1,143 tokens, `finish: stop`, no refusal keyword, not cut (`raw/refusal5-r3-new.json`). The server log shows
+why: "loop guard: a 13-token block 15 times in the thinking at token 727: repeats dropped, a short repetition
+penalty", then twice more, the last "thinking closed". Round 2's server cut the answer instead ("The answer was
+stopped: the model kept repeating itself"), so `fe01a42` does what its message says. One sample.
+
+**Conclusion.** Equal speed (within ~1%), equal GSM8K, working tool calls, and a loop guard that recovers instead of
+cutting. Adoption is the user's call (S5); proposed at the end of the round.
+
+### DSpark drafter: the `hipErrorInvalidImage` cause, fixed; slower on this card
+
+**Upstream (checked 2026-11-23 ~16:00 UTC).** `mw00/project-maya#1154` is closed, not merged on GitHub: the maintainer
+squashed it into project-maya v1.1.75 (`8621f7a7`, "drafting ... on AMD"). That release measured AMD drafting only on
+a Radeon 8065S (gfx1151); its `CHANGELOG.md` says "Radeon RX 7000 / 9000 cards are built but untested". Its fold
+still calls `cublasSgemv` (mapped to `hipblasSgemv`, `src/ik2/ik2_draft.cu:801`, read at the tag). No commit on
+GodGMN (`ik2_draft.cu` blob identical at `2b31ffe` and `f472e94`) or alesha-pro touches the drafter.
+
+**Cause.** `maya-ik2` loads rocBLAS from the ROCm 10.0 pip SDK (`_rocm_sdk_devel/lib/librocblas.so.5`, through
+`libhipblas`'s `RPATH`). That library carries no GPU code: its `.hip_fatbin` section is `NOBITS` and a
+`.rocm_kpack_ref` section points at `../.kpack/blas_lib_@GFXARCH@.kpack`, which ships in the separate
+`rocm-sdk-device-gfx1100` wheel (the `rocm[device-gfx1100]` extra) we never installed. GEMMs work because rocBLAS takes
+them from the Tensile files under `ROCBLAS_TENSILE_LIBPATH`; `Sgemv` is one of rocBLAS's own kernels, so it has no
+image. Round 1's `LD_LIBRARY_PATH` test changed nothing because `libhipblas` uses `DT_RPATH`, which wins over
+`LD_LIBRARY_PATH` (`LD_DEBUG=libs` shows the venv path still chosen).
+
+**Fix used for the test (no change to the shared venv):** `rocm_sdk_device_gfx1100-10.0.0-py3-none-linux_x86_64.whl`
+from `https://stable.repo.amd.com/rocm/whl-next/rocm-sdk-device-gfx1100/` (sha256
+`d44af24724dd1a104a973a8dbc2eb514c1a0c155ac2cf5bf38cc9ab5846f8f29`), its `_rocm_sdk_libraries/.kpack/blas_lib_gfx1100.kpack`
+copied to `<dir>/.kpack/` next to a copy of the venv's `librocblas.so.5` in `<dir>/lib/`, loaded with
+`LD_PRELOAD=<dir>/lib/librocblas.so.5`. The drafter then loads: "drafter: .../mtp.safetensors, 0.97 GiB of VRAM,
+0.9 s"; 2,294 MiB free before graph capture at 262K (3,508 without). No own GEMV kernel was needed.
+
+**Speed** (16:37-16:47 UTC, new binary, `IK2_STATS=1`, `--draft mtp.safetensors`, decode tok/s, plain = the
+`r3-new` rows above):
+
+| Depth | plain greedy | draft greedy | plain t=1 | draft t=1 |
+|---:|---:|---:|---:|---:|
+| 512 | 105.87 | 93.64 (-11.6%) | 105.09 | 87.02 (-17.2%) |
+| 8,192 | 96.82 | 87.13 (-10.0%) | 96.60 | 83.12 (-14.0%) |
+| 32,768 | 89.89 | 86.60 (-3.7%) | 89.14 | 79.80 (-10.5%) |
+| 131,072 | 68.34 | 63.37 (-7.3%) | 68.16 | 63.71 (-6.5%) |
+
+`IK2_DRAFT_CTX=65536`, `--ctx 262144 --chunk 2048`. With the author's settings (`--ctx 32768 --chunk 1024`,
+`IK2_DRAFT_CTX=8192`, his `docs/HIP-PORT.md` command) it is also slower: 105.87 -> 94.26 at 512 and 97.56 -> 85.91 at
+8K, where he measured 117.22 -> 137.49 and 107.47 -> 127.49. The engine's counters show the adaptive controller
+drafting on a minority of steps: "194 windows, 374 of 612 drafts accepted, 976 plain tokens" (greedy run, last
+line). Not separated here: whether the verify window or the drafter step costs more on gfx1100.
+
+**GSM8K with the drafter** (`DRAFT=<mtp> IK2_DRAFT_CTX=8192 LD_PRELOAD=... raw/gsm8k-pair.sh`, `--serve-ik2` accepts
+`--draft` when the projections and head are planar Q8, `ik2_main.cu:5482`): 95 + 93 = **188/192**, wrong {93} / {100,
+119, 182}; 65% of drafts accepted (10,320 of 15,809), wall 315 + 407 s vs. 275 + 403 s plain.
+
+**Conclusion.** It loads and keeps quality, but decode is 4-17% slower at every depth and sampling, so it is not wired.
+Prose at temperature 1.0 is the worst case (-10 to -17%), the direction of the author's own story run (116 -> 89.5).
+project-maya v1.1.75 cannot be tried with our file: it reads NVFP4 / Q8_0 / Q5_K / Q6_K / IQ3_XXS / IQ4_XS blocks only
+(`src/ik2/ik2_kernels.cu:7594` at `8621f7a7`), not IQ4_NL experts, and has no `IK2_PAGED_KV`; testing it on a stock
+Unsloth file was skipped by the user. The new Unsloth drafter GGUF (`dspark-Inkling-2-Mini-Q8_0.gguf`, LFS
+`3da00cf7c31b…`, uploaded 2026-11-23 14:54Z; ours is the renamed `_Old`, `2ec78510…`) was not tried.
+
+### `IK2_KV=fp4-global` (E2M1 global KV): smaller cache, much slower at depth, not adopted
+
+**Hypothesis**: the port's new FP4 global cache frees VRAM at little cost. It refuses the paged cache ("fp4-global
+requires token-major KV and 128-wide heads", `ik2_main.cu:4899` dies when `IK2_PAGED_KV=1`), so it was measured with
+`IK2_PAGED_KV=0` next to an FP8 control with the same setting (17:00-17:33 UTC, new binary):
+
+| | prod (FP8, paged) | FP8, `IK2_PAGED_KV=0` | **fp4-global**, `IK2_PAGED_KV=0` |
+|---|---:|---:|---:|
+| Decode 512 / 8K / 32K / 128K, tok/s | 105.87 / 96.82 / 89.89 / 68.34 | 106.58 / 98.31 / 85.05 / 58.39 | 104.32 / 93.23 / **75.25 / 44.96** |
+| Prefill 512 / 8K / 32K / 128K, tok/s | 2,370 / 3,432 / 2,985 / 1,927 | 2,359 / 3,416 / 2,905 / 1,823 | 2,370 / 3,408 / 2,870 / 1,752 |
+| KV cache at 262,144; free before graph capture | 4.23 GiB; 3,508 MiB | 4.23 GiB; 3,508 MiB | **2.48 GiB; 5,300 MiB** |
+| GSM8K greedy 0-95 / 96-191 | 94 / 93 = 187 | - | 95 / 93 = **188**, wrong {93} / {119, 161, 186} |
+
+1.75 GiB less cache and the same GSM8K, but decode -16% at 32K and -34% at 128K against the production profile.
+Useful only for more context or slots than 262K, which the harness does not use. Not adopted.
+
+### Proposed for production (needs the user's OK)
+
+Point `local.linux.toml` `[engines] maya` at the `f472e94` worktree (production checkout kept as the rollback), record
+the build in `docs/ENGINES.md`, and add the DECISIONS, STATUS and CHANGELOG lines. No `models.toml` change: same
+profile, env and flags. The rocBLAS device pack is not part of the proposal (only the drafter needs it).

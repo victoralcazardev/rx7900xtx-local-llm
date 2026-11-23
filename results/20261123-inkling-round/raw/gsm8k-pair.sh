@@ -6,6 +6,8 @@
 # so every model scored there answers exactly the same token IDs.
 # usage: gsm8k-pair.sh <MODEL> <OFFSET> <OUT> [COUNT]      (COUNT default 96)
 #    or: MODEL=<gguf> OFFSET=<n> OUT=<dir> [COUNT=<n>] gsm8k-pair.sh
+# ENGINE=<maya-ik2 binary> scores another build with the same tools and env (default: the production build).
+# DRAFT=<mtp.safetensors> serves with the DSpark drafter (planar Q8 files only; IK2_DRAFT_CTX from the caller).
 # LABEL names the output files (default: the model's folder name); OUT/<LABEL>.{log,err,jsonl}.
 set -u
 D=~/IA/rx7900xtx-local-llm/results/20261123-inkling-round/raw
@@ -30,9 +32,9 @@ else
 fi
 # production env, but a variable the caller set wins (e.g. IK2_KV=fp8-global for an A/B), as in bench_m.sh
 eval "$(.venv/bin/python -c 'import json,os,shlex;e=json.load(open("ik2-abiray-paged.json"))["env"];print("\n".join(f"export {k}={shlex.quote(v)}" for k,v in e.items() if k not in os.environ))')"
-echo "$L: IK2_KV=$IK2_KV"
+echo "$L: IK2_KV=$IK2_KV draft=${DRAFT:-none} engine=${ENGINE:-./build-ik2/maya-ik2}"
 t0=$(date +%s)
-./build-ik2/maya-ik2 --serve-ik2 --model "$M" --ctx 8192 --chunk 2048 < "$R" > "$O/$L.log" 2> "$O/$L.err"
+"${ENGINE:-./build-ik2/maya-ik2}" --serve-ik2 --model "$M" --ctx 8192 --chunk 2048 ${DRAFT:+--draft "$DRAFT"} < "$R" > "$O/$L.log" 2> "$O/$L.err"
 rc=$?
 echo "$L: maya exit $rc, wall $(( $(date +%s)-t0 )) s"
 [ $rc -eq 0 ] || { echo "$L: maya failed, see $O/$L.err" >&2; exit 1; }

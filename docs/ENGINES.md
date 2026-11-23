@@ -266,6 +266,11 @@ cmake --build maya-inkling-mini-hip/build-ik2 -j14 --target maya-ik2 ik2_kernels
   files, so the engine dies on the first GEMM (`Cannot read .../rocblas/library/TensileLibrary.dat ... for GPU arch :
   gfx1100`, exit -14); `ROCBLAS_TENSILE_LIBPATH=/opt/rocm/lib/rocblas/library` (system rocBLAS 10.1, 150 gfx1100
   files) fixes it.
+- **rocBLAS has no GPU code of its own here**: the venv's `librocblas.so.5` ships its kernels in a separate per-arch
+  package (`.hip_fatbin` empty, `.rocm_kpack_ref` -> `../.kpack/blas_lib_gfx1100.kpack`, wheel `rocm-sdk-device-gfx1100`),
+  so any non-Tensile rocBLAS call (the DSpark drafter's `Sgemv`) fails with `hipErrorInvalidImage`. `LD_LIBRARY_PATH`
+  cannot swap it (`libhipblas` uses `DT_RPATH`); `LD_PRELOAD` of a copy with the `.kpack` beside it works
+  ([round 3](../results/20261123-inkling-round/README.md#dspark-drafter-the-hiperrorinvalidimage-cause-fixed-slower-on-this-card)). Plain decode does not need it.
 - **Python side**: `serve/` and `tools/` need `numpy jinja2 regex pyyaml tqdm requests pillow psutil
   "jsonschema>=4.18,<5"` (a `.venv` in the checkout); the tokenizer is exported from the GGUF with
   `tools/strata_tokenizer.py --gguf <gguf> --out ik2 --chat-template tools/ik2/chat_template.jinja --check`
