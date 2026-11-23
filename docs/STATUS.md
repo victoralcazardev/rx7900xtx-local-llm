@@ -11,10 +11,8 @@ adopted: [`TRIED.md`](TRIED.md); planned engine trials:
 
 ## Setups in use
 
-No setup is the recommended or main one: each pairs a different model, quant and engine, and Strata
-ships frequent releases. `scripts/launch.py` falls back to `inkling2-mini-unc-q8d` / `262k-maya`
-when no alias is given — the setup last in use, not a recommendation ([`DECISIONS.md`](DECISIONS.md),
-2026-11-23).
+No setup is the recommended one; `scripts/launch.py` falls back to `inkling2-mini-unc-q8d` /
+`262k-maya` — the setup last in use, not a recommendation ([`DECISIONS.md`](DECISIONS.md), 2026-11-23).
 
 ### Inkling-2-Mini uncensored on `maya-ik2` (`inkling2-mini-unc-q8d` / `262k-maya`)
 
@@ -45,24 +43,23 @@ python3 scripts/launch.py inkling2-mini-unc-q8d --profile 262k-maya
 # context 262144, IK2_KV=fp8, IK2_PAGED_KV=1 (16-token pages), --chunk 2048, temp 1.0
 ```
 
-### Qwen3.8-27B on llama.cpp `hip-kvmix` (`qwen38-iq3s-mtp` / `262k-q8q51-mtp`)
+### Qwen3.8-27B abliterated on llama.cpp `hip-kvmix` (`huihui-iq3s-mtp` / `262k-q8q51-mtp`)
 
-`hip-kvmix` = llama.cpp v0.9.0 + the local `q8_0`/`q5_1` TILE patch: 76.3 tok/s empty, 22.5-33.2
-at 240K fill, 68/68 pooled retrieval. Launch: `python3 scripts/launch.py qwen38-iq3s-mtp`. Model,
-flags, sampling and every 240K number: [`models/qwen38-27b.md`](models/qwen38-27b.md).
+`hip-kvmix` = llama.cpp v0.9.0 + the local `q8_0`/`q5_1` TILE patch. Huihui file: 22.12 GiB peak at
+262K, 50.6 / 166.8 / 43.1 tok/s essay/copy/code at 64K fill (b11846; -4.6% on copy on v0.9.0), and no
+240K or quality run: those belong to the stock GSQ-RCO quant, kept as the measured reference
+(`qwen38-iq3s-mtp`), not a listed setup. Launch:
+`python3 scripts/launch.py huihui-iq3s-mtp`; flags and numbers:
+[`models/qwen38-27b.md`](models/qwen38-27b.md).
 
-### Huihui Qwen3.8-27B abliterated on llama.cpp `hip-kvmix` (`huihui-iq3s-mtp` / `262k-q8q51-mtp`)
+### Qwen3.8-Flash-Next on Strata (runs; no set installed here)
 
-The same profile with the abliterated quant: 22.12 GiB peak and 50.6 / 166.8 / 43.1 tok/s at 64K
-fill, coding suite not run ([results](../results/20261105-huihui-iq3s-262k/README.md)).
-
-### Qwen3.8-Flash-Next on Strata (paused)
-
-No set installed since 2026-11-05; the last one (v0.2.8 IQ2_XS) decoded 59-65 tok/s warm short and
-36.7 at 240K, and the 2026-11-22 v0.2.19 retest stayed below the 15 tok/s floor, so it is
-re-measured on the next install. Strata releases: [`sop/upstream-watch.md`](sop/upstream-watch.md);
-history and resume triggers:
-[`models/strata-qwen-flash-next.md`](models/strata-qwen-flash-next.md#current-state-2026-11-05).
+Flash-Next runs on one 24 GB card with Strata, experts streamed from host RAM/SSD, with many published
+quants upstream. On this 32 GiB host the experts did not all fit, so our last sets read them from the SSD
+at 2.6-12.8 tok/s: our numbers measure that limit, not Strata. Follow
+[Strata](https://github.com/Niko1221/Strata)'s latest release, quants and recommended settings. No set
+installed here since 2026-11-05 ([watch list](sop/upstream-watch.md),
+[history](models/strata-qwen-flash-next.md#current-state-2026-11-05)).
 
 ## Headline numbers
 
@@ -82,7 +79,7 @@ cycled to each depth, uncached, 129 generated tokens, 3 repeats (2 at 262K), med
 
 ## Flags and why
 
-Settings of the `262k-maya` profile; the Qwen and Huihui profiles keep their own table in
+Settings of the `262k-maya` profile; the Qwen3.8-27B profile keeps its own table in
 [`models/qwen38-27b.md`](models/qwen38-27b.md).
 
 | Setting | Why |

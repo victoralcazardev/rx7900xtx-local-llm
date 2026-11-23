@@ -1,11 +1,14 @@
 # Changelog
 
 All notable changes to this project are documented here. Format follows
-[Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Older dated releases (2026-09) are frozen in
+[`docs/archive/changelog-2026.md`](docs/archive/changelog-2026.md).
 
 ## [Unreleased]
 
 ### Changed
+
+- The Qwen3.8-27B setup is the Huihui abliterated IQ3_S-mtp (stock GSQ-RCO stays as the measured reference); the Strata row points readers to Strata's latest release, quants and settings. Old Strata history, deleted engine recipes and the 2026-09 changelog moved to `docs/archive/`.
 
 - No setup is presented as the default any more: README and STATUS document Inkling-2-Mini on `maya-ik2`, Qwen3.8-27B and Huihui on `llama.cpp hip-kvmix`, and Qwen3.8-Flash-Next on Strata (paused) side by side; `launch.py`'s no-alias fallback is `inkling2-mini-unc-q8d` / `262k-maya`, the setup in use ([`docs/STATUS.md`](docs/STATUS.md), [`docs/models/qwen38-27b.md`](docs/models/qwen38-27b.md), `models.toml`).
 
@@ -177,29 +180,3 @@ All notable changes to this project are documented here. Format follows
 - `bench/longctx_quality.py` `detect_loop` finds a repeated block at any offset, so short-period loops are flagged; new runs may record `loop_detected` where older runs did not.
 - `BENCH_MAX_HOTSPOT_C` at or below 0 now aborts instead of tripping the thermal guard on the first reading.
 - `scripts/token_ledger.py collect` honors `MODELS_MANIFEST` for the port. TOML reads share `manifest.read_toml`; `manifest.build_argv` drops its unused `profile_name`, `backend` and `port` parameters.
-
-## [2026-09-26]
-
-### Changed
-
-- Adopted `262k-q8q51-mtp` (262,144 context, KV `q8_0/q5_1`, MTP n=3, `-ub 256`) as the single
-  default profile — see `docs/DECISIONS.md` and `docs/STATUS.md`.
-- Reduced `models.toml` to a single model/profile and a single harness provider entry
-  (`local-262k`), removing overlapping alternatives.
-- Validated long-context retrieval quality: 60/60 exact match, 0 loop detections, 32K-240K fill.
-- Evaluated and rejected the ROCm 10.0.0 runtime libraries (kept the ROCm 10 compiler) and
-  BeeLlama v0.4.7's KVarN KV cache quantization — see `docs/measurements/engines.md` and
-  `docs/measurements/kv-quality.md`.
-### Added
-
-- Added a systemd unit for the permanent 272 W power cap.
-- Added community and CI files (`CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`,
-  `CITATION.cff`, issue/PR templates, GitHub Actions CI) for public contributions.
-
-## [2026-09-25]
-
-### Added
-
-
-- Initial curated public release: config, launcher, benchmark scripts, and measurement
-  write-ups for running long-context Qwen3.8-27B on an AMD RX 7900 XTX.

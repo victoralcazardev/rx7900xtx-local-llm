@@ -15,8 +15,8 @@ quants side by side. Not a multi-GPU, CUDA, vLLM/Ollama guide.
   llama.cpp ([kv-quality.md](docs/measurements/kv-quality.md)).
 - **Inkling-2-Mini at depth:** 106.1 / 90.0 / 68.9 tok/s at 512 / 32K / 128K fill, 53.6 at 262K
   ([results](results/20261123-inkling-round/README.md)).
-- **Qwen3.8-27B speculation:** MTP n=3 doubles decode at 240K (23.3 vs. 11.2 tok/s); an n-gram
-  drafter adds +62% on copying tasks ([speculative.md](docs/measurements/speculative.md)).
+- **Qwen3.8-27B speculation (stock GSQ-RCO quant):** MTP n=3 doubles decode at 240K (23.3 vs. 11.2
+  tok/s); an n-gram drafter adds +62% on copying tasks ([speculative.md](docs/measurements/speculative.md)).
 - **272 W cap:** ~6% prefill cost, hotspot 7-8°C cooler ([thermals-power.md](docs/measurements/thermals-power.md)).
 
 ## Setups
@@ -24,9 +24,8 @@ quants side by side. Not a multi-GPU, CUDA, vLLM/Ollama guide.
 | Model | Quant | Engine | Status | Headline numbers | Owner doc |
 |---|---|---|---|---|---|
 | Inkling-2-Mini uncensored (Thinking Machines) | `IQ4_NL` experts, Q8_0 head/attention | `maya-ik2` HIP port `hip-port` `f472e94` | In use | 106.1 / 90.0 / 68.9 tok/s at 512 / 32K / 128K fill, 53.6 at 262K; GSM8K 187/192 | [`inkling-2-mini.md`](docs/models/inkling-2-mini.md) |
-| Qwen3.8-27B (Qwen) | GSQ-RCO `IQ3_S-mtp` | llama.cpp `hip-kvmix` v0.9.0 + patch | In use | 76.3 tok/s empty (b11820 + patch); 22.5-33.2 at 240K (b11846); v0.9.0 untested at 240K, -4.6% at 64K | [`qwen38-27b.md`](docs/models/qwen38-27b.md) |
-| Huihui Qwen3.8-27B abliterated | GSQ-RCO `IQ3_S_mtp` | llama.cpp `hip-kvmix` | Opt-in | 50.6 / 166.8 / 43.1 tok/s at 64K | [results](results/20261105-huihui-iq3s-262k/README.md) |
-| Qwen3.8-Flash-Next | none installed | Strata | Paused: no set installed since 2026-11-05 (last one below 15 tok/s from host RAM); re-measured on the next install. Strata ships frequent releases ([watch list](docs/sop/upstream-watch.md)) | 59-65 tok/s warm short, 36.7 at 240K (v0.2.8) | [`strata-qwen-flash-next.md`](docs/models/strata-qwen-flash-next.md#current-state-2026-11-05) |
+| Qwen3.8-27B abliterated (huihui-ai) | GSQ-RCO `IQ3_S-mtp` | llama.cpp `hip-kvmix` v0.9.0 + patch | Opt-in | 50.6 / 166.8 / 43.1 tok/s essay/copy/code at 64K fill, 22.12 GiB peak; the 240K, retrieval and coding-suite numbers are the stock quant's | [`qwen38-27b.md`](docs/models/qwen38-27b.md) |
+| Qwen3.8-Flash-Next | many published Strata quants | Strata | Runs on one 24 GB card with experts streamed from host RAM/SSD; no set installed here since 2026-11-05 because our sets read the experts from the SSD on a 32 GiB host (2.6-12.8 tok/s), so follow [Strata](https://github.com/Niko1221/Strata)'s latest release, quant list and settings | 59-65 tok/s warm short, 36.7 at 240K (v0.2.8) | [`strata-qwen-flash-next.md`](docs/models/strata-qwen-flash-next.md) |
 
 Pick the alias per task: `python3 scripts/launch.py <alias> --profile <profile>`; with no alias it
 falls back to `inkling2-mini-unc-q8d` / `262k-maya`, the setup last in use (not a recommendation).
@@ -62,12 +61,11 @@ python3 -I results/20261123-inkling-round/raw/retype_q8.py --src $d/Inkling-2-Mi
   --dst $d-q8dense/Inkling-2-Mini-Uncensored-IQ4_NL-q8dense.gguf
 ```
 
-**Qwen3.8-27B and Huihui (`hip-kvmix`).** Take the
+**Qwen3.8-27B (`hip-kvmix`).** Take the
 [`engine-v0.9.0-rocm10-gfx1100-kvmix`](https://github.com/victoralcazardev/rx7900xtx-local-llm/releases/tag/engine-v0.9.0-rocm10-gfx1100-kvmix)
-asset (sha256 in [`docs/ENGINES.md`](docs/ENGINES.md)) and the 12.1 GB GGUF from
-[`ISTA-DASLab/Qwen3.8-27B-GSQ-RCO-GGUF`](https://huggingface.co/ISTA-DASLab/Qwen3.8-27B-GSQ-RCO-GGUF)
-(Huihui's abliterated file for `huihui-iq3s-mtp`), then
-`python3 scripts/launch.py qwen38-iq3s-mtp --profile 262k-q8q51-mtp`
+asset (sha256 in [`docs/ENGINES.md`](docs/ENGINES.md)) and the 12.1 GB abliterated GSQ-RCO GGUF from
+[`huihui-ai/Huihui-Qwen3.8-27B-abliterated-GGUF`](https://huggingface.co/huihui-ai/Huihui-Qwen3.8-27B-abliterated-GGUF),
+then `python3 scripts/launch.py huihui-iq3s-mtp --profile 262k-q8q51-mtp`
 ([`docs/models/qwen38-27b.md`](docs/models/qwen38-27b.md)).
 
 **Configure, check, launch.** Set `models_root` and the `[engines]` folders you use in `local.toml`.

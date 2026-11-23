@@ -21,7 +21,8 @@
 #   (docs/DECISIONS.md, 2026-11-23).
 # - No recommended setup: the models sit side by side (2026-11-23, docs/DECISIONS.md). The fallback
 #   is `inkling2-mini-unc-q8d` / `262k-maya`; the other models are the Qwen3.8-27B
-#   `qwen38-iq3s-mtp` / `262k-q8q51-mtp`, `huihui-iq3s-mtp` and `inkling2-mini-unc` (all opt-in).
+#   `huihui-iq3s-mtp` / `262k-q8q51-mtp` and `inkling2-mini-unc` (both opt-in). The stock
+#   `qwen38-iq3s-mtp` stays configured as the measured reference, not as a listed setup.
 #   Add a new model/profile per docs/sop/new-model.md.
 
 [defaults]
@@ -31,7 +32,8 @@ default_alias = "inkling2-mini-unc-q8d"
 default_profile = "262k-maya"
 
 # ---------------------------------------------------------------------------
-# Qwen3.8-27B GSQ-RCO IQ3_S-mtp (native NextN head).
+# Qwen3.8-27B GSQ-RCO IQ3_S-mtp, stock ISTA-DASLab quant (native NextN head): the measured reference,
+# not a listed setup in README/STATUS, which list the abliterated `huihui-iq3s-mtp` of the same base.
 # Sampling: official Qwen3.8-27B card (https://huggingface.co/Qwen/Qwen3.8-27B),
 # also confirmed in local metadata (general.sampling.*) and quoted verbatim in the
 # README of ISTA-DASLab/Qwen3.8-27B-GSQ-RCO-GGUF (docs/models/qwen38-27b-quants.md).
@@ -47,14 +49,15 @@ top_p = 0.95
 top_k = 20
 min_p = 0.0
 
-# Qwen3.8-27B setup (the launcher fallback from 2026-09-26 until 2026-11-23, now one of several;
-# owner doc docs/models/qwen38-27b.md). Measured 2026-09-26 (docs/measurements/): 68/68 exact retrieval
+# The stock Qwen3.8-27B profile: every 240K, retrieval and coding-suite number in this repository was
+# measured on it (owner doc docs/models/qwen38-27b.md); it was the launcher fallback from 2026-09-26
+# until 2026-11-23. Measured 2026-09-26 (docs/measurements/): 68/68 exact retrieval
 # matches pooled across configurations at 32K-240K (0 loops); only 8/8 used these exact profile
 # flags at 240K. Retrieval is not a general coding-quality evaluation. At 240K fill:
 # 24.4/26.9/18.6 tok/s essay/copy/code, pp 380, process
 # VRAM 22,630 MiB, under a 272 W power cap (this card's driver minimum). `hip-kvmix` engine, KV
 # q8_0/q5_1 (+27% KLD over q8/q8, doesn't show up in retrieval quality at 240K), MTP n=3, `-ub
-# 256`. Launch it with `python3 scripts/launch.py qwen38-iq3s-mtp`. Opt-in.
+# 256`. Launch the reference copy with `python3 scripts/launch.py qwen38-iq3s-mtp`. Opt-in.
 [models.qwen38-iq3s-mtp.profiles."262k-q8q51-mtp"]
 backend = "hip-kvmix"
 context = 262144
@@ -78,7 +81,7 @@ vram_gib = 22.2
 flags = ["-ub", "256", "--reasoning-effort", "medium", "--cache-ram", "12288"]
 
 # ---------------------------------------------------------------------------
-# Huihui Qwen3.8-27B abliterated GSQ-RCO IQ3_S-mtp (uncensored; opt-in).
+# Huihui Qwen3.8-27B abliterated GSQ-RCO IQ3_S-mtp (uncensored; the listed Qwen3.8-27B setup, opt-in).
 # Card: https://huggingface.co/huihui-ai/Huihui-Qwen3.8-27B-abliterated-GGUF (no sampling stated; the base
 # Qwen3.8-27B card's values, matching the GGUF's general.sampling.*). Same file size (12,120,016,416 bytes),
 # quant method, architecture, NextN head and template as qwen38-iq3s-mtp, so it takes that setup's 262K

@@ -9,7 +9,8 @@ Files covered (GGUF, relative to `models_root`):
 
 - `Qwen3.8-27B-Uncensored-HauhauCS-Aggressive-IQ4_XS.gguf` (15.7 GB) — not adopted (see below)
 - `Qwen3.8-27B-GSQ-RCO-IQ3_S.gguf` (11.8 GB) — was `qwen38-iq3s`, no MTP
-- `Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp.gguf` (12.1 GB) — `qwen38-iq3s-mtp`, **adopted model**
+- `Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp.gguf` (12.1 GB) — `qwen38-iq3s-mtp`, **measured reference** (the listed
+  setup is the abliterated Huihui file, `huihui-iq3s-mtp`, [`qwen38-27b.md`](qwen38-27b.md))
 - `Qwen3.8-27B-GSQ-RCO-IQ3_XXS-mtp.gguf` (10.4 GB) — was `qwen38-iq3xxs-mtp`
 - `RVN-Q4_K_M-multilingual-mtp.gguf` (17.0 GB) — was `qwen38-rvn-mtp`
 - `mmproj-Qwen3.8-27B-BF16.gguf` (vision projector, 0.93 GB)

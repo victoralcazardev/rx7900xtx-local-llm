@@ -3,10 +3,11 @@
 For models already in `models.toml` (see `docs/STATUS.md`). If the model doesn't exist in
 the manifest yet, use `docs/sop/new-model.md` first.
 
-## Qwen3.8-27B setup (`qwen38-iq3s-mtp`, measured in `docs/measurements/`)
+## Qwen3.8-27B setup (`huihui-iq3s-mtp`; the stock `qwen38-iq3s-mtp` reference takes the same steps)
 
 `models.toml` carries several setups side by side and recommends none of them
-([`docs/STATUS.md`](../STATUS.md)). This one, from `docs/DECISIONS.md` 2026-09-26:
+([`docs/STATUS.md`](../STATUS.md)). This one, from `docs/DECISIONS.md` 2026-09-26, with its 240K numbers
+measured on the stock GSQ-RCO quant:
 
 | Profile | For | Generation | VRAM peak |
 |---|---|---|---:|
@@ -74,7 +75,7 @@ shorthand for the `launch.py` invocation below.
    To pick an alias/profile explicitly, `--profile` is required if the model has more than one
    profile:
    ```
-   python3 scripts/launch.py qwen38-iq3s-mtp --profile 262k-q8q51-mtp --dry-run
+   python3 scripts/launch.py huihui-iq3s-mtp --profile 262k-q8q51-mtp --dry-run
    ```
    Check the printed command and the "Harness provider: local-262k" line.
 
