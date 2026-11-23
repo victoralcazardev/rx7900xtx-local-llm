@@ -5,8 +5,14 @@ All notable changes to this project are documented here. Format follows
 
 ## [Unreleased]
 
+### Changed
+
+- No setup is presented as the default any more: README and STATUS document Inkling-2-Mini on `maya-ik2`, Qwen3.8-27B and Huihui on `llama.cpp hip-kvmix`, and Qwen3.8-Flash-Next on Strata (paused) side by side; `launch.py`'s no-alias fallback is `inkling2-mini-unc-q8d` / `262k-maya`, the setup in use ([`docs/STATUS.md`](docs/STATUS.md), [`docs/models/qwen38-27b.md`](docs/models/qwen38-27b.md), `models.toml`).
+
 ### Added
 
+- Both engines in use published as GitHub releases: `engine-v0.9.0-rocm10-gfx1100-kvmix` (with the local `server-sigterm-watchdog.patch`) and `maya-ik2-f472e94-rocm10-gfx1100`, with tag, asset and SHA256 recorded ([`docs/ENGINES.md`](docs/ENGINES.md), [`docs/sop/update-engine.md`](docs/sop/update-engine.md#publish-a-release)).
+- `README.md` credits the upstream engines, ports, quants and models this repository builds on, and [`docs/sop/publish-sync.md`](docs/sop/publish-sync.md) now refreshes the README, About text, topics, credits and latest release after every release and every push that changes them ([`README.md`](README.md)).
 - Inkling round 3 on `maya-ik2` ([`results/20261123-inkling-round/`](results/20261123-inkling-round/README.md#round-3-2026-11-23-evening-hip-port-f472e94-dspark-loads-ik2_kvfp4-global)): `hip-port` `f472e94` adopted as the `maya` engine (same speed and GSM8K, loop guard recovers instead of cutting; `2b31ffeaa` kept as rollback), the DSpark `hipErrorInvalidImage` traced to rocBLAS's missing gfx1100 device pack (drafter then loads but decodes 4-17% slower), `IK2_KV=fp4-global` measured (-34% decode at 128K, not adopted); `bench_m.sh` / `gsm8k-pair.sh` take `ENGINE` and `DRAFT`, new `raw/refusal_one.py`.
 - Upstream watch SOP: one list of every engine, model, runtime and playbook source with its last-checked ref, plus the routine to collect, triage (ignore / note / test / adopt) and record what changed ([`docs/sop/upstream-watch.md`](docs/sop/upstream-watch.md)).
 - Inkling round 2 on `maya-ik2` ([`results/20261123-inkling-round/`](results/20261123-inkling-round/README.md#round-2-2026-11-23-afternoon)): `IK2_SUFFIX=128` measured (copy/edit ~9x over HTTP, novel greedy text -8 to -13%: opt-in only), `IK2_KV=fp8-global` measured (no gain, not adopted), `suffix-run.sh` and `gsm8k-pair.sh` fixed (default windows, absolute out dir, exit codes, caller env wins), prioritized next candidates.
@@ -60,7 +66,7 @@ All notable changes to this project are documented here. Format follows
 - b11718 engine measured at 240K against b11454 + PR #29509 and kept; engine updates now take one 240K pair plus one coding-suite run ([`results/20261018-engine-b11718-vs-b11454-240k/`](results/20261018-engine-b11718-vs-b11454-240k/README.md), [`docs/sop/update-engine.md`](docs/sop/update-engine.md)).
 - `bench/coding_suite.py`: the fixed six-task coding suite runner (streaming tool calls, worktrees, scoring, `--smoke`, `--verify-fixtures`, `--rescore`, `--compare`) with its frozen task data ([`bench/README.md`](bench/README.md)).
 - Designed the fixed six-task coding suite (pinned repos, injected bugs, pass rules, 128K long-context task, regression rule); tool-eval-bench reviewed and not reused ([`docs/ENGINES-EXPERIMENTS.md`](docs/ENGINES-EXPERIMENTS.md#coding-suite-design-b1a-2026-10-18)).
-- README front page lists every model and engine (Qwen3.8-27B default, Flash-Next Coder via Strata, Qwen4 planned, Nemotron 3.5 Bolt candidate); the upstream-contributions section is removed ([`README.md`](README.md#models)).
+- README front page lists every model and engine (Qwen3.8-27B default, Flash-Next Coder via Strata, Qwen4 planned, Nemotron 3.5 Bolt candidate); the upstream-contributions section is removed ([`README.md`](README.md#setups)).
 - Reviewed the tinygrad-qwen38 fork (~100 tok/s claim), llama.cpp's verify-batch FA dispatch and TurboQuant KV; planned T29, a native quantized-KV multi-query verify kernel ([`docs/ENGINES-EXPERIMENTS.md`](docs/ENGINES-EXPERIMENTS.md#new-t29-native-quantized-kv-multi-query-verify-kernel-2026-10-18-not-started), [`docs/SOURCES.md`](docs/SOURCES.md#tinygrad-qwen38-fork-verify-kernel-references-and-turboquant-kv-2026-10-18)).
 - Current execution plan with dependencies and gates (measure b11718, coding suite, Qwen4, Strata, Nemotron, T29); replaces the 2026-10-03 queue ([`docs/ENGINES-EXPERIMENTS.md`](docs/ENGINES-EXPERIMENTS.md#current-plan-2026-10-18)).
 - `hip-kvmix` engine moves to llama.cpp b11718 (own build, no PR #29509 patch: upstream #30514 replaces it); not measured on this machine, rollback b11454 + PR #29509 ([`docs/ENGINES.md`](docs/ENGINES.md)).

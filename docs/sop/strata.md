@@ -1,7 +1,7 @@
 # SOP: Strata with Qwen3.8-Flash-Next
 
-Run [Strata](https://github.com/Niko1221/Strata) with a Qwen3.8-Flash-Next GGUF as an alternative to the default
-llama.cpp profile, on the same port. **State (2026-11-22): the clone is at v0.2.19 with engine 0.1.65 built; the
+Run [Strata](https://github.com/Niko1221/Strata) with a Qwen3.8-Flash-Next GGUF as a second engine next to the
+llama.cpp setups, on the same port. **State (2026-11-22): the clone is at v0.2.19 with engine 0.1.65 built; the
 abliterated SC117 IQ2_XS set is installed (262K int8, mapped) and rejected on speed — 5.8-12.8 tok/s against the
 15 tok/s floor, storage-bound.** Full record: [`../../results/20261122-strata-0219-sc117/`](../../results/20261122-strata-0219-sc117/README.md).
 **Free disk is the first gate, before RAM or VRAM** (the pack alone is 36.5 GB for IQ2_XS); the rest of the steps below

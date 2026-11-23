@@ -3,26 +3,26 @@
 For models already in `models.toml` (see `docs/STATUS.md`). If the model doesn't exist in
 the manifest yet, use `docs/sop/new-model.md` first.
 
-## Recommended profile (`qwen38-iq3s-mtp`, measured in `docs/measurements/`)
+## Qwen3.8-27B setup (`qwen38-iq3s-mtp`, measured in `docs/measurements/`)
 
-`models.toml` ships a single model/profile — one best default, no overlapping alternatives (see
-`docs/DECISIONS.md`, 2026-09-26):
+`models.toml` carries several setups side by side and recommends none of them
+([`docs/STATUS.md`](../STATUS.md)). This one, from `docs/DECISIONS.md` 2026-09-26:
 
 | Profile | For | Generation | VRAM peak |
 |---|---|---|---:|
-| `262k-q8q51-mtp` | **Default** (`scripts/launch.py` with no alias) — max context + MTP n=3, `-ub 256`, no vision | 18.6-26.9 at 240K fill | 22.2 GiB |
+| `262k-q8q51-mtp` | Long-context Qwen3.8-27B — max context + MTP n=3, `-ub 256`, no vision | 18.6-26.9 at 240K fill | 22.2 GiB |
 
 `launch.py` **blocks system suspend** while the server runs (`systemd-inhibit`): suspending with a
 full VRAM has been observed to hang the machine on resume (see `docs/measurements/coexistence.md`).
 It also warns if free VRAM doesn't cover the profile's `vram_gib` + 0.5 GiB margin.
 
-### Opt-in: Inkling-2-Mini uncensored (`inkling2-mini-unc`)
+### Inkling-2-Mini uncensored (`inkling2-mini-unc`)
 
 Two profiles on the same Abiray IQ4_NL file; `--profile` is required. Text only, no vision.
 
 | Profile | Engine | Decode at 512 / 128K / 262K (tok/s, 272 W) | Use |
 |---|---|---|---|
-| `262k-maya` | `maya` (GodGMN `maya-inkling-mini` HIP port, not llama.cpp) | 95 / 63.6 / 51.1 | **Faster**: try this one first |
+| `262k-maya` | `maya` (GodGMN `maya-inkling-mini` HIP port, not llama.cpp) | 95 / 63.6 / 51.1 | Faster of the two on this card |
 | `262k-q8q8` | `hip-inkling` (GodGMN `inkling-rdna3` llama.cpp fork) | 57.6 / 44.5 / 37.8 | llama.cpp features (`/metrics`, n-gram speculation, checkpoints) |
 
 ```
@@ -65,14 +65,14 @@ shorthand for the `launch.py` invocation below.
    ```
    If the manifest reports a PROBLEM (not a WARNING), fix it before continuing.
 
-2. **Pick alias and profile, or use the default.** With no alias, `scripts/launch.py` loads
-   `models.toml`'s `[defaults] default_alias`/`default_profile` (currently `qwen38-iq3s-mtp` /
-   `262k-q8q51-mtp` — see `docs/STATUS.md`):
+2. **Pick alias and profile.** With no alias, `scripts/launch.py` uses `models.toml`'s
+   `[defaults] default_alias`/`default_profile` fallback (`inkling2-mini-unc-q8d` / `262k-maya`, the
+   setup last in use — not a recommendation; see `docs/STATUS.md`):
    ```
    python3 scripts/launch.py --dry-run
    ```
-   To pick a different alias/profile explicitly (once one exists — the manifest currently has
-   only one), `--profile` is required if the model has more than one profile:
+   To pick an alias/profile explicitly, `--profile` is required if the model has more than one
+   profile:
    ```
    python3 scripts/launch.py qwen38-iq3s-mtp --profile 262k-q8q51-mtp --dry-run
    ```
@@ -95,7 +95,7 @@ shorthand for the `launch.py` invocation below.
    only be analyzed from them. On Linux the launcher also writes `<log>.gpu.csv` from
    `scripts/gpu_watch.py`: GPU temperatures, power, VRAM and (trailing columns) sclk/mclk/vddgfx and the server's host `RssAnon` (`rss_anon_mib`) every 5 s, with rows flagged
    `HOT` or `VRAM` past the safety limits; it is read-only and stops with the server. Pass an explicit
-   `<alias> --profile <profile>` (see the table above) to load something other than the default.
+   `<alias> --profile <profile>` (see the tables above) to load a different setup than the fallback.
 
 4. **In your coding-agent harness (if any), select the provider printed in step 2**
    (`local-262k`). A harness doesn't know the model alias, only the `:8080` endpoint — see

@@ -7,7 +7,7 @@ Uses a single TOML manifest (models.toml) plus a per-machine local.toml
 Use as a library:
     from manifest import load, resolve, build_argv, harness_entry
     m = load()
-    model, profile_name, profile = resolve(m, "qwen38-iq3s-mtp", "262k-q8q51-mtp")
+    model, profile_name, profile = resolve(m, "inkling2-mini-unc-q8d", "262k-maya")
     argv = build_argv(m, model, profile)
 
 Environment variables:

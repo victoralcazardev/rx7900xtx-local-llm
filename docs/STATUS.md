@@ -1,128 +1,124 @@
 # Status
 
-What runs today and why: the adopted profile, its headline numbers, flag rationale, and a short
-list of what is open. Other docs link here instead of repeating them.
+The setups documented side by side, their headline numbers, flag rationale and what is open. Other
+docs link here instead of repeating them.
 
 **Scope.** This file holds only the current state. Each open question or next step is one line
 that links its owner; results, candidate lists, trial details, upstream watch lists and analysis
-live in the owner doc ([`STYLE.md`](STYLE.md) §8), never here. When an item is answered or
-started, remove it and record the outcome in its owner. Budget: 1,000 words. Tried and not
+live in the owner doc ([`STYLE.md`](STYLE.md) §8), never here. Budget: 1,000 words. Tried and not
 adopted: [`TRIED.md`](TRIED.md); planned engine trials:
 [`ENGINES-EXPERIMENTS.md`](ENGINES-EXPERIMENTS.md).
 
-## Current profile
+## Setups in use
 
-`qwen38-iq3s-mtp` / `262k-q8q51-mtp` — the best default (2026-09-26, [`DECISIONS.md`](DECISIONS.md))
-and `scripts/launch.py`'s default when no alias is given. Opt-in, uncensored: `huihui-iq3s-mtp` / `262k-q8q51-mtp`
-([results](../results/20261105-huihui-iq3s-262k/README.md)). The Q4_K_M (128K) was tried and deleted
-([results](../results/20261105-huihui-q4km-context/README.md)).
+No setup is the recommended or main one: each pairs a different model, quant and engine, and Strata
+ships frequent releases. `scripts/launch.py` falls back to `inkling2-mini-unc-q8d` / `262k-maya`
+when no alias is given — the setup last in use, not a recommendation ([`DECISIONS.md`](DECISIONS.md),
+2026-11-23).
 
-- Model: Qwen3.8-27B GSQ-RCO `IQ3_S-mtp` (native MTP head baked in), 12.1 GB, PPL 6.734 ± 0.084;
-  `mmproj-Qwen3.8-27B-BF16.gguf` present but vision disabled. Other quants:
-  [`models/qwen38-27b-quants.md`](models/qwen38-27b-quants.md).
-- Engine: llama.cpp v0.9.0 + local PR #30792 patch extended to V `q5_1` (`hip-kvmix`, own ROCm build
-  with FlashAttention kernels for K `q8_0` + V `q5_1`, dequantized natively in the TILE kernel), in use
-  since 2026-11-05 by operator choice (-4.6% decode at 64K vs. b11846); rollback b11846. 240K numbers
-  below are b11846. ROCm/HIP beats Vulkan 2-3.5x on generation
-  here, Vulkan is reference-only. [`ENGINES.md`](ENGINES.md). Every `kvmix` folder carries Arch's generic
-  `libamdhip64` 10.1 symlink, because CachyOS's 10.1 build SIGSEGVs any HIP program
-  ([`DECISIONS.md`](DECISIONS.md), [`sop/install.md`](sop/install.md#known-errors)).
+### Inkling-2-Mini uncensored on `maya-ik2` (`inkling2-mini-unc-q8d` / `262k-maya`)
+
+- Model: Abiray Inkling-2-Mini-Uncensored `IQ4_NL` (13.90 GB, OpenUncensored edit) with its head
+  and 176 non-expert attention/conv matrices re-typed to Q8_0: experts and `token_embd` unchanged,
+  15.4 GB, rebuilt by `results/20261123-inkling-round/raw/retype_q8.py`. Cards, quants and the fork
+  comparison: [`models/inkling-2-mini.md`](models/inkling-2-mini.md).
+- Engine: `maya` = GodGMN `maya-inkling-mini` branch `hip-port` `f472e94` (rollback `2b31ffeaa`),
+  the Inkling-only HIP port, not llama.cpp. Paged E4M3 KV, `--chunk 2048`, and the env
+  `IK2_PAGED_KV=1` plus `ROCBLAS_TENSILE_LIBPATH=/opt/rocm/lib/rocblas/library`.
+  [`ENGINES.md`](ENGINES.md).
+- Sampling: vendor `temperature 1.0` (the card sets nothing else) and the reasoned `min_p 0.0`;
+  `top_p`/`top_k` stay unset. Text only: the port takes no mmproj.
 - Power: 272 W permanent cap (driver minimum; stock 303 W) — [`sop/power-cap.md`](sop/power-cap.md).
-- Harness wiring: one fixed provider `local-262k` on `:8080`, advertised at the full 262144 (provider,
-  port and window verified by `python3 scripts/check-sync.py` when `local.toml` has
-  `[harness] enabled = true`). Every model compacts at ~35% of its window (local: 91,750 tokens; omp
-  `compaction.thresholdPercent` 35, Gentle Shell per-model `compaction.modelOverrides` reserveTokens);
-  `check-sync.py` does not check these compaction settings. Hermes profiles
-  outside this repo use the same endpoint (not covered by `check-sync.py`), and `tailscale serve`
-  exposes it to the tailnet without a key ([`DECISIONS.md`](DECISIONS.md), 2026-10-23).
+- Harness wiring, shared by every setup: one provider `local-262k` on `:8080` at the full 262144;
+  every model compacts at ~35% of its window. `check-sync.py` checks provider, port and window when
+  `local.toml` has `[harness] enabled = true`, not the compaction settings. Hermes profiles use the
+  same endpoint, exposed to the tailnet by `tailscale serve` without a key
+  ([`DECISIONS.md`](DECISIONS.md), 2026-10-23).
 
 ```bash
-python3 scripts/launch.py            # default profile; add --dry-run to print the command
-llama-server -m <models_root>/Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp/Qwen3.8-27B-GSQ-RCO-IQ3_S-mtp.gguf \
-  --port 8080 -c 262144 -ctk q8_0 -ctv q5_1 \
-  --temp 1.0 --top-p 0.95 --top-k 20 --min-p 0.0 \
-  -fa on -np 1 --ctx-checkpoints 10 -ngl all --metrics \
-  --spec-type draft-mtp,ngram-map-k4v --spec-draft-n-max 3 -ub 256 --reasoning-effort medium \
-  --cache-ram 12288
+python3 scripts/launch.py            # launcher fallback; add --dry-run to print only
+python3 scripts/launch.py inkling2-mini-unc-q8d --profile 262k-maya
+# the maya backend writes _tmp/maya/inkling2-mini-unc-q8d.maya.json from models.toml plus the
+# port's gfx1100 preset and runs, in the f472e94 worktree:
+#   .venv/bin/python serve/server.py --engine maya --config <that json> --port 8080 \
+#     --tokenizer ik2/tokenizer
+# context 262144, IK2_KV=fp8, IK2_PAGED_KV=1 (16-token pages), --chunk 2048, temp 1.0
 ```
+
+### Qwen3.8-27B on llama.cpp `hip-kvmix` (`qwen38-iq3s-mtp` / `262k-q8q51-mtp`)
+
+`hip-kvmix` = llama.cpp v0.9.0 + the local `q8_0`/`q5_1` TILE patch: 76.3 tok/s empty, 22.5-33.2
+at 240K fill, 68/68 pooled retrieval. Launch: `python3 scripts/launch.py qwen38-iq3s-mtp`. Model,
+flags, sampling and every 240K number: [`models/qwen38-27b.md`](models/qwen38-27b.md).
+
+### Huihui Qwen3.8-27B abliterated on llama.cpp `hip-kvmix` (`huihui-iq3s-mtp` / `262k-q8q51-mtp`)
+
+The same profile with the abliterated quant: 22.12 GiB peak and 50.6 / 166.8 / 43.1 tok/s at 64K
+fill, coding suite not run ([results](../results/20261105-huihui-iq3s-262k/README.md)).
+
+### Qwen3.8-Flash-Next on Strata (paused)
+
+No set installed since 2026-11-05; the last one (v0.2.8 IQ2_XS) decoded 59-65 tok/s warm short and
+36.7 at 240K, and the 2026-11-22 v0.2.19 retest stayed below the 15 tok/s floor, so it is
+re-measured on the next install. Strata releases: [`sop/upstream-watch.md`](sop/upstream-watch.md);
+history and resume triggers:
+[`models/strata-qwen-flash-next.md`](models/strata-qwen-flash-next.md#current-state-2026-11-05).
 
 ## Headline numbers
 
-- **240K fill, adopted profile (temperature 0), essay/copy/code**: 33.2 / 54.7 / 22.5 tok/s, prefill
-  395 tok/s, peak process VRAM 22,645 MiB —
-  [results](../results/20261024-engine-b11846-240k/README.md); TILE patch +18-27%
-  ([D1](../results/20261023-d1-pr30792q51-240k/README.md)); cross-session spread up to ~6%.
-- **Empty context**: 76.3 tok/s MTP n=3 (39.1 without MTP), community `probe.py`, 3 passes —
-  [results](../results/20261024-probe-ab-262k-pr30792q51/README.md).
-- **Without MTP at 240K fill** (b11160): 11.2 tok/s, so MTP n=3 is +109% at depth —
-  [speculative.md](measurements/speculative.md#mtp-vs-spec-off-at-240k-fill-adopted-profile-2026-09-27).
-- **n-gram map on MTP**: copy at 240K 43.9 vs. 27.0 tok/s (+62%), agent/editing at empty context
-  +55% / +36%, other tasks -0-2%, temperature-0 output identical —
-  [results](../results/20261003-ngram-mtp-stacking/README.md).
-- **Quality**: 68/68 pooled across configurations from 32K-240K (0 loops), plus 40/40 at 190K and
-  240K on the adopted KV/MTP flags (b11160, temperature 0, thinking off, no n-gram map). Recall on
-  real agent history at 80K/176K with production sampling: 15-16/16 and 14-15/16, no
-  position-dependent loss. Retrieval only —
-  [depth.md](measurements/depth.md#current-conclusion).
-- **Power**: 272 W costs ~6% prefill vs. 303 W and runs the hotspot 7-8°C cooler (303 W hit 106°C
-  in a deep prefill) — [thermals-power.md](measurements/thermals-power.md).
+Inkling-2-Mini on `maya-ik2`, the port's `tools/ik2_bench.py`: 50,206 token IDs of this repo's docs
+cycled to each depth, uncached, 129 generated tokens, 3 repeats (2 at 262K), median, 272 W cap.
+
+- **Decode**: 106.1 / 98.2 / 90.0 / 68.9 / 53.6 tok/s at 512 / 8K / 32K / 128K / 262K fill; prefill
+  2,276 / 3,429 / 2,960 / 1,929 / 1,298 tok/s ([round](../results/20261123-inkling-round/README.md)).
+- **VRAM**: 22,304 MiB device-wide serving 262K on the previous port build, 22,029 MiB on `f472e94`
+  (`rocm-smi`); 3,498 MiB free before graph capture.
+- **Quality**: GSM8K greedy **187/192** (the untyped file: 188/192); 0/8 keyword refusals (on
+  `2b31ffeaa` the loop guard cut one answer; `f472e94` drops the repeats); a valid tool call and
+  12,216 of 12,253 prompt tokens reused. 262K retrieval 3/3: untyped file only.
+- **Comparison, same bench**: the untyped file decodes 95.7 / 88.2 / 82.3 / 64.2 tok/s (so the Q8_0
+  re-type is the +7-11%) and the llama.cpp fork profile 57.6 / 44.5 / 37.8 at 512 / 128K / 262K
+  ([owner](models/inkling-2-mini.md)).
 
 ## Flags and why
 
-Sampling is the Qwen3.8-27B card's own; `--min-p 0.0` is set explicitly because the binary default
-(0.05) isn't what the vendor tested ([`../AGENTS.md`](../AGENTS.md)).
+Settings of the `262k-maya` profile; the Qwen and Huihui profiles keep their own table in
+[`models/qwen38-27b.md`](models/qwen38-27b.md).
 
-| Flag | Why |
+| Setting | Why |
 |---|---|
-| `-c 262144` | Full native context; matches the wired `local-262k` provider |
-| `-ctk q8_0 -ctv q5_1` | `q8_0/q8_0` is near-free (KLD 0.000587 vs. f16); `q5_1` V costs +27% KLD but fits 262K in 24 GB; `q4_0/q4_0` has 4x KLD — [kv-quality.md](measurements/kv-quality.md) |
-| `-fa on` | Mandatory with a quantized V cache; avoids a silent slow-path fallback — [engines.md](measurements/engines.md) |
-| `--spec-type draft-mtp,ngram-map-k4v` | MTP head in the GGUF (no separate draft model) plus an n-gram drafter over the slot's own tokens: large gains when output copies context, lossless at temperature 0 — [qwen38-27b-quants.md](models/qwen38-27b-quants.md), [speculative.md](measurements/speculative.md) |
-| `--spec-draft-n-max 3` | +9-11% mean tg over n=2 at the real 190K/240K depths (a 128K screening favored n=3 only on copy); n=4 loses 9-23% at 240K, re-checked on the current engine — [speculative.md](measurements/speculative.md), [TRIED.md](TRIED.md) |
-| `-ub 256` | -350 MiB peak VRAM vs. 512, -5% prefill, no generation cost — [memory.md](measurements/memory.md) |
-| `-np 1` | Single user; one slot + MTP with queuing beats more slots — [concurrency.md](measurements/concurrency.md) |
-| `--ctx-checkpoints 10` | Default is 32; 4 evicted the system-prompt checkpoint before each ~35% compaction (48K re-processed, 70 s); 10 keeps it (20K, 33 s) at peak RssAnon 11.5 GiB — [replay](../results/20261106-ctx-checkpoints-replay/README.md) |
-| `--cache-ram 12288` | The 8192 default evicts a ~180K main state (7.7 GiB) when a side request is cached (412 s re-prefill); 12288 restores it in 1.8 s; up to ~4 GiB more host RAM — [memory.md](measurements/memory.md#host-prompt-cache-eviction-with-a-side-request-2026-10-03) |
-| `-ngl all` | All layers on GPU, explicit rather than `auto` |
-| `--reasoning-effort medium` | Template default `xhigh` injects "think carefully..." and overthinks; `medium` adds no instruction — `models.toml` |
-| `--metrics` | Exposes `/metrics` for the token usage ledger — [token-ledger.md](sop/token-ledger.md) |
+| `-c 262144` | Native context (the port reserves 393,216 positions); matches `local-262k` |
+| KV E4M3 paged (`IK2_KV=fp8`, `IK2_PAGED_KV=1`) | 16-token global pages: +29% decode and +13% prefill over token-major KV at 262K. `fp8-global` no gain, `fp4-global` -16/-34% at 32K/128K — [round](../results/20261123-inkling-round/README.md), [maya vs. fork](../results/20261122-inkling-maya-vs-fork/README.md) |
+| `--chunk 2048` | Alone no gain (39.5 vs. 39.6 tok/s and 1,157 vs. 1,138 prefill at 262K); the paged-KV arm ran with it; `--chunk 1024` under paging no better |
+| `ROCBLAS_TENSILE_LIBPATH` | The port's venv rocBLAS lacks the gfx1100 Tensile files; the first GEMM dies without the system library |
+| `temp 1.0`, `min_p 0.0` | The vendor card sets temperature only; `min_p 0.0` overrides the binary's 0.05 ([`AGENTS.md`](../AGENTS.md)) |
+| no `top_p`/`top_k`, no drafter | The card states neither, and DSpark decodes 4-17% slower on this build — [`models/inkling-2-mini.md`](models/inkling-2-mini.md) |
 
 ## Open questions
 
-- **Full cache misses in long sessions**: cause found (harness speculative compaction on the single
-  local slot) and a harness compaction change is in place; the 2026-10-03/04 logs are classified,
-  with one local compaction-summary fallback found —
+- **Inkling quality beyond GSM8K**: the six-task coding suite and the 68-case 240K retrieval set
+  have not run on this model, so quality parity between the setups is unmeasured —
+  [`models/inkling-2-mini.md`](models/inkling-2-mini.md#comparison-plan-open).
+- **Full cache misses in long sessions**: cause found (speculative compaction on the single local
+  slot), harness change in place, 2026-10-03/04 logs classified —
   [agent-traffic.md](measurements/agent-traffic.md#first-session-after-the-compaction-change-2026-10-03-evening-single-session).
-- **Compaction threshold, compaction method order and presence penalty** A/B only after a fixed
-  coding-task suite with executable tests and pass/fail criteria exists; checkpoint count was
-  settled at 10 by a compaction replay (2026-11-06, [DECISIONS](DECISIONS.md)); 60% (~157K) is the comparison arm —
-  [agent-traffic.md](measurements/agent-traffic.md#open-ab-tests).
+- **Compaction threshold and presence penalty** A/B only after a fixed coding-task suite exists;
+  checkpoints settled at 10 (2026-11-06) — [agent-traffic.md](measurements/agent-traffic.md#open-ab-tests).
 - **KVMem**: not adopted until a real agent run —
   [ENGINES-EXPERIMENTS.md](ENGINES-EXPERIMENTS.md#kvmem-trial-round-2-and-final-round-2026-09-30-not-adopted).
-- **Qwen3.8-Flash-Next via Strata**: measured 2026-11-22 on v0.2.19 + engine 0.1.65 (abliterated SC117 IQ2_XS,
-  262K int8, mapped) and **rejected on speed**: 5.8-12.8 tok/s decode at empty context, 324.2 tok/s prefill and
-  12.8 tok/s at a 69.7K fill — below the 15 tok/s floor and 5-10x under the 2026-10-30 v0.2.8 short decode. Cause is
-  the storage path (file tier 20.3 GiB vs a 15-19 GiB page cache, `page cache held 0.0 MB`, 39-191 GB read per
-  request, dense shard on the HDD priced at 0.15 GB/s), not 0.1.65's kernels; `GPU_PINNED_MIN_XFER_SIZE` is still
-  required (without it the engine died on `verify: timed out at layer 28`) — [owner](models/strata-qwen-flash-next.md#2026-11-22-sc117-on-v0219-measured-below-the-floor).
-  No `[strata.*]` table. Last faster set stays ISTA IQ2_XS on v0.2.8 (59-65 tok/s warm short, 36.7 at 240K).
-- **Inkling-2-Mini**: wired 2026-11-22 as opt-in `inkling2-mini-unc` / `262k-q8q8` on the `hip-inkling` engine
-  (GodGMN `inkling-rdna3` fork `cb0e46960`) with Abiray's uncensored IQ4_NL: decode 61.1 / 43.1 tok/s at depth 0 /
-  192K, 21,305 MiB at 262K `q8_0`/`q8_0`. Upstream
-  b12633 still cannot fit 262K (12,765 MiB compute buffer). Smoke only: no long fill, retrieval, refusal or coding
-  check. Faster engine wired 2026-11-22: GodGMN's `maya-ik2` HIP port with `IK2_PAGED_KV=1 --chunk 2048`, same file and 272 W: decode 95 / 63.6 / 51.1 tok/s and prefill 1,894 / 1,292 at 512 / 128K / 262K (fork 57.6 / 44.5 / 37.8 and 882 / 599), GSM8K 95/96 vs. 93/96, refusals 0/8, tool call and prefix reuse OK ([run](../results/20261122-inkling-maya-vs-fork/README.md)); wired as profile `262k-maya`, 262K retrieval 3/3. **Best since 2026-11-23**: `inkling2-mini-unc-q8d` / `262k-maya` (`python3 scripts/launch.py inkling2-mini-unc-q8d --profile 262k-maya`), the same file with Q8_0 head/attention: decode 106 / 98 / 90 / 69 tok/s at 512 / 8K / 32K / 128K (+7-11%), +1.3 GiB VRAM, GSM8K 187/192 ([round](../results/20261123-inkling-round/README.md)); engine `hip-port` `f472e94` since 2026-11-23 (same speed and GSM8K, loop guard recovers instead of cutting, [round 3](../results/20261123-inkling-round/README.md#round-3-2026-11-23-evening-hip-port-f472e94-dspark-loads-ik2_kvfp4-global)). DSpark does not load on the fork and on `maya-ik2` decodes 4-17% slower; n-gram speculation is untested on real sessions — [owner](models/inkling-2-mini.md#engine-and-variant-review-2026-11-22-second-pass).
 
 ## Next steps
 
 Execution order, dependencies and gates: [current plan](ENGINES-EXPERIMENTS.md#current-plan-2026-10-18).
 27B flag tuning stays paused until Qwen4; engine-level runs are allowed (2026-10-23, [`DECISIONS.md`](DECISIONS.md)).
 
-1. A2: check the harness compaction change in the next real session —
+1. Run the coding suite and the 68-case retrieval set on Inkling (quality question above).
+2. A2: check the harness compaction change in the next real session —
    [agent-traffic.md](measurements/agent-traffic.md#root-cause-speculative-compaction-on-the-local-slot-2026-10-03).
-2. C1: Qwen4 on day one, gated by the coding suite (27B baseline 6/6 on the current engine:
-   [results](../results/20261023-d1-pr30792q51-240k/README.md)); day-one checklist in
+3. C1: Qwen4 on day one, gated by the coding suite (27B baseline 6/6:
+   [results](../results/20261023-d1-pr30792q51-240k/README.md)); checklist in
    [sop/new-model.md](sop/new-model.md#qwen4-day-one-checklist).
-3. ~~A versioned `build_engine` script for the `kvmix` recipe, then the Flash-Next SC117 retest on Strata 0.2.19~~
-   Done 2026-11-22: the script shipped ([`DECISIONS.md`](DECISIONS.md)); the retest updated Strata to v0.2.19, built
-   engine 0.1.65 and stopped at the install's disk check (needs 15 GB more free on `/home` or a packs folder on
-   another drive) — [results](../results/20261122-strata-0219-sc117/README.md).
+
+## Current profile
+
+Renamed to [Setups in use](#setups-in-use) on 2026-11-23; this heading stays so older links resolve.

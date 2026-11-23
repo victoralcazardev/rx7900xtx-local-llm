@@ -1,8 +1,9 @@
-# Inkling-2-Mini (Thinking Machines) on llama.cpp
+# Inkling-2-Mini (Thinking Machines) on llama.cpp and the `maya-ik2` HIP port
 
 ## Current state (2026-11-22, wired on the GodGMN fork)
 
-- **Recommended since 2026-11-23: `inkling2-mini-unc-q8d` / `262k-maya`** — the Abiray file with its head and
+- **In use since 2026-11-23: `inkling2-mini-unc-q8d` / `262k-maya`** (the launcher's no-alias fallback,
+  not a recommendation) — the Abiray file with its head and
   non-expert attention/conv matrices re-typed to Q8_0 (experts byte-identical), so `maya-ik2` takes its planar Q8
   decode path: decode 106.1 / 98.2 / 90.0 / 68.9 tok/s at 512 / 8K / 32K / 128K (+7-11%), 1.3 GiB more VRAM,
   GSM8K 187/192 vs. 188/192. Engine `hip-port` `f472e94` since 2026-11-23. DSpark loads with rocBLAS's gfx1100 device
@@ -17,11 +18,12 @@
   `python3 scripts/launch.py inkling2-mini-unc --profile 262k-maya` ([SOP](../sop/launch-model.md)). Both GodGMN
   projects are in use: the llama.cpp fork serves `262k-q8q8`, the HIP port serves `262k-maya`. The bullets
   below describe the fork profile.
-- **Wired (opt-in, not the default)**: `models.toml` alias `inkling2-mini-unc` (Abiray IQ4_NL, below), profile `262k-q8q8`
-  (262,144 context, KV `q8_0`/`q8_0`, text only), backend `hip-inkling` = the GodGMN fork below
+- **Wired llama.cpp profile** (`262k-q8q8`, the comparison arm; the Q8_0 re-typed `262k-maya` on the HIP
+  port above is the setup in use since 2026-11-23): `models.toml` alias `inkling2-mini-unc` (Abiray IQ4_NL, below),
+  profile `262k-q8q8` (262,144 context, KV `q8_0`/`q8_0`, text only), backend `hip-inkling` = the GodGMN fork below
   (`local.toml` `[engines] hip-inkling`). Launch: `python3 scripts/launch.py inkling2-mini-unc --profile 262k-q8q8`.
-  `smoke.py` with the final flags (temp 1.0, min-p 0.0): **44.1 tok/s**. User decision of 2026-11-22
-  reversing the park ([`DECISIONS.md`](../DECISIONS.md)).
+  `smoke.py` with the final flags (temp 1.0, min-p 0.0): **44.1 tok/s**. This fork is the only llama.cpp
+  path that holds 262K on this card ([`DECISIONS.md`](../DECISIONS.md)).
 - **Sampling**: vendor `generation_config.json` sets only `temperature 1.0` (re-read 2026-11-22), so
   `top_p`/`top_k` stay at the engine default; the `top-p 1.0, top-k 0` of the Unsloth guide below is
   not the vendor's. Vendor warning: limit output tokens and agent turns (reasoning loops).
@@ -48,11 +50,12 @@
   ([results](../../results/20261122-inkling-abiray-iq4nl/README.md)). Its IQ4_NL experts also load in `maya-ik2`.
   The AtomicChat file and its mmproj were deleted on 2026-11-22 (user confirmed); sha256 kept in the
   [earlier results](../../results/20261122-inkling-uncensored-ad-q4k/README.md).
-- **Next**: the GodGMN `maya-ik2` HIP port claims 117 tok/s and 393K on this card but does not read the
-  AtomicChat file; DSpark does not load on the fork. Ranked path in
+- **Next**: the DSpark drafter loads on the port once rocBLAS gets its gfx1100 device pack, but decodes
+  4-17% slower, so it stays out of the profile; n-gram speculation on the port is untested. Ranked path in
   [Engine and variant review](#engine-and-variant-review-2026-11-22-second-pass).
-- **Decision**: wired on the fork (above); the former park and its triggers are kept in
-  [Status](#status-parked-2026-11-22-resume-triggers) as the re-check list for the comparison below.
+- **Decision**: the port profile is the setup in use since 2026-11-23 and the launcher's no-alias
+  fallback; no setup is recommended ([`DECISIONS.md`](../DECISIONS.md)). Wiring history and the former
+  park triggers stay in [Status](#status-parked-2026-11-22-resume-triggers) and [History](#history).
 - **Strata became an option (desk review, not installed)**: v0.2.19 ships `strata-inkling` 0.1.65
   and three SQ packs, of which **SQ-20 is 18.02 GiB "for 24 GiB+ GPUs"**. It would fit this card with
   little room left for KV, no latency number exists for gfx1100, and no Flash-Next or Inkling set is
@@ -193,7 +196,7 @@ Who is who (the names overlap; none of these engines is this repository's own co
 
 | Name | Author | What it is |
 |---|---|---|
-| llama.cpp | ggml-org | the standard engine; the Qwen default runs our own build of it plus a patch |
+| llama.cpp | ggml-org | the standard engine; the Qwen setup runs our own build of it plus a patch |
 | `GodGMN/llama.cpp` branch `inkling-rdna3` | GodGMN (Sergio) | llama.cpp with Inkling HIP kernels; the `hip-inkling` engine wired here |
 | Project Maya (`mw00/project-maya`) | Peasant Smith and contributors | a separate engine family that grew out of Strata, not llama.cpp |
 | `alesha-pro/maya-inkling-mini` | alesha-pro | Maya's Inkling-only engine `maya-ik2`, CUDA |

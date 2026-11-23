@@ -5,7 +5,8 @@
 #   vendor doesn't say, don't set"). The source of each value is in a comment.
 # - `[defaults].flags` are the flags that ALREADY change the binary's default. Re-verified
 #   against the engine's `--help` (see docs/measurements/). Re-verify with every new engine
-#   build: a default can change between versions or backends.
+#   build: a default can change between versions or backends. They apply to llama.cpp backends only:
+#   the `maya` backend takes no command-line flags, just the profile's `env`, `chunk` and `kv`.
 # - MTP profiles add `--spec-type draft-mtp --spec-draft-n-max N`; optional `spec_type` replaces
 #   the drafter list (e.g. "draft-mtp,ngram-map-k4v").
 # - Optional profile keys: `backend` (overrides the model's), `vision = false`
@@ -15,16 +16,19 @@
 #   `inkling-rdna3` fork, Inkling-2-Mini only), maya (GodGMN `maya-inkling-mini` HIP port, not llama.cpp,
 #   Inkling-2-Mini only; profile keys `chunk` and `env` feed its run config, kv is ["fp8","fp8"] or
 #   ["f16","f16"]), vulkan. See docs/measurements/ and docs/ENGINES.md.
-# - `default_alias`/`default_profile`: what `scripts/launch.py` loads when called with no
-#   alias (see docs/STATUS.md for why this is the current best configuration).
-# - One best default (2026-09-26, docs/DECISIONS.md), plus opt-in models the user asked for
-#   (2026-11-05: huihui-iq3s-mtp; 2026-11-22: inkling2-mini-unc). Add a new model/profile per docs/sop/new-model.md.
+# - `default_alias`/`default_profile`: the launcher fallback when `scripts/launch.py` is called with
+#   no alias — the setup last in use, not a recommendation; pick the alias per task
+#   (docs/DECISIONS.md, 2026-11-23).
+# - No recommended setup: the models sit side by side (2026-11-23, docs/DECISIONS.md). The fallback
+#   is `inkling2-mini-unc-q8d` / `262k-maya`; the other models are the Qwen3.8-27B
+#   `qwen38-iq3s-mtp` / `262k-q8q51-mtp`, `huihui-iq3s-mtp` and `inkling2-mini-unc` (all opt-in).
+#   Add a new model/profile per docs/sop/new-model.md.
 
 [defaults]
 port = 8080
 flags = ["-fa", "on", "-np", "1", "--ctx-checkpoints", "10", "-ngl", "all", "--metrics"]
-default_alias = "qwen38-iq3s-mtp"
-default_profile = "262k-q8q51-mtp"
+default_alias = "inkling2-mini-unc-q8d"
+default_profile = "262k-maya"
 
 # ---------------------------------------------------------------------------
 # Qwen3.8-27B GSQ-RCO IQ3_S-mtp (native NextN head).
@@ -43,13 +47,14 @@ top_p = 0.95
 top_k = 20
 min_p = 0.0
 
-# Recommended daily long-context default (2026-09-26, docs/measurements/): 68/68 exact retrieval
+# Qwen3.8-27B setup (the launcher fallback from 2026-09-26 until 2026-11-23, now one of several;
+# owner doc docs/models/qwen38-27b.md). Measured 2026-09-26 (docs/measurements/): 68/68 exact retrieval
 # matches pooled across configurations at 32K-240K (0 loops); only 8/8 used these exact profile
 # flags at 240K. Retrieval is not a general coding-quality evaluation. At 240K fill:
 # 24.4/26.9/18.6 tok/s essay/copy/code, pp 380, process
 # VRAM 22,630 MiB, under a 272 W power cap (this card's driver minimum). `hip-kvmix` engine, KV
 # q8_0/q5_1 (+27% KLD over q8/q8, doesn't show up in retrieval quality at 240K), MTP n=3, `-ub
-# 256`. This is `scripts/launch.py`'s default (see `[defaults]` above) when no alias is given.
+# 256`. Launch it with `python3 scripts/launch.py qwen38-iq3s-mtp`. Opt-in.
 [models.qwen38-iq3s-mtp.profiles."262k-q8q51-mtp"]
 backend = "hip-kvmix"
 context = 262144
@@ -73,10 +78,10 @@ vram_gib = 22.2
 flags = ["-ub", "256", "--reasoning-effort", "medium", "--cache-ram", "12288"]
 
 # ---------------------------------------------------------------------------
-# Huihui Qwen3.8-27B abliterated GSQ-RCO IQ3_S-mtp (uncensored; opt-in, not the default).
+# Huihui Qwen3.8-27B abliterated GSQ-RCO IQ3_S-mtp (uncensored; opt-in).
 # Card: https://huggingface.co/huihui-ai/Huihui-Qwen3.8-27B-abliterated-GGUF (no sampling stated; the base
 # Qwen3.8-27B card's values, matching the GGUF's general.sampling.*). Same file size (12,120,016,416 bytes),
-# quant method, architecture, NextN head and template as qwen38-iq3s-mtp, so it takes the default's 262K
+# quant method, architecture, NextN head and template as qwen38-iq3s-mtp, so it takes that setup's 262K
 # profile unchanged and the harness's `local-262k` provider (results/20261105-huihui-iq3s-262k/).
 [models.huihui-iq3s-mtp]
 gguf = "Huihui-Qwen3.8-27B-abliterated-GSQ-RCO-IQ3_S-mtp/Huihui-Qwen3.8-27B-abliterated-GSQ-RCO-IQ3_S-mtp.gguf"
@@ -100,7 +105,8 @@ vram_gib = 22.2
 flags = ["-ub", "256", "--reasoning-effort", "medium", "--cache-ram", "12288"]
 
 # ---------------------------------------------------------------------------
-# Abiray Inkling-2-Mini-Uncensored IQ4_NL (uncensored; opt-in, not the default). GGUF of
+# Abiray Inkling-2-Mini-Uncensored IQ4_NL (uncensored; the untyped file behind the launcher fallback
+# `inkling2-mini-unc-q8d`). GGUF of
 # OpenUncensored/Inkling-2-Mini-Uncensored (rank-2 refusal edit on 20 attention output projections, experts untouched);
 # replaced AtomicChat AD-Q4_K on 2026-11-22 (docs/DECISIONS.md). Experts all IQ4_NL, so the same file also loads in
 # GodGMN's maya-ik2 HIP port. Cards: https://huggingface.co/thinkingmachines/Inkling-2-Mini (generation_config.json
@@ -146,7 +152,8 @@ env = { IK2_PAGED_KV = "1", ROCBLAS_TENSILE_LIBPATH = "/opt/rocm/lib/rocblas/lib
 vision = false
 vram_gib = 20.3
 
-# The same Abiray file with the output head and the 176 non-expert attention/conv matrices re-typed to Q8_0
+# Launcher fallback since 2026-11-23 — the setup in use, not a recommendation (docs/DECISIONS.md):
+# the same Abiray file with the output head and the 176 non-expert attention/conv matrices re-typed to Q8_0
 # (2026-11-23, results/20261123-inkling-round/raw/retype_q8.py; experts and token_embd byte-identical, sha256
 # 375eea1b...). maya-ik2 then takes its planar Q8 decode path, like the port author's ggml-org file. At 272 W, same
 # bench: decode 106.1 / 98.2 / 90.0 / 68.9 tok/s at 512 / 8K / 32K / 128K vs. 95.7 / 88.2 / 82.3 / 64.2 (+7-11%),
