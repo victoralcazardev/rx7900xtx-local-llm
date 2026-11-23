@@ -247,9 +247,9 @@ Ranked by expected gain per effort for this setup. Scout claims are leads until 
 | # | Candidate | Expected gain | Effort | Evidence |
 |---:|---|---|---|---|
 | 1 | Opt-in `IK2_SUFFIX=128` for copy/edit-heavy agent sessions | ~9x decode on copied spans (measured above), -8 to -13% on novel greedy text | none (env var at launch) | measured |
-| 2 | Rebuild `maya-ik2` at `hip-port` `4f2b2ff` in a separate build dir, rerun the round's bench + GSM8K | server loop guard that recognizes reasoning/tool segments (`fe01a42`, maybe the q8dense refusal-prompt cut), multi-slot fixes; speed unknown | one build + one bench session | checked (`git log`, 32 commits) |
+| 2 | Rebuild `maya-ik2` at `hip-port` `4f2b2ff` in a separate build dir, rerun the round's bench + GSM8K | server loop guard that recognizes reasoning/tool segments (`fe01a42`, maybe the q8dense refusal-prompt cut), multi-slot fixes; speed unknown | one build + one bench session | checked (`git log`, 32 commits); **done in [round 3](#round-3-2026-11-23-evening-hip-port-f472e94-dspark-loads-ik2_kvfp4-global)**: `f472e94` adopted |
 | 3 | Uncensored edit as a `--lora` attention-output adapter on the stock ggml-org IQ4_NL (needs #2) | lets the vendor-like file run with the OpenUncensored edit and no re-type; quality vs. q8dense unknown | convert the 1 MB PEFT LoRA to GGUF | checked (`--lora` in `ik2_main.cu` at `4f2b2ff`); adapter conversion not tried |
-| 4 | `IK2_KV=fp4-global` (needs #2) | more context or slots in the same VRAM; quality per the author's FP8-vs-FP4 tables | env var | checked (`docs/HIP-PORT.md` at `4f2b2ff`) |
+| 4 | `IK2_KV=fp4-global` (needs #2) | more context or slots in the same VRAM; quality per the author's FP8-vs-FP4 tables | env var | checked (`docs/HIP-PORT.md` at `4f2b2ff`); **measured in [round 3](#ik2_kvfp4-global-e2m1-global-kv-smaller-cache-much-slower-at-depth-not-adopted)**: not adopted |
 | 5 | `IK2_RG_SLOTS` (short-prompt routing groups) | chat turn of 12 new tokens 118 -> 56 ms (project-maya SETTINGS.md, CUDA) | env var | scout, not fetched |
 | 6 | GPU undervolt at the same 272 W cap | +3.3% decode in one field report (60.24 vs. 58.29 tok/s) | needs `amdgpu.ppfeaturemask` + reboot (user decision) | scout, not fetched |
 | 7 | `pp_power_profile_mode` COMPUTE | low prior: single-card lanes gained nothing in the one published A/B | 2 sysfs writes | scout, not fetched |
@@ -282,7 +282,7 @@ cmake --build maya-inkling-mini-hip-f472e94/build-ik2 -j14 --target maya-ik2 ik2
 checked in the source: every CLI flag the scripts pass and every `IK2_*` variable of the preset is still read, no
 default changed in the diff, one new variable (`IK2_CAPTURE_PREFILL_RESIDUALS`). The port's preset
 (`docs/inkling2-mini/ik2-mini-gfx1100.json`) and `CMakeLists.txt` did not change. `raw/bench_m.sh` and
-`raw/gsm8k-pair.sh` now take `ENGINE=<binary>` (default: the production build), so both builds run with the same
+`raw/gsm8k-pair.sh` now take `ENGINE=<binary>` (default: the checkout's `2b31ffeaa` build, now the rollback), so both builds run with the same
 tools, request streams and env.
 
 **A/B, interleaved** (2026-11-23 16:09-16:36 UTC), `ENGINE=<new> MODEL=<q8dense> raw/bench_m.sh r3-new-g 2048 262144
@@ -360,7 +360,7 @@ line). Not separated here: whether the verify window or the drafter step costs m
 119, 182}; 65% of drafts accepted (10,320 of 15,809), wall 315 + 407 s vs. 275 + 403 s plain.
 
 **Conclusion.** It loads and keeps quality, but decode is 4-17% slower at every depth and sampling, so it is not wired.
-Prose at temperature 1.0 is the worst case (-10 to -17%), the direction of the author's own story run (116 -> 89.5).
+Prose at temperature 1.0 is the worst case (-6.5% at 128K to -17.2% at 512), the direction of the author's own story run (116 -> 89.5).
 project-maya v1.1.75 cannot be tried with our file: it reads NVFP4 / Q8_0 / Q5_K / Q6_K / IQ3_XXS / IQ4_XS blocks only
 (`src/ik2/ik2_kernels.cu:7594` at `8621f7a7`), not IQ4_NL experts, and has no `IK2_PAGED_KV`; testing it on a stock
 Unsloth file was skipped by the user. The new Unsloth drafter GGUF (`dspark-Inkling-2-Mini-Q8_0.gguf`, LFS
@@ -382,8 +382,10 @@ requires token-major KV and 128-wide heads", `ik2_main.cu:4899` dies when `IK2_P
 1.75 GiB less cache and the same GSM8K, but decode -16% at 32K and -34% at 128K against the production profile.
 Useful only for more context or slots than 262K, which the harness does not use. Not adopted.
 
-### Proposed for production (needs the user's OK)
+### Adopted for production (user OK, 2026-11-23)
 
-Point `local.linux.toml` `[engines] maya` at the `f472e94` worktree (production checkout kept as the rollback), record
-the build in `docs/ENGINES.md`, and add the DECISIONS, STATUS and CHANGELOG lines. No `models.toml` change: same
-profile, env and flags. The rocBLAS device pack is not part of the proposal (only the drafter needs it).
+`local.linux.toml` `[engines] maya` points at the `f472e94` worktree; the `2b31ffeaa` checkout stays as the rollback.
+Recorded in `docs/ENGINES.md`, DECISIONS, STATUS and CHANGELOG. No `models.toml` change: same profile, env and flags.
+The rocBLAS device pack is not part of production (only the drafter needs it). Smoke test through the real launcher
+(`scripts/smoke.py inkling2-mini-unc-q8d --profile 262k-maya`): OK*, 108.7 tok/s (the 200-token budget went to
+reasoning), no engine left.

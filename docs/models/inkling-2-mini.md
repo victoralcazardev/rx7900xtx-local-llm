@@ -5,7 +5,8 @@
 - **Recommended since 2026-11-23: `inkling2-mini-unc-q8d` / `262k-maya`** — the Abiray file with its head and
   non-expert attention/conv matrices re-typed to Q8_0 (experts byte-identical), so `maya-ik2` takes its planar Q8
   decode path: decode 106.1 / 98.2 / 90.0 / 68.9 tok/s at 512 / 8K / 32K / 128K (+7-11%), 1.3 GiB more VRAM,
-  GSM8K 187/192 vs. 188/192. DSpark still fails (rocBLAS `hipErrorInvalidImage`). Launch:
+  GSM8K 187/192 vs. 188/192. Engine `hip-port` `f472e94` since 2026-11-23. DSpark loads with rocBLAS's gfx1100 device
+  pack but decodes 4-17% slower, not wired ([round 3](../../results/20261123-inkling-round/README.md#dspark-drafter-the-hiperrorinvalidimage-cause-fixed-slower-on-this-card)). Launch:
   `python3 scripts/launch.py inkling2-mini-unc-q8d --profile 262k-maya`
   ([round](../../results/20261123-inkling-round/README.md)). To rebuild the file from a new Abiray release:
   `python3 -I results/20261123-inkling-round/raw/retype_q8.py --src <Abiray.gguf> --dst <models_root>/Inkling-2-Mini-Uncensored-Abiray-q8dense/Inkling-2-Mini-Uncensored-IQ4_NL-q8dense.gguf` (the path `models.toml` reads).
@@ -342,11 +343,12 @@ Read by scouts from the primary repos; author numbers, not re-measured here unle
   edit 106 -> 197 at window 64, identical final answers. Present in our build (`src/ik2/ik2_main.cu:5098`, off with
   `--draft`, window capped at `--chunk` and 128). Measured here: [round](../../results/20261123-inkling-round/README.md).
 - **`IK2_KV=fp8-global`** (sliding layers FP16, global E4M3): author GSM8K 188/192 vs. 184/192, prefill at 512 -17%,
-  KV 6.31 vs. 6.16 GiB. Untested here.
+  KV 6.31 vs. 6.16 GiB. Measured here: same GSM8K, prefill -12 to -15% at 512, not adopted ([round 2](../../results/20261123-inkling-round/README.md#ik2_kvfp8-global-sliding-layers-fp16-global-layers-e4m3-no-gain-here-not-adopted)).
 - **`IK2_CACHE_SLOTS=2`**: warm follow-ups 0.3 s vs. 130 s cold, but the reserved context is split (2 x 131K at 262K).
-- **DSpark on AMD**: project-maya ships it disabled on AMD (`--drafting auto` measured the drafter at -1.0, #1163);
-  open PR mw00/project-maya#1154 loads a GGUF drafter and folds the Q8_0 head in chunks (no FP16 copy), CUDA-tested
-  only. Our `hipErrorInvalidImage` is in that fold's `cublasSgemv`, so #1154 is the retest trigger.
+- **DSpark on AMD**: in project-maya #1163 (RX 7900 XT, v1.1.73) `--drafting auto` measured the drafter at -1.0 tok/s
+  (unusable) and kept prompt lookup. #1154 was squashed into project-maya v1.1.75 (2026-11-23), which reads no IQ4_NL
+  experts. On our port the `hipErrorInvalidImage` was rocBLAS's missing gfx1100 device pack; with it the drafter loads
+  but decodes 4-17% slower ([round 3](../../results/20261123-inkling-round/README.md#dspark-drafter-the-hiperrorinvalidimage-cause-fixed-slower-on-this-card)).
 - **Strata v0.2.20** (`strata-inkling` 0.1.66): no IQ4_NL in its lossless list; a field report shows 52 -> 47 tok/s on
   a 7900 XTX for another model (#6791); the gfx11 prefill/KV-snapshot work of #6685 is unmerged. Not tried.
 - **llama.cpp b12651**: #32752 (chunked mask) and #32740 (FA compact bias) open; #32218 (DSpark) has changes
@@ -358,6 +360,8 @@ Read by scouts from the primary repos; author numbers, not re-measured here unle
 - **Since 2026-11-23 (round 2)**: `hip-port` gained `IK2_KV=fp4-global` and `--lora` for GGUF attention-output
   adapters (OpenUncensored's edit is attention-output only, so it could run as an adapter on a stock file); details
   and the upstream recheck in the [round](../../results/20261123-inkling-round/README.md#round-2-2026-11-23-afternoon).
+- **Round 3 (2026-11-23)**: `hip-port` `f472e94` adopted (same speed and GSM8K, the loop guard recovers instead of
+  cutting); `IK2_KV=fp4-global` needs `IK2_PAGED_KV=0` and loses 34% decode at 128K ([round 3](../../results/20261123-inkling-round/README.md#round-3-2026-11-23-evening-hip-port-f472e94-dspark-loads-ik2_kvfp4-global)).
 
 ### Ranked path
 
@@ -368,7 +372,8 @@ Read by scouts from the primary repos; author numbers, not re-measured here unle
    call), the coding suite and a 262K retrieval check on it, and 393K (fits: every bench ran with 393,216 reserved).
 2. **Fork above 262K**: arithmetic only (~300K `q8_0`/`q8_0`, ~350K `q8_0`/`q5_1`, ~550K `q4_0`); the harness's
    `local-262k` stops at 262,144, so it only helps outside the harness.
-3. **Drafter**: retest when #32218 lands, or when the HIP port's server accepts a drafter.
+3. **Drafter**: loads on `maya-ik2` with rocBLAS's device pack but is 4-17% slower ([round 3](../../results/20261123-inkling-round/README.md#dspark-drafter-the-hiperrorinvalidimage-cause-fixed-slower-on-this-card)); retest
+   when the port takes project-maya's newer drafter code, or #32218 lands.
 4. **Strata**: only after a gfx1100 Inkling number exists.
 5. Upstream llama.cpp: on the [triggers](#status-parked-2026-11-22-resume-triggers).
 

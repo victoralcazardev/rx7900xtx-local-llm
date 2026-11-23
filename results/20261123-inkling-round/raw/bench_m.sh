@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # 2026-11-23 Inkling round: bench.sh with the model taken from the MODEL env var, so the
 # Q8_0-dense re-type (raw/retype_q8.py) can be measured with the identical production env.
-# ENGINE=<maya-ik2 binary> runs another build with the same tools and env (default: the production build).
+# ENGINE=<maya-ik2 binary> runs another build with the same tools and env (default: ./build-ik2/maya-ik2 of the
+# maya-inkling-mini-hip checkout, the 2b31ffeaa rollback since 2026-11-23; production is the f472e94 worktree).
 # usage: MODEL=<gguf> IK2_DRAFT_CTX=... bench_m.sh <label> <chunk> <ctx> <depths> <repeats> [extra ik2_bench args...]
 set -u -o pipefail
 label=$1 chunk=$2 ctx=$3 depths=$4 repeats=$5; shift 5

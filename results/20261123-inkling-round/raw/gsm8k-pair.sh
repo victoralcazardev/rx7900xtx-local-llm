@@ -6,7 +6,8 @@
 # so every model scored there answers exactly the same token IDs.
 # usage: gsm8k-pair.sh <MODEL> <OFFSET> <OUT> [COUNT]      (COUNT default 96)
 #    or: MODEL=<gguf> OFFSET=<n> OUT=<dir> [COUNT=<n>] gsm8k-pair.sh
-# ENGINE=<maya-ik2 binary> scores another build with the same tools and env (default: the production build).
+# ENGINE=<maya-ik2 binary> scores another build with the same tools and env (default: ./build-ik2/maya-ik2 of the
+# maya-inkling-mini-hip checkout, the 2b31ffeaa rollback since 2026-11-23; production is the f472e94 worktree).
 # DRAFT=<mtp.safetensors> serves with the DSpark drafter (planar Q8 files only; IK2_DRAFT_CTX from the caller).
 # LABEL names the output files (default: the model's folder name); OUT/<LABEL>.{log,err,jsonl}.
 set -u
