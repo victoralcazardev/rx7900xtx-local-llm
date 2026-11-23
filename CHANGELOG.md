@@ -8,12 +8,16 @@ All notable changes to this project are documented here. Format follows
 
 ### Changed
 
+- `launch.py`'s no-alias fallback is `inkling2-mini-unc-q8d` / `315k-maya` (315,392 context, peak 22,874 of 24,560 MiB, retrieval exact at 5/50/95%; [`results/20261123-inkling-315k/`](results/20261123-inkling-315k/README.md)); `check-sync.py` accepts a harness `context_window` up to the largest profile context.
+- Strata: every model file must be on the NVMe before any run or measurement; the 2026-11-22 SC117 number was read from the HDD ([`docs/sop/strata.md`](docs/sop/strata.md)). `scripts/strata.py` follows the v0.2.19 layout (run configs in `terminal/`, `update` runs `./setup.sh --update`).
+
 - The Qwen3.8-27B setup is the Huihui abliterated IQ3_S-mtp (stock GSQ-RCO stays as the measured reference); the Strata row points readers to Strata's latest release, quants and settings. Old Strata history, deleted engine recipes and the 2026-09 changelog moved to `docs/archive/`.
 
 - No setup is presented as the default any more: README and STATUS document Inkling-2-Mini on `maya-ik2`, Qwen3.8-27B and Huihui on `llama.cpp hip-kvmix`, and Qwen3.8-Flash-Next on Strata (paused) side by side; `launch.py`'s no-alias fallback is `inkling2-mini-unc-q8d` / `262k-maya`, the setup in use ([`docs/STATUS.md`](docs/STATUS.md), [`docs/models/qwen38-27b.md`](docs/models/qwen38-27b.md), `models.toml`).
 
 ### Added
 
+- `smoke.py` and `launch.py` refuse to start when the port already answers (catches Strata and maya's Python server, which the process check cannot name).
 - `scripts/launch.py --stop` stops whichever model server runs (llama-server or maya) and waits until the VRAM is free; `--background --wait` returns once the server answers `/health`.
 - Both engines in use published as GitHub releases: `engine-v0.9.0-rocm10-gfx1100-kvmix` (with the local `server-sigterm-watchdog.patch`) and `maya-ik2-f472e94-rocm10-gfx1100`, with tag, asset and SHA256 recorded ([`docs/ENGINES.md`](docs/ENGINES.md), [`docs/sop/update-engine.md`](docs/sop/update-engine.md#publish-a-release)).
 - `README.md` credits the upstream engines, ports, quants and models this repository builds on, and [`docs/sop/publish-sync.md`](docs/sop/publish-sync.md) now refreshes the README, About text, topics, credits and latest release after every release and every push that changes them ([`README.md`](README.md)).

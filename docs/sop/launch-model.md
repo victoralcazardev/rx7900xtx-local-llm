@@ -67,7 +67,7 @@ shorthand for the `launch.py` invocation below.
    If the manifest reports a PROBLEM (not a WARNING), fix it before continuing.
 
 2. **Pick alias and profile.** With no alias, `scripts/launch.py` uses `models.toml`'s
-   `[defaults] default_alias`/`default_profile` fallback (`inkling2-mini-unc-q8d` / `262k-maya`, the
+   `[defaults] default_alias`/`default_profile` fallback (`inkling2-mini-unc-q8d` / `315k-maya`, the
    setup last in use — not a recommendation; see `docs/STATUS.md`):
    ```
    python3 scripts/launch.py --dry-run

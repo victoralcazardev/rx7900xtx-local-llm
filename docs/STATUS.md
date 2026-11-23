@@ -12,7 +12,7 @@ adopted: [`TRIED.md`](TRIED.md); planned engine trials:
 ## Setups in use
 
 No setup is the recommended one; `scripts/launch.py` falls back to `inkling2-mini-unc-q8d` /
-`262k-maya` — the setup last in use, not a recommendation ([`DECISIONS.md`](DECISIONS.md), 2026-11-23).
+`315k-maya` (315,392 context; omp compacts it at 75%) — the setup last in use, not a recommendation ([`DECISIONS.md`](DECISIONS.md), 2026-11-23).
 
 ### Inkling-2-Mini uncensored on `maya-ik2` (`inkling2-mini-unc-q8d` / `262k-maya`)
 
@@ -35,7 +35,7 @@ No setup is the recommended one; `scripts/launch.py` falls back to `inkling2-min
 
 ```bash
 python3 scripts/launch.py            # launcher fallback; add --dry-run to print only
-python3 scripts/launch.py inkling2-mini-unc-q8d --profile 262k-maya
+python3 scripts/launch.py inkling2-mini-unc-q8d --profile 315k-maya   # or 262k-maya
 # the maya backend writes _tmp/maya/inkling2-mini-unc-q8d.maya.json from models.toml plus the
 # port's gfx1100 preset and runs, in the f472e94 worktree:
 #   .venv/bin/python serve/server.py --engine maya --config <that json> --port 8080 \

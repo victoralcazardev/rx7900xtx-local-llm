@@ -28,7 +28,7 @@ quants side by side. Not a multi-GPU, CUDA, vLLM/Ollama guide.
 | Qwen3.8-Flash-Next | many published Strata quants | Strata | Runs on one 24 GB card with experts streamed from host RAM/SSD; no set installed here: our last runs read the model from the SSD or the HDD on a 32 GiB host (2.6-12.8 tok/s), which measures storage, not Strata (every file must be on the NVMe), so follow [Strata](https://github.com/Niko1221/Strata)'s latest release, quant list and settings | 59-65 tok/s warm short, 36.7 at 240K (v0.2.8) | [`strata-qwen-flash-next.md`](docs/models/strata-qwen-flash-next.md) |
 
 Pick the alias per task: `python3 scripts/launch.py <alias> --profile <profile>`; with no alias it
-falls back to `inkling2-mini-unc-q8d` / `262k-maya`, the setup last in use (not a recommendation).
+falls back to `inkling2-mini-unc-q8d` / `315k-maya` (315,392 context), the setup last in use (not a recommendation).
 One engine serves `:8080` at a time. Flags, launch commands and evidence: each owner doc.
 
 ## Tested setup

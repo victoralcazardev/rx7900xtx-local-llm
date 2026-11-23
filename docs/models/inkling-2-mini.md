@@ -2,7 +2,7 @@
 
 ## Current state (2026-11-22, wired on the GodGMN fork)
 
-- **In use since 2026-11-23: `inkling2-mini-unc-q8d` / `262k-maya`** (the launcher's no-alias fallback,
+- **In use since 2026-11-23: `inkling2-mini-unc-q8d` / `315k-maya`** (315,392 context, [run](../../results/20261123-inkling-315k/README.md); the launcher's no-alias fallback,
   not a recommendation) — the Abiray file with its head and
   non-expert attention/conv matrices re-typed to Q8_0 (experts byte-identical), so `maya-ik2` takes its planar Q8
   decode path: decode 106.1 / 98.2 / 90.0 / 68.9 tok/s at 512 / 8K / 32K / 128K (+7-11%), 1.3 GiB more VRAM,
