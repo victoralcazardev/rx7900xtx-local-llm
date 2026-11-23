@@ -351,6 +351,13 @@ Read by scouts from the primary repos; author numbers, not re-measured here unle
   a 7900 XTX for another model (#6791); the gfx11 prefill/KV-snapshot work of #6685 is unmerged. Not tried.
 - **llama.cpp b12651**: #32752 (chunked mask) and #32740 (FA compact bias) open; #32218 (DSpark) has changes
   requested; #32773 (DSpark 16 GB) works on Vulkan/RADV only. The GodGMN fork already computes the bias in-kernel.
+- **Watch: an abliterated Inkling from @SergioGMN** (post relayed by the user, 2026-11-23: "terminando de ultimar
+  los detalles antes de subir Inkling abliterated", first Hugging Face upload). Not published yet. When it appears:
+  check the expert and head types against what `maya-ik2` reads (IQ4_NL / Q8_0 / NVFP4 experts, no K-quant rows;
+  `retype_q8.py` covers K-quant experts) and run the round's bench + GSM8K 192 + refusal set against q8dense.
+- **Since 2026-11-23 (round 2)**: `hip-port` gained `IK2_KV=fp4-global` and `--lora` for GGUF attention-output
+  adapters (OpenUncensored's edit is attention-output only, so it could run as an adapter on a stock file); details
+  and the upstream recheck in the [round](../../results/20261123-inkling-round/README.md#round-2-2026-11-23-afternoon).
 
 ### Ranked path
 

@@ -28,7 +28,9 @@ else
   .venv/bin/python tests/ik2_gsm8k.py $args > "$R" || { echo "$L: request generation failed" >&2; exit 1; }
   echo "$L: wrote request stream $R"
 fi
-eval "$(.venv/bin/python -c 'import json,shlex;e=json.load(open("ik2-abiray-paged.json"))["env"];print("\n".join(f"export {k}={shlex.quote(v)}" for k,v in e.items()))')"
+# production env, but a variable the caller set wins (e.g. IK2_KV=fp8-global for an A/B), as in bench_m.sh
+eval "$(.venv/bin/python -c 'import json,os,shlex;e=json.load(open("ik2-abiray-paged.json"))["env"];print("\n".join(f"export {k}={shlex.quote(v)}" for k,v in e.items() if k not in os.environ))')"
+echo "$L: IK2_KV=$IK2_KV"
 t0=$(date +%s)
 ./build-ik2/maya-ik2 --serve-ik2 --model "$M" --ctx 8192 --chunk 2048 < "$R" > "$O/$L.log" 2> "$O/$L.err"
 rc=$?

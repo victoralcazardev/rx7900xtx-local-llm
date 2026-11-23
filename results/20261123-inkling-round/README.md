@@ -157,3 +157,103 @@ Checked 2026-11-23 ~13:10 UTC.
   not apply here: every q8dense log says "tokens take the resident path, one graph replay per decode step".
 
 So DSpark was not retested.
+
+### `IK2_SUFFIX` on the generation bench: not neutral, not wired
+
+**Hypothesis**: prompt lookup costs nothing when the continuation is not in the prompt, so window 128 could be on by
+default. **Run** 2026-11-23 13:00-13:23 UTC, q8dense file, same session, in this order: plain greedy, plain t=1.0,
+sfx128 greedy, sfx128 t=1.0, then sfx64 / sfx16 greedy and a closing plain greedy control (512 / 8K / 32K):
+
+```bash
+MODEL=<q8dense> raw/bench_m.sh r2-q8d-plain-g 2048 262144 512,8192,32768,131072 3 [--temperature 1.0]
+MODEL=<q8dense> IK2_SUFFIX=128 raw/bench_m.sh r2-q8d-sfx128-g 2048 262144 512,8192,32768,131072 3 [--temperature 1.0]
+MODEL=<q8dense> IK2_SUFFIX=64 raw/bench_m.sh r2-q8d-sfx64-g 2048 262144 512,8192,32768 3     # and IK2_SUFFIX=16
+```
+
+Median decode tok/s (3 repeats; all rows in `raw/bench.jsonl`, variants `r2-*`):
+
+| Depth | plain | sfx128 | sfx64 | sfx16 | control | plain t=1 | sfx128 t=1 |
+|---:|---:|---:|---:|---:|---:|---:|---:|
+| 512 | 107.02 | 159.01 | 159.60 | 117.65 | 106.14 | 105.18 | 105.70 |
+| 8,192 | 98.31 | **90.46** | 90.91 | 90.65 | 97.78 | 96.82 | 94.05 |
+| 32,768 | 90.08 | **78.34** | 78.72 | 79.50 | 90.01 | 89.20 | 100.63 |
+| 131,072 | 68.93 | 707.18 | - | - | - | 68.38 | 490.42 |
+
+- The controls agree within 1% (107.0 -> 106.1, 98.3 -> 97.8, 90.1 -> 90.0), so the deltas are not drift.
+- Greedy at 8K and 32K loses 7-8% and 12-13% at every window: the cost does not come from the window width. The
+  engine's own counters show proposals mostly rejected on that text (e.g. "accepted 1/30 proposals").
+- 128K is not novel text: `docs.ids` holds 50,206 tokens, so the 128K prompt repeats the corpus and the continuation
+  is in it (prompt prefill unchanged, decode 7x). 512 also gains, because the docs' tables and lists repeat.
+  32K repeats vary 76.5-109.7 with the suffix on (one hit-rich repeat each).
+- At temperature 1.0 (production sampling) 8K is -2.9%, 32K +12.8%: mixed, and greedy coding work would pay the
+  8-13%.
+
+**Conclusion**: not neutral on prose, so not added to `262k-maya` (S3 condition). Keep it opt-in for copy/edit-heavy
+sessions: `IK2_SUFFIX=128 python3 scripts/launch.py inkling2-mini-unc-q8d --profile 262k-maya`.
+
+### `IK2_SUFFIX=128` through `serve/server.py` (HTTP)
+
+2026-11-23 ~13:26-13:32 UTC, `launch.py ... --background` with and without `IK2_SUFFIX=128` in the caller's
+environment (the server copies `os.environ` into the engine's; checked in `/proc/<pid>/environ` and in every
+response's `timings.draft_n`). Client `raw/http_copy_edit.py`: 40-line inventory, copy it and return it with one
+line edited, `/v1/chat/completions`, temperature 0, `reasoning_effort: "none"`, 3 repeats; decode from the server's
+`timings.predicted_per_second`. Rows: `raw/http-suffix.jsonl`.
+
+| Case | sfx128 exact | sfx128 median tok/s | plain exact | plain median tok/s |
+|---|---:|---:|---:|---:|
+| copy (2,580 tokens) | 3/3 | 938.80 | 3/3 | 99.40 |
+| one-line edit (2,581 tokens) | 3/3 | 948.30 | 3/3 | 100.90 |
+
+Tool call (`results/20261122-inkling-maya-vs-fork/raw/agent_check.py`, 14,789-token prompt, t=1.0): both variants
+produced a valid `read_file` call and a correct second turn with 14,853 prompt tokens cached (`raw/agent-*.txt`).
+The engine's "suffix verification" startup line is not in the launcher log (the server only forwards tagged engine
+lines), so check the variable in `/proc/<pid>/environ` or in `timings.draft_n`.
+
+### `IK2_KV=fp8-global` (sliding layers FP16, global layers E4M3): no gain here, not adopted
+
+**Hypothesis** (port author: GSM8K 188/192 vs. 184/192 with plain FP8, prefill -17% at 512): keeping the 40
+sliding-window visits in FP16 improves quality at a small prefill cost. **Run** 2026-11-23 13:35-13:56 UTC, q8dense,
+production env with `IK2_KV=fp8-global` in the caller's environment (engine log: "kv cache: fp8-global, 16-token
+global pages"), then a closing plain control:
+
+```bash
+MODEL=<q8dense> IK2_KV=fp8-global raw/bench_m.sh r2-q8d-fp8g-g 2048 262144 512,8192,32768,131072 3
+IK2_KV=fp8-global LABEL=F raw/gsm8k-pair.sh <q8dense> 0  <abs-out>/gsm-0  96   # reuses the q8dense request streams
+IK2_KV=fp8-global LABEL=F raw/gsm8k-pair.sh <q8dense> 96 <abs-out>/gsm-96 96
+MODEL=<q8dense> raw/bench_m.sh r2-q8d-plain-g-ctl2 2048 262144 512,8192,32768,131072 3
+```
+
+`gsm8k-pair.sh` used to overwrite the caller's variables with the preset's (`IK2_KV=fp8`); it now lets the caller's
+win and prints `IK2_KV`, and the runs above printed `fp8-global`. The earlier rows did not set any preset variable
+in the caller, so they are unaffected.
+
+| | plain FP8 (first / closing control) | fp8-global |
+|---|---:|---:|
+| Decode 512 / 8K / 32K / 128K, tok/s | 107.02 / 98.31 / 90.08 / 68.93 and 105.79 / 97.41 / 89.82 / 68.78 | 108.02 / 98.92 / 91.17 / 69.26 |
+| Prefill 512 / 8K / 32K / 128K, tok/s | 2,276 / 3,441 / 2,999 / 1,931 and 2,359 / 3,415 / 2,975 / 1,927 | **2,000** / 3,419 / 2,984 / 1,929 |
+| K / V cache at 262,144 reserved | 4.2 GiB, 3,508 MiB free before graph capture | 4.5 GiB (4.47), 3,348 MiB free |
+| GSM8K greedy 0-95 / 96-191 | 94 / 93 = 187, wrong {40, 93} / {100, 119, 161} | 94 / 93 = **187**, wrong {40, 93} / {119, 163, 182} |
+
+Decode within ~1% of the controls, prefill -12 to -15% at 512 only (the author's direction), 160 MiB less free VRAM,
+and the same GSM8K score with the same misses on the first half. The author's +4 questions did not reproduce on this
+file. **Conclusion**: no measured benefit, so `262k-maya` keeps `IK2_KV=fp8`. Per-question rows:
+`raw/gsm8k-fp8global-{0,96}.jsonl`.
+
+### Next cheap improvements, prioritized (scouts 2026-11-23, not yet measured here)
+
+Ranked by expected gain per effort for this setup. Scout claims are leads until fetched; the ones marked
+"checked" were verified against the source or locally.
+
+| # | Candidate | Expected gain | Effort | Evidence |
+|---:|---|---|---|---|
+| 1 | Opt-in `IK2_SUFFIX=128` for copy/edit-heavy agent sessions | ~9x decode on copied spans (measured above), -8 to -13% on novel greedy text | none (env var at launch) | measured |
+| 2 | Rebuild `maya-ik2` at `hip-port` `4f2b2ff` in a separate build dir, rerun the round's bench + GSM8K | server loop guard that recognizes reasoning/tool segments (`fe01a42`, maybe the q8dense refusal-prompt cut), multi-slot fixes; speed unknown | one build + one bench session | checked (`git log`, 32 commits) |
+| 3 | Uncensored edit as a `--lora` attention-output adapter on the stock ggml-org IQ4_NL (needs #2) | lets the vendor-like file run with the OpenUncensored edit and no re-type; quality vs. q8dense unknown | convert the 1 MB PEFT LoRA to GGUF | checked (`--lora` in `ik2_main.cu` at `4f2b2ff`); adapter conversion not tried |
+| 4 | `IK2_KV=fp4-global` (needs #2) | more context or slots in the same VRAM; quality per the author's FP8-vs-FP4 tables | env var | checked (`docs/HIP-PORT.md` at `4f2b2ff`) |
+| 5 | `IK2_RG_SLOTS` (short-prompt routing groups) | chat turn of 12 new tokens 118 -> 56 ms (project-maya SETTINGS.md, CUDA) | env var | scout, not fetched |
+| 6 | GPU undervolt at the same 272 W cap | +3.3% decode in one field report (60.24 vs. 58.29 tok/s) | needs `amdgpu.ppfeaturemask` + reboot (user decision) | scout, not fetched |
+| 7 | `pp_power_profile_mode` COMPUTE | low prior: single-card lanes gained nothing in the one published A/B | 2 sysfs writes | scout, not fetched |
+
+Ruled out: per-arch Tensile folder (flat here), iGPU masking (none), the project-maya #1173 resident-path issue
+(resident path confirmed), `HIP_FORCE_DEV_KERNARG` (already the default), `GPU_MAX_HW_QUEUES` > 4 (documented as
+unpredictable), `IK2_BATCH_PREFILL` changes (AMD builds use their own batched path), DSpark until #1154 or a HIP fix.
