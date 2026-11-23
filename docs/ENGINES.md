@@ -231,7 +231,7 @@ cmake --build maya-inkling-mini-hip/build-ik2 -j14 --target maya-ik2 ik2_kernels
   `context`, `kv` (-> `IK2_KV`), `chunk` and `env`, then runs `.venv/bin/python serve/server.py --engine maya`
   on `[defaults].port`: an OpenAI and Anthropic API, so the `local-262k` harness provider works unchanged. The
   preset's `reasoning_effort` is dropped (vendor default, as on llama-server). Stop it with Ctrl+C in the
-  foreground, or `pkill -INT -f 'serve/server.py --engine maya'` after `--background`: the engine takes up to
+  foreground, or `python3 scripts/launch.py --stop` (SIGINT to `serve/server.py --engine maya`) after `--background`: the engine takes up to
   ~50 s to exit (the server then stops it); `pgrep -x maya-ik2` empty means the VRAM is free, and is what
   `launch.py` checks before starting. Verified 2026-11-22: launch, a Gentle-Shell-shaped streaming tool call
   (`model: local-262k`, `bash {"command":"ls -la"}`), stop, and `smoke.py` (96.5 tok/s, no engine left behind).

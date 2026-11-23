@@ -14,6 +14,7 @@ All notable changes to this project are documented here. Format follows
 
 ### Added
 
+- `scripts/launch.py --stop` stops whichever model server runs (llama-server or maya) and waits until the VRAM is free; `--background --wait` returns once the server answers `/health`.
 - Both engines in use published as GitHub releases: `engine-v0.9.0-rocm10-gfx1100-kvmix` (with the local `server-sigterm-watchdog.patch`) and `maya-ik2-f472e94-rocm10-gfx1100`, with tag, asset and SHA256 recorded ([`docs/ENGINES.md`](docs/ENGINES.md), [`docs/sop/update-engine.md`](docs/sop/update-engine.md#publish-a-release)).
 - `README.md` credits the upstream engines, ports, quants and models this repository builds on, and [`docs/sop/publish-sync.md`](docs/sop/publish-sync.md) now refreshes the README, About text, topics, credits and latest release after every release and every push that changes them ([`README.md`](README.md)).
 - Inkling round 3 on `maya-ik2` ([`results/20261123-inkling-round/`](results/20261123-inkling-round/README.md#round-3-2026-11-23-evening-hip-port-f472e94-dspark-loads-ik2_kvfp4-global)): `hip-port` `f472e94` adopted as the `maya` engine (same speed and GSM8K, loop guard recovers instead of cutting; `2b31ffeaa` kept as rollback), the DSpark `hipErrorInvalidImage` traced to rocBLAS's missing gfx1100 device pack (drafter then loads but decodes 4-17% slower), `IK2_KV=fp4-global` measured (-34% decode at 128K, not adopted); `bench_m.sh` / `gsm8k-pair.sh` take `ENGINE` and `DRAFT`, new `raw/refusal_one.py`.

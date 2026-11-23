@@ -27,9 +27,9 @@ Two profiles on the same Abiray IQ4_NL file; `--profile` is required. Text only,
 | `262k-q8q8` | `hip-inkling` (GodGMN `inkling-rdna3` llama.cpp fork) | 57.6 / 44.5 / 37.8 | llama.cpp features (`/metrics`, n-gram speculation, checkpoints) |
 
 ```
-python3 scripts/launch.py inkling2-mini-unc --profile 262k-maya --background
+python3 scripts/launch.py inkling2-mini-unc --profile 262k-maya --background --wait   # returns once /health answers
 python3 scripts/smoke.py inkling2-mini-unc --profile 262k-maya     # automated check, starts and stops its own server
-pkill -INT -f 'serve/server.py --engine maya'                        # stop the maya profile (up to ~50 s)
+python3 scripts/launch.py --stop                                     # stop any model server, wait until the VRAM is free
 ```
 
 Both serve the `local-262k` harness provider on `:8080`. Evidence:
@@ -85,12 +85,13 @@ shorthand for the `launch.py` invocation below.
    ```
    or detached in the background:
    ```
-   python3 scripts/launch.py --background
+   python3 scripts/launch.py --background          # add --wait to return only once it answers /health
    ```
    From an agent's shell tool, start it with `setsid -f python3 scripts/launch.py --background
    >/dev/null 2>&1 </dev/null`: otherwise the tool's timeout kills the launcher's process group and
    the server with it (observed 2026-10-23: "cleaning up before exit" ~2 min after launch). Stop it
-   with `pkill -INT -x llama-server` when done: it holds ~22 GiB of VRAM.
+   with `python3 scripts/launch.py --stop` when done (SIGINT to llama-server or maya's server, waits until
+   the GPU process exits, SIGKILL after 90 s): it holds ~22 GiB of VRAM.
    Both modes write the server log to `_tmp/logs/<alias>-<profile>-<timestamp>.log`; foreground
    also echoes it to the console. Keep these logs: cache misses and timings of a real session can
    only be analyzed from them. On Linux the launcher also writes `<log>.gpu.csv` from
@@ -112,7 +113,7 @@ shorthand for the `launch.py` invocation below.
 ## Known errors
 
 - **`a model server (llama-server or maya-ik2) is already running`**: stop the previous process first
-  (`pkill -x llama-server`, `pkill -INT -f 'serve/server.py --engine maya'`, or Task Manager on Windows).
+  (`python3 scripts/launch.py --stop` on Linux, or Task Manager on Windows).
   There's only VRAM for one.
 - **`400 exceed_context`**: your harness's provider entry doesn't match the profile's real `-c`.
   Run `check-sync.py`; if the "harness" block fails, the wiring is out of sync.

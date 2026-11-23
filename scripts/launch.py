@@ -2,10 +2,11 @@
 
 Usage:
     python3 scripts/launch.py [alias] [--profile P] [--backend vulkan|hip|cuda]
-                               [--dry-run] [--background] [--manifest path.toml]
+                               [--dry-run] [--background [--wait]] [--manifest path.toml]
+    python3 scripts/launch.py --stop
 
 Without an alias, models.toml's [defaults] default_alias/default_profile is used (the
-current best configuration -- see docs/STATUS.md). Without --profile, if the model has
+launcher fallback, not a recommendation -- see docs/STATUS.md). Without --profile, if the model has
 only one profile that one is used; with several, they are listed and the script exits
 with code 2. --backend overrides the one declared in models.toml (useful for pipeline
 tests, e.g. --backend cuda).
@@ -13,7 +14,10 @@ tests, e.g. --backend cuda).
 Every launch writes the server log to _tmp/logs/<alias>-<profile>-<timestamp>.log and, on
 Linux, a GPU thermal/VRAM CSV next to it (<log>.gpu.csv, scripts/gpu_watch.py).
 Foreground (the default) also echoes it to the console, Ctrl+C to stop;
---background detaches the server and only writes the file.
+--background detaches the server and only writes the file; --wait then blocks until the
+server answers /health (exit 1 if it dies or takes longer than 10 min).
+--stop ends the running model server (maya's serve/server.py or llama-server) and waits
+until its GPU process is gone, so the VRAM is free; after 90 s it sends SIGKILL.
 """
 from __future__ import annotations
 
@@ -24,6 +28,8 @@ import shutil
 import subprocess
 import shlex
 import sys
+import time
+import urllib.request
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from manifest import (  # noqa: E402
@@ -32,6 +38,59 @@ from manifest import (  # noqa: E402
 )
 
 VRAM_MARGIN_GIB = 0.5  # over the profile's measured `vram_gib` (peak with a full context)
+READY_WAIT_S = 600  # 10-17 GB from disk
+STOP_WAIT_S = 90  # maya-ik2 takes up to ~50 s to exit after SIGINT
+
+
+def stop_servers(timeout_s: int = STOP_WAIT_S) -> int:
+    """SIGINT to every model server, wait for the GPU processes to exit, SIGKILL after timeout_s."""
+    alive = running_servers()
+    if alive is None:
+        print("ERROR: could not detect running model servers.", file=sys.stderr)
+        return 1
+    if not alive:
+        print("no model server running.")
+        return 0
+    # maya: stop the Python server, which stops its engine; llama-server takes SIGINT directly
+    subprocess.run(["pkill", "-INT", "-f", "serve/server.py --engine maya"])
+    subprocess.run(["pkill", "-INT", "-x", "llama-server"])
+    deadline = time.monotonic() + timeout_s
+    while time.monotonic() < deadline:
+        now_alive = running_servers()
+        if now_alive is None:
+            print("ERROR: could not detect running model servers while stopping.", file=sys.stderr)
+            return 1
+        if not now_alive:
+            free = free_vram_gib()
+            print("stopped; VRAM free: " + (f"{free:.1f} GiB" if free is not None else "unknown"))
+            return 0
+        time.sleep(2)
+    subprocess.run(["pkill", "-KILL", "-f", "serve/server.py --engine maya"])
+    subprocess.run(["pkill", "-KILL", "-x", "llama-server|maya-ik2"])
+    time.sleep(3)
+    left = running_servers()
+    if left is None:
+        print("ERROR: could not detect running model servers after SIGKILL.", file=sys.stderr)
+        return 1
+    if left:
+        print(f"ERROR: model server still running after SIGKILL (PID {left}).", file=sys.stderr)
+        return 1
+    print(f"did not exit in {timeout_s} s: killed.")
+    return 0
+
+
+def wait_ready(port: int, proc: subprocess.Popen, timeout_s: int = READY_WAIT_S) -> bool:
+    """True once /health answers; False if the server exits first or timeout_s passes."""
+    deadline = time.monotonic() + timeout_s
+    while time.monotonic() < deadline:
+        if proc.poll() is not None:
+            return False
+        try:
+            urllib.request.urlopen(f"http://127.0.0.1:{port}/health", timeout=3)
+            return True
+        except OSError:
+            time.sleep(2)
+    return False
 
 
 def _without_suspend(cmd: list[str]) -> list[str]:
@@ -63,8 +122,15 @@ def main() -> int:
     p.add_argument("--backend", help="override the backend declared in the manifest")
     p.add_argument("--dry-run", action="store_true", help="only print the command")
     p.add_argument("--background", action="store_true", help="launch in the background with a log")
+    p.add_argument("--wait", action="store_true",
+                   help="with --background: return only once the server answers /health")
+    p.add_argument("--stop", action="store_true",
+                   help="stop the running model server and wait until the VRAM is free")
     p.add_argument("--manifest", type=pathlib.Path, help="alternate path to models.toml")
     args = p.parse_args()
+
+    if args.stop:
+        return stop_servers()
 
     try:
         m = load(manifest=args.manifest)
@@ -141,6 +207,13 @@ def main() -> int:
             proc = subprocess.Popen(cmd, cwd=str(cwd), stdout=log, stderr=log)
         _start_gpu_watch(proc.pid, log_path, m.default_port)
         print(f"launched in background, log: {log_path}")
+        if not args.wait:
+            return 0
+        print("loading...", flush=True)
+        if not wait_ready(m.default_port, proc):
+            print(f"ERROR: server did not become ready; see {log_path}", file=sys.stderr)
+            return 1
+        print(f"ready on http://127.0.0.1:{m.default_port}/v1 (harness provider: {entry})")
         return 0
 
     print(f"log: {log_path}")

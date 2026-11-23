@@ -105,5 +105,66 @@ class TestLauncherAndSmoke(unittest.TestCase):
         self.assertIn("could not detect running model servers", output.getvalue())
 
 
+
+class TestStopAndWait(unittest.TestCase):
+    """`--stop` ends whatever model server runs and waits for the VRAM; `--wait` blocks a
+    background launch until /health answers."""
+
+    def test_stop_signals_both_servers_and_reports_free_vram(self):
+        out = io.StringIO()
+        with mock.patch.object(launch, "running_servers", side_effect=[[11, 12], [12], []]), \
+             mock.patch.object(launch.subprocess, "run") as run, \
+             mock.patch.object(launch.time, "sleep"), \
+             mock.patch.object(launch, "free_vram_gib", return_value=23.4), \
+             contextlib.redirect_stdout(out):
+            self.assertEqual(launch.stop_servers(timeout_s=60), 0)
+        called = [c.args[0] for c in run.call_args_list]
+        self.assertIn(["pkill", "-INT", "-f", "serve/server.py --engine maya"], called)
+        self.assertIn(["pkill", "-INT", "-x", "llama-server"], called)
+        self.assertIn("stopped; VRAM free: 23.4 GiB", out.getvalue())
+
+    def test_stop_with_nothing_running_is_a_no_op(self):
+        out = io.StringIO()
+        with mock.patch.object(launch, "running_servers", return_value=[]), \
+             mock.patch.object(launch.subprocess, "run") as run, \
+             contextlib.redirect_stdout(out):
+            self.assertEqual(launch.stop_servers(timeout_s=60), 0)
+        run.assert_not_called()
+        self.assertIn("no model server running", out.getvalue())
+
+    def test_stop_fails_when_the_server_outlives_the_timeout(self):
+        err = io.StringIO()
+        clock = iter(range(0, 1000, 10))
+        with mock.patch.object(launch, "running_servers", return_value=[11]), \
+             mock.patch.object(launch.subprocess, "run"), \
+             mock.patch.object(launch.time, "sleep"), \
+             mock.patch.object(launch.time, "monotonic", side_effect=lambda: next(clock)), \
+             contextlib.redirect_stderr(err):
+            self.assertEqual(launch.stop_servers(timeout_s=60), 1)
+        self.assertIn("still running", err.getvalue())
+
+    def test_wait_ready_returns_when_health_answers(self):
+        proc = mock.Mock(); proc.poll.return_value = None
+        with mock.patch.object(launch.urllib.request, "urlopen",
+                               side_effect=[OSError("refused"), mock.Mock()]), \
+             mock.patch.object(launch.time, "sleep"):
+            self.assertTrue(launch.wait_ready(8080, proc, timeout_s=60))
+
+    def test_wait_ready_fails_when_the_server_exits(self):
+        proc = mock.Mock(); proc.poll.return_value = 1
+        with mock.patch.object(launch.urllib.request, "urlopen", side_effect=OSError("refused")), \
+             mock.patch.object(launch.time, "sleep"):
+            self.assertFalse(launch.wait_ready(8080, proc, timeout_s=60))
+    def test_stop_does_not_report_free_vram_when_detection_fails(self):
+        output, errors = io.StringIO(), io.StringIO()
+        with mock.patch.object(launch, "running_servers", side_effect=[[123], None, None]), \
+             mock.patch.object(launch.subprocess, "run"), \
+             mock.patch.object(launch.time, "sleep"), \
+             contextlib.redirect_stdout(output), contextlib.redirect_stderr(errors):
+            self.assertEqual(launch.stop_servers(timeout_s=1), 1)
+        self.assertNotIn("VRAM free", output.getvalue())
+        self.assertIn("could not detect", errors.getvalue())
+
+
 if __name__ == "__main__":
     unittest.main()
