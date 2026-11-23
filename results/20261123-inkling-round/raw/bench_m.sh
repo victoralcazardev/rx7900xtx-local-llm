@@ -2,7 +2,7 @@
 # 2026-11-23 Inkling round: bench.sh with the model taken from the MODEL env var, so the
 # Q8_0-dense re-type (raw/retype_q8.py) can be measured with the identical production env.
 # usage: MODEL=<gguf> IK2_DRAFT_CTX=... bench_m.sh <label> <chunk> <ctx> <depths> <repeats> [extra ik2_bench args...]
-set -u
+set -u -o pipefail
 label=$1 chunk=$2 ctx=$3 depths=$4 repeats=$5; shift 5
 cd ~/IA/Motores/src/maya-inkling-mini-hip
 source ~/IA/Motores/src/build-env.sh >/dev/null 2>&1 || true
