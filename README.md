@@ -23,8 +23,8 @@ quants side by side. Not a multi-GPU, CUDA, vLLM/Ollama guide.
 
 | Model | Quant | Engine | Status | Headline numbers | Owner doc |
 |---|---|---|---|---|---|
-| Inkling-2-Mini uncensored (Thinking Machines) | `IQ4_NL` experts, Q8_0 head/attention | `maya-ik2` HIP port `hip-port` `f472e94` | In use | 106.1 / 90.0 / 68.9 tok/s at 512 / 32K / 128K fill, 53.6 at 262K; GSM8K 187/192 | [`inkling-2-mini.md`](docs/models/inkling-2-mini.md) |
-| Qwen3.8-27B abliterated (huihui-ai) | GSQ-RCO `IQ3_S-mtp` | llama.cpp `hip-kvmix` v0.9.0 + patch | Opt-in | 50.6 / 166.8 / 43.1 tok/s essay/copy/code at 64K fill, 22.12 GiB peak; the 240K, retrieval and coding-suite numbers are the stock quant's | [`qwen38-27b.md`](docs/models/qwen38-27b.md) |
+| Inkling-2-Mini uncensored (Thinking Machines) | `IQ4_NL` experts, Q8_0 head/attention | `maya-ik2` HIP port `hip-port` `f472e94` | Ready | 106.1 / 90.0 / 68.9 tok/s at 512 / 32K / 128K fill, 53.6 at 262K; GSM8K 187/192 | [`inkling-2-mini.md`](docs/models/inkling-2-mini.md) |
+| Qwen3.8-27B abliterated (huihui-ai) | GSQ-RCO `IQ3_S-mtp` | llama.cpp `hip-kvmix` v0.9.0 + patch | Ready | 50.6 / 166.8 / 43.1 tok/s essay/copy/code at 64K fill, 22.12 GiB peak; the 240K, retrieval and coding-suite numbers are the stock quant's | [`qwen38-27b.md`](docs/models/qwen38-27b.md) |
 | Qwen3.8-Flash-Next | many published Strata quants | Strata | Runs on one 24 GB card with experts streamed from host RAM/SSD; no set installed here since 2026-11-05 because our sets read the experts from the SSD on a 32 GiB host (2.6-12.8 tok/s), so follow [Strata](https://github.com/Niko1221/Strata)'s latest release, quant list and settings | 59-65 tok/s warm short, 36.7 at 240K (v0.2.8) | [`strata-qwen-flash-next.md`](docs/models/strata-qwen-flash-next.md) |
 
 Pick the alias per task: `python3 scripts/launch.py <alias> --profile <profile>`; with no alias it
