@@ -1,0 +1,4 @@
+_tmp/nib-slots/serve-slots1.log:[mtp] drafter online (threshold=0.80, ctx=8192, shortlist=32834 rows, vram=21.17 GiB total)
+_tmp/nib-slots/serve-slots1.log:[nib] Config: ctx=262144 slots=1(262144/slot, req_max=262144, solo) kv=q8_0 sparse_pages=224 temp=0.60 mtp=ON vision=OFF vram=21.17 GiB
+_tmp/nib-slots/serve-slots2.log:[mtp] drafter online (threshold=0.80, ctx=8192, shortlist=32834 rows, vram=21.30 GiB total)
+_tmp/nib-slots/serve-slots2.log:[nib] Config: ctx=262144 slots=2(131072/slot, req_max=262144, elastic) kv=q8_0 sparse_pages=224 temp=0.60 mtp=ON vision=OFF vram=21.30 GiB

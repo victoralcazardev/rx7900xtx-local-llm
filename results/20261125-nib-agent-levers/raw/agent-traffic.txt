@@ -1,0 +1,15 @@
+requests 63, agent turns 60, loops at the cap 2
+prompt tokens 3484376, from cache 3094189 (88.8%)
+reading 125 s, generating 412 s (280 s in loops)
+reading share 23.2%, without loops 48.5%
+turns re-reading >10K new tokens: 9, 106 s of the reading time
+  prompt 39121, cached 0, read 11.5 s
+  prompt 52923, cached 40897, read 4.1 s
+  prompt 39121, cached 0, read 12.0 s
+  prompt 54062, cached 42036, read 4.2 s
+  prompt 32101, cached 0, read 9.5 s
+  prompt 32774, cached 0, read 9.8 s
+  prompt 32980, cached 0, read 9.9 s
+  prompt 68150, cached 0, read 21.8 s
+  prompt 72367, cached 0, read 23.1 s
+median agent turn: read 300 ms, gen 257.0 tokens in 1582 ms
