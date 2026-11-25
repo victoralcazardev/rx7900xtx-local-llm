@@ -9,7 +9,9 @@ Two independent checks:
      config file is checked for EXACTLY the local provider (local-262k) with
      the right port and contextWindow (262144, or the target's optional
      `context_window`, up to the largest profile context in models.toml), optionally local-flash-262k (Strata,
-     same port, docs/sop/strata.md), and no other provider pointing at
+     same port, docs/sop/strata.md) and window-named entries for larger profiles
+     (local-315k = contextWindow 315392: the name is the window in thousands, at most
+     the largest profile context), and no other provider pointing at
      127.0.0.1 (an orphan from an earlier setup). This check is off by
      default -- see local.example.toml.
 
@@ -20,6 +22,7 @@ from __future__ import annotations
 
 import json
 import pathlib
+import re
 import sys
 from urllib.parse import urlsplit
 
@@ -35,6 +38,8 @@ OPTIONAL_ENTRIES = {
     "local-flash-262k": LOCAL_262K_CONTEXT,
 }
 EXPECTED_PORT = 8080
+# Window-named entries for larger profiles: local-<N>k, N = contextWindow / 1000 rounded.
+WINDOW_ENTRY = re.compile(r"local-(\d+)k")
 
 
 def validate_manifest() -> tuple[list[str], list[str]]:
@@ -133,6 +138,17 @@ def validate_harness(name: str, entries, expected_port: int = EXPECTED_PORT,
             return problems
         expected["local-262k"] = context_window
 
+    for _pid, mid, ctx, _base in local:
+        named = WINDOW_ENTRY.fullmatch(mid)
+        if mid in expected or not named:
+            continue
+        if type(ctx) is not int or round(ctx / 1000) != int(named.group(1)):
+            problems.append(f"{name}: '{mid}' contextWindow={ctx} does not match its name.")
+        elif ctx > server_context:
+            problems.append(f"{name}: '{mid}' contextWindow={ctx} is above the server context "
+                            f"{server_context} -> 400 exceed_context.")
+        expected[mid] = ctx
+
     for expected_id, expected_ctx in expected.items():
         matches = [e for e in local if e[1] == expected_id]
         if not matches:
@@ -157,7 +173,7 @@ def validate_harness(name: str, entries, expected_port: int = EXPECTED_PORT,
                     "-> 400 exceed_context if it doesn't match -c."
                 )
 
-    orphans = seen - set(EXPECTED_ENTRIES) - set(OPTIONAL_ENTRIES)
+    orphans = seen - set(expected)
     for o in orphans:
         problems.append(
             f"{name}: orphaned local provider '{o}' is still wired up "
@@ -228,7 +244,8 @@ def main() -> int:
                 for p in probs:
                     print(f"  PROBLEM: {p}")
             else:
-                print(f"  OK: {target['name']} has exactly local-262k on :{port}.")
+                print(f"  OK: {target['name']} has exactly one local-262k on :{port} "
+                      "(plus any valid optional entries).")
 
     if manifest_problems or harness_problems:
         return 1

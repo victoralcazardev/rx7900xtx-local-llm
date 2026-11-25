@@ -161,6 +161,34 @@ class TestValidateHarness(unittest.TestCase):
         self.assertEqual(len(problems), 1)
         self.assertIn("contextWindow=131072, expected 262144", problems[0])
 
+    def test_window_named_entry_is_accepted_up_to_the_server_context(self):
+        entries = self._entries(
+            ("p1", "local-262k", 262144, "http://127.0.0.1:8080/v1"),
+            ("p2", "local-315k", 315392, "http://127.0.0.1:8080/v1"),
+        )
+        self.assertEqual(check_sync.validate_harness("t", entries, server_context=315392), [])
+        problems = check_sync.validate_harness("t", entries, server_context=262144)
+        self.assertEqual(len(problems), 1)
+        self.assertIn("'local-315k' contextWindow=315392 is above the server context 262144", problems[0])
+
+    def test_window_named_entry_must_match_its_name(self):
+        entries = self._entries(
+            ("p1", "local-262k", 262144, "http://127.0.0.1:8080/v1"),
+            ("p2", "local-315k", 262144, "http://127.0.0.1:8080/v1"),
+        )
+        problems = check_sync.validate_harness("t", entries, server_context=315392)
+        self.assertEqual(len(problems), 1)
+        self.assertIn("'local-315k' contextWindow=262144 does not match its name", problems[0])
+
+    def test_window_named_entry_wrong_port_reported(self):
+        entries = self._entries(
+            ("p1", "local-262k", 262144, "http://127.0.0.1:8080/v1"),
+            ("p2", "local-315k", 315392, "http://127.0.0.1:9999/v1"),
+        )
+        problems = check_sync.validate_harness("t", entries, server_context=315392)
+        self.assertEqual(len(problems), 1)
+        self.assertIn("expected port :8080", problems[0])
+
     def test_configured_port_is_used_by_main(self):
         import contextlib
         import io

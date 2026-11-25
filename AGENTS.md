@@ -81,5 +81,6 @@ Radeon RX 7900 XTX (24 GB, RDNA3, gfx1100)** with `llama-server` (ROCm/HIP; Vulk
 
 Wire a harness to exactly one `local-262k` provider (contextWindow 262144, or the target's
 `context_window` in `local.toml` to move its auto-compaction for the local model only) on
-`[defaults].port` (8080 if absent); `launch.py` decides which alias is loaded. `check-sync.py`
-checks this wiring only when `local.toml` has a `[harness]` table.
+`[defaults].port` (8080 if absent); `launch.py` decides which alias is loaded. A larger profile gets
+an optional entry named by its window, never by its model (`local-315k` = 315392; `launch.py` prints
+the name). `check-sync.py` checks this wiring only when `local.toml` has a `[harness]` table.

@@ -23,12 +23,12 @@ Two profiles on the same Abiray IQ4_NL file; `--profile` is required. Text only,
 
 | Profile | Engine | Decode at 512 / 128K / 262K (tok/s, 272 W) | Use |
 |---|---|---|---|
-| `262k-maya` | `maya` (GodGMN `maya-inkling-mini` HIP port, not llama.cpp) | 95 / 63.6 / 51.1 | Faster of the two on this card |
+| `inkling2-mini-unc-q8d` / `315k-maya` | `maya` (GodGMN `maya-inkling-mini` HIP port, not llama.cpp) | 106.1 / 68.9 at 512 / 128K | Faster on this card; 315K context |
 | `262k-q8q8` | `hip-inkling` (GodGMN `inkling-rdna3` llama.cpp fork) | 57.6 / 44.5 / 37.8 | llama.cpp features (`/metrics`, n-gram speculation, checkpoints) |
 
 ```
-python3 scripts/launch.py inkling2-mini-unc --profile 262k-maya --background --wait   # returns once /health answers
-python3 scripts/smoke.py inkling2-mini-unc --profile 262k-maya     # automated check, starts and stops its own server
+python3 scripts/launch.py inkling2-mini-unc-q8d --profile 315k-maya --background --wait   # returns once /health answers
+python3 scripts/smoke.py inkling2-mini-unc-q8d --profile 315k-maya     # automated check, starts and stops its own server
 python3 scripts/launch.py --stop                                     # stop any model server, wait until the VRAM is free
 ```
 
@@ -100,7 +100,7 @@ shorthand for the `launch.py` invocation below.
    `<alias> --profile <profile>` (see the tables above) to load a different setup than the fallback.
 
 4. **In your coding-agent harness (if any), select the provider printed in step 2**
-   (`local-262k`). A harness doesn't know the model alias, only the `:8080` endpoint — see
+   (`local-262k`, or `local-315k` for a 315K profile). A harness doesn't know the model alias, only the `:8080` endpoint — see
    `AGENTS.md`.
 
 ## How to verify

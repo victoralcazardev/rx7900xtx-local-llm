@@ -35,10 +35,10 @@
    python3 scripts/smoke.py <alias> --profile <profile>
    ```
 
-6. **Harness wiring**: the project has exactly one fixed provider, `local-262k`, for
-   `context = 262144` (see `AGENTS.md`). Do not add a provider for another model or profile.
-   `scripts/launch.py` prints `local-262k` for the supported context and reports no harness
-   provider for any other context. Only touch harness config if the family uses a thinking format
+6. **Harness wiring**: providers are named by context window, never by model: `local-262k` for
+   `context = 262144`, and an optional `local-<N>k` for a larger profile (`local-315k` = 315392; see
+   `AGENTS.md`). Do not add a provider for another model at the same window.
+   `scripts/launch.py` prints the entry for the profile's context and none below 262144. Only touch harness config if the family uses a thinking format
    other than `<think>`/channels already covered (check `tokenizer.chat_template` with
    `gguf_info.py`) — document it in `AGENTS.md` before changing anything.
 
