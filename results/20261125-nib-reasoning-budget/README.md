@@ -17,10 +17,12 @@ CachyOS kernel 7.3.5, RX 7900 XTX. Model and serve flags as `python3 scripts/lau
 
 ## 1. The patch
 
-Server-side only (`src/server.cpp`, `src/main.cpp`, `src/server.hpp`, 137-line diff). `nib serve --reasoning-budget N`
-(default `-1`, off) counts the tokens a reply spends inside `<|content_thinking|>`; once it reaches `N`, the next
-token is replaced by `<|end_message|>`, so the model closes the thinking block and goes on to its answer or tool
-call. The replacement only ever hits a token that is not in the KV yet (the sampled token that becomes `cur_tok`);
+Server-side only (`src/server.cpp`, `src/main.cpp`, `src/server.hpp`, 139-line diff). `nib serve --reasoning-budget N`
+(default `-1`, off) counts the tokens a reply spends inside `<|content_thinking|>` blocks, all blocks of the reply
+together; once the count reaches `N`, the next thinking token is replaced by `<|end_message|>`, so the model closes
+the block and goes on to its answer or tool call. The count is not reset when the model opens a new block: Inkling
+does that right after a forced close, and a per-block budget never ends ([llama.cpp #32836](https://github.com/ggml-org/llama.cpp/issues/32836);
+the first version of this patch, commit `b1e1c63`, had that flaw). The replacement only ever hits a token that is not in the KV yet (the sampled token that becomes `cur_tok`);
 in the MTP path the accepted-draft loop is truncated at the cap exactly like the existing draft-EOS truncation, so
 `verify_rollback` and the drafter commit stay consistent. A capped reply logs `think-cap` in its `[serve]` line,
 and the `[nib] Config:` line prints `reasoning_budget=N`. Rebuild:
@@ -42,6 +44,7 @@ Server log lines: [`raw/serve-lines.txt`](raw/serve-lines.txt).
 | Streaming with a tool, cap 32 | `toolreq.py` ×4 | `think-cap` on 4/4, then a text answer with no tool call (`finish stop`): a 32-token cap is too short for this prompt, as expected |
 | Parity, cap unset | `parity.py`, greedy, 4 prompts, patched vs. production binary | byte-identical replies ([`raw/greedy-patched-unset.jsonl`](raw/greedy-patched-unset.jsonl) = [`raw/greedy-2e16cf0.jsonl`](raw/greedy-2e16cf0.jsonl)); speed 186.6 / 177.2 / 163.0 / 200.0 vs. 187.1 / 177.7 / 163.3 / 200.4 tok/s |
 | Parity, cap 4096 | same, `--reasoning-budget 4096` (no prompt reaches it) | byte-identical ([`raw/greedy-patched-4096.jsonl`](raw/greedy-patched-4096.jsonl)) |
+| Whole-reply count (second build) | cap 256 `capreq.py` ×3; parity at 4096; `toolreq.py` | `think-cap` 3/3 at 160-173 tok/s, answers correct (3:33 PM); parity byte-identical again; tool prompt unchanged. A reopened block was not provoked: no prompt here reopens one |
 
 ## 3. Start-up crash bisect
 

@@ -36,7 +36,7 @@ index 4d6b435..08523f1 100644
          return run_http_server(eng, bpe, drafter_ptr, vision_ptr, scfg);
      }
 diff --git a/src/server.cpp b/src/server.cpp
-index 8b9c3dc..8c0b8bc 100644
+index 8b9c3dc..d52faf1 100644
 --- a/src/server.cpp
 +++ b/src/server.cpp
 @@ -1249,6 +1249,9 @@ struct StreamJob {
@@ -49,7 +49,7 @@ index 8b9c3dc..8c0b8bc 100644
      int est_prompt_toks = 0; // exact for text-only; pre-estimated for multimodal
      SampleParams sp;
      std::mt19937_64 rng;
-@@ -2161,6 +2164,16 @@ private:
+@@ -2161,6 +2164,18 @@ private:
          }
      }
  
@@ -57,8 +57,10 @@ index 8b9c3dc..8c0b8bc 100644
 +    bool think_cap_due(bool in_thinking, int think_toks) const {
 +        return cfg_.reasoning_budget >= 0 && in_thinking && think_toks >= cfg_.reasoning_budget;
 +    }
++    // think_toks counts every thinking block of the reply: Inkling may open a new block right after a forced
++    // close, and a per-block count would re-arm the cap (llama.cpp #32836).
 +    void track_thinking(bool & in_thinking, int & think_toks, int32_t tok) const {
-+        if (tok == id_thinking_) { in_thinking = true; think_toks = 0; }
++        if (tok == id_thinking_) { in_thinking = true; }
 +        else if (tok == id_end_msg_) in_thinking = false;
 +        else if (in_thinking) ++think_toks;
 +    }
@@ -66,7 +68,7 @@ index 8b9c3dc..8c0b8bc 100644
      // Emits a newly produced token to the HTTP thread and updates scheduler state.
      // Returns true if job should keep decoding, false if job finished (EOS / max_tokens / cancelled).
      bool emit_token(const std::shared_ptr<StreamJob> & job, int32_t tok, bool mark_prefill_ready = false) {
-@@ -2172,6 +2185,13 @@ private:
+@@ -2172,6 +2187,13 @@ private:
              finish_job(job, "stop");
              return false;
          }
@@ -80,7 +82,7 @@ index 8b9c3dc..8c0b8bc 100644
          ++job->sched_completion_tokens;
          job->live_gen_toks.store(job->sched_completion_tokens, std::memory_order_relaxed);
          {
-@@ -2799,6 +2819,14 @@ private:
+@@ -2799,6 +2821,14 @@ private:
          int emit_acc = acc;
          const int rem = job->max_tokens - job->sched_completion_tokens;
          if (rem >= 0 && emit_acc > rem) emit_acc = rem;
@@ -95,7 +97,7 @@ index 8b9c3dc..8c0b8bc 100644
          bool stop_on_draft_eos = false;
          int32_t stop_eos_tok = id_end_sampling_;
          for (int r = 0; r < emit_acc; ++r) {
-@@ -3578,12 +3606,13 @@ private:
+@@ -3578,12 +3608,13 @@ private:
          }
          char log_buf[384];
          std::snprintf(log_buf, sizeof(log_buf),
@@ -111,7 +113,7 @@ index 8b9c3dc..8c0b8bc 100644
          std::printf("[serve] %s\n", log_buf);
          std::fflush(stdout);
          record_activity(gr, stream, has_images);
-@@ -3768,9 +3797,9 @@ int run_http_server(
+@@ -3768,9 +3799,9 @@ int run_http_server(
                  cfg.host.c_str(), cfg.port);
      std::printf("[nib] Web UI: http://%s:%d/  |  OpenAI API: http://%s:%d/v1/chat/completions\n",
                  cfg.host.c_str(), cfg.port, cfg.host.c_str(), cfg.port);
