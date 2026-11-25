@@ -6,15 +6,17 @@ unbounded sampler (#1)". Arm C tests that sampler's claim (unbounded sampling, `
 claimed ~127-137 tok/s solo), arm D measures the sampling the agent harnesses actually send. Engine and model flags
 are identical between builds; only the binary and the per-request sampling change.
 
-**Status: not adoptable.** `bdc9307` segfaults on roughly one start in three, inside `hipGraphInstantiate` while
-capturing the DSpark drafter graphs. The sampler and parity claims hold, but a build that dies on a third of its
-starts cannot replace `2e16cf0`, which produced no core in this run.
+**Status: not adoptable.** `bdc9307` segfaults at start-up inside `hipGraphInstantiate` while capturing HIP graphs:
+3 of 9 `serve` starts in this run and 2 of 10 in the [retest](#retest-for-nib1), against 0 of 15 for `2e16cf0`
+across both runs. The sampler and parity claims hold, but a build that dies on 5 of 19 starts cannot replace
+`2e16cf0`, which wrote no core in either run.
 
 ## Startup crashes (the blocker)
 
 The new build dies with SIGSEGV during startup, at an address in `libamdhip64.so.7.16.0-4f6d503` after a general
-protection fault. The main-thread stack of every `serve` core ends the same way
-([`raw/coredump-854424.txt`](raw/coredump-854424.txt)):
+protection fault. The main-thread stack read in full from the arm-B `serve` core ends like this; frames 0-9 are
+anonymous frames inside that library ([`raw/coredump-854424.txt`](raw/coredump-854424.txt), and the
+[retest](#retest-for-nib1) read the same `hipGraphInstantiate` frame from its `bench` and drafter-free `serve` cores):
 
 ```
 #10 hipGraphInstantiate (libamdhip64.so.7)
@@ -24,36 +26,99 @@ protection fault. The main-thread stack of every `serve` core ends the same way
 #14 main
 ```
 
-In the logs the crash always lands between `[InklingEngine] Ready! …` and `[dspark] captured N static draft HIP
-graphs` ([`raw/crash-new-build.txt`](raw/crash-new-build.txt)): the exact region `aa394af` rewrote (the drafter now
-zeroes its allocations with stream-ordered `hipMemsetAsync`). One earlier core (11:36) instead crashed inside
-`inkling::InklingEngine::init`, so the fault is not confined to the graph-capture call. The kernel log for the same
-window also shows a `comp_1.3.0 ring reset` at 11:42, a GPU ring timeout the old build never produced here.
+In each of the five crashed `serve` starts (three here, two in the retest) the last logged line is
+`[InklingEngine] Ready! …`, before `[dspark] captured N static draft HIP graphs`
+([`raw/crash-new-build.txt`](raw/crash-new-build.txt)): the exact region `aa394af` rewrote (the drafter now zeroes
+its allocations with stream-ordered `hipMemsetAsync`). One earlier core (11:36) instead crashed inside
+`inkling::InklingEngine::init`, so the fault is not confined to the graph-capture call. The kernel log also has a
+GPU ring timeout while this build was under test: `amdgpu 0000:0c:00.0: Starting comp_1.3.0 ring reset` …
+`amdgpu 0000:0c:00.0: Ring comp_1.3.0 reset succeeded`, at 11:42:02 — the only ring reset in the kernel log between
+00:00 and 14:00 that day, and `2e16cf0` produced none.
 
-| Build | `serve` starts | SIGSEGV | `selftest` runs | SIGSEGV |
-|---|---:|---:|---:|---:|
-| A `2e16cf0` (current) | 5 | **0** | not run | — |
-| B/C/D `bdc9307` (new) | 9 | **3** | 4 | **2** |
+| Run | Build | `serve` starts | SIGSEGV | `selftest` runs | SIGSEGV |
+|---|---|---:|---:|---:|---:|
+| this run, 11:35-12:45 | `2e16cf0` (current) | 5 | **0** | not run | — |
+| this run, 11:35-12:45 | `bdc9307` (new) | 9 | **3** | 4 | **2** |
+| [retest](#retest-for-nib1), 12:48-13:06 | `2e16cf0` | 10 | **0** | not run | — |
+| [retest](#retest-for-nib1), 12:48-13:06 | `bdc9307` | 10 | **2** | not run | — |
+| both runs | `2e16cf0` | 15 | **0** | — | — |
+| both runs | `bdc9307` | 19 | **5** | 4 | **2** |
 
-`coredumpctl list` agrees with the logs: five SIGSEGV of `nib-main/build/nib` at 11:36:04, 11:38:09, 11:58:39,
+`coredumpctl list` agrees for this run: five SIGSEGV of `nib-main/build/nib` at 11:36:04, 11:38:09, 11:58:39,
 12:02:52 and 12:03:11 — my two crashed `selftest` runs, the first arm-B start and two of the three startup attempts
-in a dedicated reliability loop. No core of `nib/build/nib` was written during this run; the three old-build cores
-in the same list (2026-11-24 23:05 SIGABRT, 23:13 and 2026-11-25 00:17 SIGSEGV) date from the previous trial.
+in a dedicated reliability loop. The retest wrote five more (12:50:11 and 12:52:46 from `serve --mtp`, 12:54:04 from
+`bench`, 12:59:14 from `bench --sparse-pages 0`, 13:03:07 from `serve` without `--mtp`). No core of `nib/build/nib`
+was written during either run; the three old-build cores in the same list (2026-11-24 23:05 SIGABRT, 23:13 and
+2026-11-25 00:17 SIGSEGV) date from the previous trial.
 Counts and the retry log: [`raw/startup-crashes.txt`](raw/startup-crashes.txt).
 
 Arm scripts therefore retry a dead start up to four times (`raw/serve-lib.sh`) rather than skipping an arm; every
 start after that helper was added came up on attempt 1, so the numbers below are single-start numbers.
 
+## Retest for nib#1
+
+Upstream [asked for reproducible cases](https://github.com/Chromadera/nib/issues/1#issuecomment-7163284160), so the
+same two builds were retested 12:48-13:06 on the **un-grafted** pack (`Inkling-2-Mini-NVFP4-Mixed.gguf` +
+`mtp.safetensors`, `-c 262848 --kv-type q8_0 --sparse-pages 224`, port 4444), with `2e16cf0` interleaved as the
+control. Script [`raw/retest/run.sh`](raw/retest/run.sh); each start was stopped once `/v1/models` answered.
+
+| Test | `bdc9307` | `2e16cf0` |
+|---|---|---|
+| `serve --mtp`, 10 starts each, interleaved | **2/10 SIGSEGV** (exit 139, counted in the table above), last line `[InklingEngine] Ready!` | 0/10 |
+| `bench --sparse-pages 224 -d 0` | SIGSEGV (exit 139) | not run |
+| `bench --sparse-pages 224 --no-graph -d 0` | no crash, exit 124: no result row within 300 s, last output is the table header | not run |
+| `HIP_LAUNCH_BLOCKING=1 AMD_LOG_LEVEL=1 bench --sparse-pages 0 -d 0` | SIGSEGV (exit 139) instead of the hang | not run |
+| `serve` without `--mtp` | without gdb: SIGSEGV during `[serve] warming up HIP graphs`; under `gdb -batch -ex run` it came up once and a request got no answer within 120 s | not run |
+
+Both crashed starts produced the same kernel line, `traps: nib[...] general protection fault … in
+libamdhip64.so.7.16.0-4f6d503`; [`raw/retest/summary.txt`](raw/retest/summary.txt) holds all 20 starts, those kernel
+lines and the failed request. The 10 old-build starts repeat `start-old-1.txt` and the 8 new-build starts that came
+up repeat `start-new-1.txt` apart from the `[gguf] loaded … in N s` time, so only those two representative logs and
+the two crashed starts are kept.
+
+Backtraces from the cores of this retest (frames 0-9 are anonymous frames inside `libamdhip64.so.7`):
+
+```text
+# serve --mtp, start-up — the same stack as the 11:58 arm-B core
+#10 hipGraphInstantiate ()
+#11 inkling::DSparkDrafter::capture_draft_graphs()
+#12 inkling::DSparkDrafter::init(...)
+#13 (anonymous namespace)::mtp_session_init(...)
+#14 main ()
+
+# bench (sparse 224 and sparse 0)
+#10 hipGraphInstantiate ()
+#11 inkling::InklingEngine::capture_decode_graph()
+#12 inkling::InklingEngine::benchmark_decode_steps(int, int, std::vector<int>*)
+#13 main ()
+
+# serve without --mtp, warm-up
+#10 hipGraphInstantiate ()
+#11 inkling::InklingEngine::capture_decode_graph()
+#12 inkling::InklingEngine::decode_step(int, std::vector<float>*)
+#13 inkling::run_http_server(...)
+#14 main ()
+```
+
+Every failure is the same `hipGraphInstantiate` call, so graph instantiation itself is the suspect rather than one
+drafter-only path, and the no-MTP arm surviving under gdb but dying without it points at a race. The kernel log has
+10 `traps: nib` lines from this build between 00:00 and 14:00 that day and none from `2e16cf0`. Reported in
+[nib#1](https://github.com/Chromadera/nib/issues/1#issuecomment-7163284160).
+
 ## What does hold
 
 - **The unbounded sampler is fixed**: with `top_k 0` the new build decodes 156.6 tok/s at 8K and 113-117 tok/s at
-  33K-258K, against ~31 tok/s for the same sampling on `2e16cf0` (previous trial, short prompt). The sampling the
-  model card asks for no longer costs 4x throughput.
-- **Greedy output is bit-identical**: three 256-token greedy prompts (prose, code, 33K) are identical to the
-  character, and the 192 GSM8K generations have identical predicted values *and* identical token counts. GSM8K
-  stays at 187/192 with the same five failures. The tool-call path still works.
-- **No decode or prefill gain on the bounded path**: arm B (`top_k 256`) is 102-114% of arm A per depth and prefill
-  is unchanged (2,964-3,614 vs. 2,989-3,576 tok/s). That spread is noise, not a win — see the method note.
+  33K-258K, against ~31 tok/s on `2e16cf0` (previous trial, short prompt). Arm C runs the **base vendor's**
+  sampling (`temp 1.0, top_p 1.0, top_k 0, min_p 0.0`, the vendor generation config via the Unsloth guide), not the
+  Unbound v2.1 card's `temp 0.6 / top_p 0.95`, so the 4x cost is gone for that sampling only; the card's sampling
+  was measured at `top_k 256` (arm D) and never at `top_k 0`.
+- **Greedy output is text-identical**: three 256-token greedy prompts (prose, code, 33K) are identical to the
+  character, and the 192 GSM8K generations have identical predicted values *and* identical token counts. Neither
+  build returns token ids, so this is a decoded-text comparison, not a token-id one. GSM8K stays at 187/192 with
+  the same five failures. The tool-call path still works.
+- **No decode or prefill gain on the bounded path**: arm B (`top_k 256`) is 87-114% of arm A per depth (the low end
+  is 258K, 115.1 vs. 131.9 tok/s) and prefill is unchanged (2,964-3,614 vs. 2,989-3,576 tok/s). Read as "no
+  regression": that spread falls within the ±10-15% repeat-to-repeat band the method note measures, not a win.
 
 ## Setup
 
@@ -92,17 +157,20 @@ first), uncached, 256-token cap.
 | 258,126 | 131.9 (pp 2,989) | 115.1 (pp 2,976) | 116.6 (pp 2,971) | 115.7 (pp 2,964) |
 
 Sampling per arm: A `{"temperature":1.0,"top_k":256}`; B the same; C `{"temperature":1.0,"top_p":1.0,"top_k":0,"min_p":0.0}`
-(the model card); D `{"temperature":0.6,"top_p":0.95,"top_k":256,"min_p":0.0}` (what production sends).
+(the base vendor's generation config); D `{"temperature":0.6,"top_p":0.95,"top_k":256,"min_p":0.0}` (the Unbound
+v2.1 card, which production follows). Every request also sends `reasoning_effort: "none"` at the top level, which
+`2e16cf0` honors (`src/server.cpp:966-982`), so all arms decode without thinking.
 
 **Method note — these numbers are noisy, read them as "no regression".** Each cell is a median of two sampled
 runs, and the two runs do not decode the same text: accepted draft tokens per drafter round range from 0.68 to
 2.24 across cells and repeats (A `0.99/0.72`, `1.03/0.85`, `0.83/0.77`, `1.26/1.39`; B `0.83/0.94`, `1.51/1.17`,
 `0.98/1.20`, `0.89/0.96`; C `1.24/2.24`, `0.85/1.07`, `0.80/0.79`, `0.72/1.00`; D `0.80/1.49`, `1.06/1.58`,
-`1.01/0.68`, `0.96/0.93`), and four replies stopped early (`gen` of 103, 31, 85, 222 in `raw/speed.jsonl`). The
-spread between two repeats of one arm reaches ±10-15% and is as large as any difference between arms (C: 141.9 vs.
-171.4 at 7,824 tokens). Only the arm-C gap at 8K is far outside that band.
+`1.01/0.68`, `0.96/0.93`), and five replies stopped early (`gen` of 103, 123, 31, 85 and 222 in `raw/speed.jsonl`).
+One of them is half of arm C's 8K median, so that 156.6 tok/s rests partly on a 123-token reply. The spread between
+two repeats of one arm reaches ±10-15% and is as large as any difference between arms (C: 141.9 vs. 171.4 at 7,824
+tokens). Only the arm-C gap at 8K is far outside that band.
 
-Raw: [`raw/speed.jsonl`](raw/speed.jsonl); one server log per start, `raw/serve-<arm>.log`.
+Raw: [`raw/speed.jsonl`](raw/speed.jsonl); one server log per start, `raw/serve-<arm>.txt`.
 
 ## Greedy parity gate
 
@@ -118,8 +186,9 @@ prompt.
 
 [`raw/greedy-parity.txt`](raw/greedy-parity.txt), inputs [`raw/greedy-old-2e16cf0.jsonl`](raw/greedy-old-2e16cf0.jsonl)
 and [`raw/greedy-new-bdc9307.jsonl`](raw/greedy-new-bdc9307.jsonl). Neither build returns token ids or logprobs
-from the endpoint, so parity is asserted on the generated text, which for one tokenizer implies the same token
-sequence.
+from the endpoint, so this is a **text-identical** result, not a token-id comparison: the decoded texts match
+character for character. `raw/greedy_compare.py` now exits 1 when a prompt differs, is missing from one side, or
+comes back empty.
 
 ## GSM8K and tool calls (new build)
 
@@ -132,7 +201,9 @@ match the previous trial's file one for one.
 
 Tool calls (`raw/tool_check.py`, 129-token prompt, no system prompt): turn 1 `finish=tool_calls` with one
 `read_file` call, arguments `{"path":"src/app.py"}`; turn 2 `finish=stop`, 191 of 191 prompt tokens reused, correct
-answer, **PASS** ([`raw/tool-new-bdc9307.txt`](raw/tool-new-bdc9307.txt)).
+answer, **PASS** ([`raw/tool-new-bdc9307.txt`](raw/tool-new-bdc9307.txt)). `quality-run.sh` passes no `--sampling`,
+so both turns ran at the script's default `{"temperature":1.0,"top_k":256}` with top-level
+`reasoning_effort: "none"`, not at arm C's or the card's sampling. The script now exits 1 on `FAIL`.
 
 ## Not measured
 
@@ -142,12 +213,20 @@ answer, **PASS** ([`raw/tool-new-bdc9307.txt`](raw/tool-new-bdc9307.txt)).
 - Multi-slot concurrency, vision, and the >262,144 positions the `pass1_end` clamp addresses.
 - `--sparse-pages 0`: every arm used 224, the production value.
 - What fixes the crash: no code change was attempted (the Nib checkouts are out of scope for this run).
+- `bench` speed for either build: the retest got no result row, and the retest used the un-grafted base pack at
+  `-c 262848`, so it adds crash evidence only.
 
 ## Raw files
 
-`coredump-854424.txt` (coredumpctl list plus the arm-B backtrace), `startup-crashes.txt` (start counts and the
-empty retry log), `crash-new-build.txt` (a crashed start, `Ready!` as its last line), `selftest.txt`,
-`speed.jsonl` (16 rows), `serve-<arm>.log` (one per server start: A, B, C, D, both greedy runs, quality),
-`greedy-*.jsonl`, `greedy-parity.txt`, `gsm-raw-new-bdc9307.jsonl`, `tool-new-bdc9307.txt`,
-`production-health.json`, `depth_http.py`, `gsm8k_http.py`, `tool_check.py`, `greedy_parity.py`,
-`greedy_compare.py`, `serve-lib.sh`, `speed-run.sh`, `greedy-run.sh`, `quality-run.sh`.
+`coredump-854424.txt` (coredumpctl list plus the arm-B backtrace, machine/user IDs and host redacted),
+`startup-crashes.txt` (start counts for both runs plus the retry log), `crash-new-build.txt` (a crashed start,
+`Ready!` as its last line), `selftest.txt`, `speed.jsonl` (16 rows), `serve-<arm>.txt` (one per server start: A, B,
+C, D, both greedy runs, quality), `greedy-*.jsonl`, `greedy-parity.txt`, `gsm-raw-new-bdc9307.jsonl`,
+`tool-new-bdc9307.txt`, `production-health.json`, `retest/` (the nib#1 retest: `summary.txt`, one log per kept
+start, the three `bench` runs, both no-MTP `serve` runs, `run.sh`), `depth_http.py`, `gsm8k_http.py`,
+`tool_check.py`, `greedy_parity.py`, `greedy_compare.py`, `serve-lib.sh`, `speed-run.sh`, `greedy-run.sh`,
+`quality-run.sh`.
+
+Known limits of these scripts, recorded as run rather than rewritten: `serve-lib.sh` treats any listener on port 4444
+as "up", so it cannot tell the new server from a leftover one, and the run scripts assume the author's `~/IA`
+checkout, model and results layout.

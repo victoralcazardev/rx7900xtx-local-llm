@@ -1,0 +1,27 @@
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/usr/lib/libthread_db.so.1".
+[New Thread 0x7fffe7dff6c0 (LWP 957227) (id 2)]
+[New Thread 0x7fffdf3ff6c0 (LWP 957228) (id 3)]
+[New Thread 0x7fffe72ff6c0 (LWP 957229) (id 4)]
+[Thread 0x7fffe72ff6c0 (LWP 957229) (id 4) exited]
+[step7i] occupancy blocks/WGP (wgp=48): wo_b=5 wo_c=5 wo_c_h2=6 mix_rms_qkv=9 a_qkv=5
+[step7j] occupancy blocks/CU: qkv_384=7
+[gguf] loaded ~/IA/Modelos/Inkling-2-Mini-Nib-Pack/Inkling-2-Mini-NVFP4-Mixed.gguf in 2.720 s
+[gguf] total VRAM: 17542839968 bytes (16730.2 MiB)
+[InklingEngine] Ready! max_ctx=262848 slots=1 slot_ctx=262848 swa_cap=1536 kv=q8_0 sparse_pages=224 total_vram=21.16 GiB (weights=16.34 GiB, kv+scratch=4.82 GiB)
+[serve] warming up HIP graphs & multi-slot batch kernels...
+[InklingEngine] Captured 1-shot static decode HIP Graph: 288 kernel nodes!
+[New Thread 0x7ffd7bbff6c0 (LWP 957277) (id 5)]
+[nib] v0.1.0 listening on http://127.0.0.1:4444
+[nib] Web UI: http://127.0.0.1:4444/  |  OpenAI API: http://127.0.0.1:4444/v1/chat/completions
+[nib] Config: ctx=262848 slots=1(262848/slot, req_max=262848, solo) kv=q8_0 sparse_pages=224 temp=0.60 mtp=OFF vision=OFF vram=21.16 GiB
+[New Thread 0x7ffd7b3fe6c0 (LWP 957279) (id 6)]
+[Thread 0x7ffd7b3fe6c0 (LWP 957279) (id 6) exited]
+[New Thread 0x7ffd7b3fe6c0 (LWP 957281) (id 7)]
+
+Thread 1 "nib" received signal SIGINT, Interrupt.
+0x00007ffff58b59e2 in ?? () from /usr/lib/libc.so.6
+#0  0x00007ffff58b59e2 in ?? () from /usr/lib/libc.so.6
+#1  0x00007ffff5950d22 in accept () from /usr/lib/libc.so.6
+#2  0x00005555555f4986 in inkling::run_http_server(inkling::InklingEngine&, inkling::BpeTokenizer const&, inkling::DSparkDrafter*, inkling::VisionEncoder*, inkling::ServerConfig const&) ()
+#3  0x000055555557317a in main ()

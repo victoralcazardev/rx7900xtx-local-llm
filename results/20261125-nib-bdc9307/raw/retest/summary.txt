@@ -1,0 +1,51 @@
+start new #1: up | last: [serve] shutdown complete.
+start old #1: up | last: [serve] shutdown complete.
+start new #2: died exit=139 | last: [InklingEngine] Ready! max_ctx=262848 slots=1 slot_ctx=262848 swa_cap=1536 kv=q8_0 sparse_
+nov 25 12:50:11 <host> kernel: traps: nib[943580] general protection fault ip:7f5094d4d5b8 sp:7ffcf8548e80 error:0 in libamdhip64.so.7.16.0-4f6d503[74d5b8,7f5094613000+79d000]
+start old #2: up | last: [serve] shutdown complete.
+start new #3: up | last: [serve] shutdown complete.
+start old #3: up | last: [serve] shutdown complete.
+start new #4: up | last: [serve] shutdown complete.
+start old #4: up | last: [serve] shutdown complete.
+start new #5: up | last: [serve] shutdown complete.
+start old #5: up | last: [serve] shutdown complete.
+start new #6: up | last: [serve] shutdown complete.
+start old #6: up | last: [serve] shutdown complete.
+start new #7: up | last: [serve] shutdown complete.
+start old #7: up | last: [serve] shutdown complete.
+start new #8: died exit=139 | last: [InklingEngine] Ready! max_ctx=262848 slots=1 slot_ctx=262848 swa_cap=1536 kv=q8_0 sparse_
+nov 25 12:52:46 <host> kernel: traps: nib[947555] general protection fault ip:7f4fc4f4d5b8 sp:7ffdd34eca80 error:0 in libamdhip64.so.7.16.0-4f6d503[74d5b8,7f4fc4813000+79d000]
+start old #8: up | last: [serve] shutdown complete.
+start new #9: up | last: [serve] shutdown complete.
+start old #9: up | last: [serve] shutdown complete.
+start new #10: up | last: [serve] shutdown complete.
+start old #10: up | last: [serve] shutdown complete.
+bench sp224 : exit 139 | [InklingEngine] Ready! max_ctx=262848 slots=1 slot_ctx=262848 swa_cap=1536 kv=q8_0 sparse_pages=224 total_vram=21.16 GiB (weights=16.34 GiB, kv+scratch=4.82 GiB) timeout: la orden monitorizada ha volc
+nov 25 12:54:04 <host> kernel: traps: nib[950055] general protection fault ip:7fba6b94d5b8 sp:7fffbf941ea0 error:0 in libamdhip64.so.7.16.0-4f6d503[74d5b8,7fba6b213000+79d000]
+bench sp224 --no-graph: exit 124 | | depth | pp512 (tok/s) | tg128 (tok/s) | |------:|--------------:|-------------:| 
+bench sp0 (HIP_LAUNCH_BLOCKING=1): exit 139 (124=timeout) | [InklingEngine] Ready! max_ctx=262848 slots=1 slot_ctx=262848 swa_cap=1536 kv=q8_0 sparse_pages=0 total_vram=21.09 GiB (weights=16.34 GiB, kv+scratch=4.76 GiB) timeout: la orden monitorizada ha volcad
+nov 25 12:59:14 <host> kernel: traps: nib[956726] general protection fault ip:7fbba3f4d5b8 sp:7ffebbfe0260 error:0 in libamdhip64.so.7.16.0-4f6d503[74d5b8,7fbba3813000+79d000]
+serve no-mtp: up; request: Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    import json;d=json.load(open("~/IA/rx7900xtx-local-llm/_tmp/nib-retest/serve-nomtp-req.json"));print(d["choices"][0]["finish_reason"],d["usage"]["completion_tokens"],d.get("timings",{}).get("predicted_per_second"))
+                  ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/json/__init__.py", line 298, in load
+    return loads(fp.read(),
+        cls=cls, object_hook=object_hook,
+        parse_float=parse_float, parse_int=parse_int,
+        parse_constant=parse_constant, object_pairs_hook=object_pairs_hook, **kw)
+  File "/usr/lib/python3.14/json/__init__.py", line 352, in loads
+    return _default_decoder.decode(s)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "/usr/lib/python3.14/json/decoder.py", line 345, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/json/decoder.py", line 363, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+Thread 1 "nib" received signal SIGINT, Interrupt.
+#0  0x00007ffff58b59e2 in ?? () from /usr/lib/libc.so.6
+#1  0x00007ffff5950d22 in accept () from /usr/lib/libc.so.6
+#2  0x00005555555f4986 in inkling::run_http_server(inkling::InklingEngine&, inkling::BpeTokenizer const&, inkling::DSparkDrafter*, inkling::VisionEncoder*, inkling::ServerConfig const&) ()
+#3  0x000055555557317a in main ()
+production restored

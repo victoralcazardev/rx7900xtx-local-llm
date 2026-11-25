@@ -1,0 +1,23 @@
+[step7i] occupancy blocks/WGP (wgp=48): wo_b=5 wo_c=5 wo_c_h2=6 mix_rms_qkv=9 a_qkv=5
+[step7j] occupancy blocks/CU: qkv_384=7
+[gguf] loaded ~/IA/Modelos/Inkling-2-Mini-Nib-Pack/Inkling-2-Mini-NVFP4-Mixed.gguf in 49.489 s
+[gguf] total VRAM: 17542839968 bytes (16730.2 MiB)
+[InklingEngine] Ready! max_ctx=262848 slots=1 slot_ctx=262848 swa_cap=1536 kv=q8_0 sparse_pages=224 total_vram=21.16 GiB (weights=16.34 GiB, kv+scratch=4.82 GiB)
+[dspark] captured 4 static draft HIP graphs
+[dspark] drafter ready: layers=3 inter=9216 ctx=8192 short_K=32834 vocab=200058 vram=697 MiB
+[InklingEngine] MTP I/O enabled: taps=9.0 MiB verify_raw=9.8 MiB hist_bak=3.7 MiB
+[mtp] drafter online (threshold=0.80, ctx=8192, shortlist=32834 rows, vram=21.18 GiB total)
+[serve] warming up HIP graphs & multi-slot batch kernels...
+[InklingEngine] Captured 1-shot static decode HIP Graph: 292 kernel nodes!
+[InklingEngine] Captured static verify(m=2) HIP Graph: 698 kernel nodes
+[InklingEngine] Captured static verify(m=3) HIP Graph: 699 kernel nodes
+[InklingEngine] Captured static verify(m=4) HIP Graph: 700 kernel nodes
+[InklingEngine] Captured static verify(m=5) HIP Graph: 701 kernel nodes
+[InklingEngine] Captured static verify(m=6) HIP Graph: 702 kernel nodes
+[InklingEngine] Captured static verify(m=7) HIP Graph: 703 kernel nodes
+[InklingEngine] Captured static verify(m=8) HIP Graph: 704 kernel nodes
+[nib] v0.1.0 listening on http://127.0.0.1:4444
+[nib] Web UI: http://127.0.0.1:4444/  |  OpenAI API: http://127.0.0.1:4444/v1/chat/completions
+[nib] Config: ctx=262848 slots=1(262848/slot, req_max=262848, solo) kv=q8_0 sparse_pages=224 temp=0.60 mtp=ON vision=OFF vram=21.18 GiB
+
+[serve] shutdown complete.

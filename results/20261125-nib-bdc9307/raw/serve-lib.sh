@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Sourced by the run scripts: start one nib server and retry a start that dies.
-# The bdc9307 build intermittently segfaults while initializing the DSpark drafter (right after
-# "[InklingEngine] Ready!"): 3 of 4 starts during this run. A failed start is recorded in
-# raw/startup-crashes.txt and retried up to 4 times; the harness never silently skips an arm.
+# The bdc9307 build intermittently segfaults while initializing the DSpark drafter or a HIP graph
+# (right after "[InklingEngine] Ready!"): 3 of 9 serve starts in this run and 2 of 10 in the retest,
+# 0/15 for 2e16cf0 (raw/startup-crashes.txt). A failed start is recorded there and retried up to 4
+# times; the harness never silently skips an arm.
 # Sets NIB_PID; returns 1 if every attempt died.
 # usage: start_nib <tag> <log-file> <command...>
 

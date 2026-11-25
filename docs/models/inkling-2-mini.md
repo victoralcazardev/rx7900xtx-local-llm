@@ -132,6 +132,7 @@ Source: [`thinkingmachines/Inkling-2-Mini`](https://huggingface.co/thinkingmachi
 - Card warnings: may get stuck in long reasoning loops (limit output tokens); `reasoning_effort` minimum does
   not fully disable reasoning; weaker in long multi-turn conversations.
 - Sampling (Unsloth guide, from the vendor's generation config): `temp 1.0, top-p 1.0, top-k 0, min-p 0.0`.
+  Check the vendor card again before configuring (AGENTS.md rule). The smoke runs used greedy on purpose.
 - Unbound v2.1 card (re-read 2026-11-25): "Recommended settings: thinking on, `--temp 0.6 --top-p 0.95`, and a
   thinking cap"; "No DRY or other repetition samplers". `262k-nib` follows it since 2026-11-25.
 - **Reasoning loop observed (2026-11-25, `262k-nib` at temp 1.0, top-k 256, MTP on)**: one Gentle Shell turn at
@@ -143,7 +144,10 @@ Source: [`thinkingmachines/Inkling-2-Mini`](https://huggingface.co/thinkingmachi
   ×27. Both loops circle the same unresolved premise conflict in the task (which machine owns a refresh token,
   docs vs. files), so the trigger looks task-driven and the card sampling does not prevent it. Engine, MTP or
   model still not separated.
-  Check the vendor card again before configuring (AGENTS.md rule). The smoke runs used greedy on purpose.
+- **Nib `bdc9307` (2026-11-25) is not adopted**: its exact GPU sampler makes the vendor sampling fast at `top_k 0`
+  (113-157 tok/s, was ~31) with text-identical greedy output and GSM8K 187/192, but it segfaults in
+  `hipGraphInstantiate` on 3 of 9 `serve` starts in the A/B run and 2 of 10 in the retest (0/15 on `2e16cf0`), in
+  `bench`, and in `serve` without `--mtp`; the installed engine stays `2e16cf0` ([results](../../results/20261125-nib-bdc9307/README.md)).
 
 ## KV and fit arithmetic
 

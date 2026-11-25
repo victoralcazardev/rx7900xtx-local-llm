@@ -7,7 +7,7 @@
 #   2e16cf0 : 3/3 up
 #   bdc9307 : up, crash, crash  (crash = SIGSEGV after '[InklingEngine] Ready!', see crash-new-build.txt)
 #   2e16cf0 : 1/1 up (arm A), bdc9307: 1 start crashed (arm B attempt 1), then up on the retry
-# Totals: 2e16cf0 5/5 up; bdc9307 6/9 up, 2/4 selftest runs crashed with no output.
+# Totals for this run: 2e16cf0 5/5 up; bdc9307 6/9 up (3 SIGSEGV), 2/4 selftest runs crashed.
 #
 # Post-helper starts (speed A-D, greedy gate x2, quality): all up on attempt 1, so no row below.
 #
@@ -21,3 +21,14 @@
 #   2026-11-25 12:02:52 SIGSEGV   858769  nib-main/build/nib  reliability loop attempt 1
 #   2026-11-25 12:03:11 SIGSEGV   859515  nib-main/build/nib  reliability loop attempt 3
 # Full backtrace of PID 854424: raw/coredump-854424.txt
+#
+# Retest for nib#1 (12:48-13:06, un-grafted Inkling-2-Mini-NVFP4-Mixed.gguf, -c 262848; script and
+# logs in raw/retest/): 10 interleaved starts per build, serve --mtp, up when GET /v1/models
+# answers within 120 s.
+#   2e16cf0 10/10 up
+#   bdc9307 2/10 crashed (starts #2 and #8, exit 139 after '[InklingEngine] Ready!')
+#   bdc9307 cores in the same window (kernel traps): 12:50:11 and 12:52:46 from serve --mtp,
+#   12:54:04 from `bench --sparse-pages 224 -d 0`, 12:59:14 from `bench --sparse-pages 0` under
+#   HIP_LAUNCH_BLOCKING=1, 13:03:07 from `serve` without --mtp during '[serve] warming up HIP graphs'.
+# Serve-start totals over both runs: 2e16cf0 0/15 SIGSEGV; bdc9307 3/9 + 2/10 = 5/19, plus 2/4
+# selftest runs. No core of nib/build/nib in either run.

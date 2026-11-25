@@ -663,7 +663,7 @@ class TestServerCommand(unittest.TestCase):
         (engine / "build").mkdir(parents=True)
         (engine / "build" / "nib").write_bytes(b"")
         model = manifest.Model(alias="ink", gguf=self.root / "pack" / "ink.gguf", backend="nib", mtp=True,
-                               sampling={"temp": 1.0, "top_k": 256, "min_p": 0.0},
+                               sampling={"temp": 0.6, "top_p": 0.95, "top_k": 256, "min_p": 0.0},
                                mmproj=self.root / "pack" / "mm.gguf", profiles={})
         profile = {"context": 262144, "kv": ["q8_0", "q8_0"], "sparse_pages": 224}
         cmd, cwd = manifest.server_command(self._manifest({"nib": engine}), model, profile, "nib", self.root / "out")
@@ -671,7 +671,8 @@ class TestServerCommand(unittest.TestCase):
                                "--mtp", str(self.root / "pack" / "mtp.safetensors"),
                                "--mmproj", str(model.mmproj), "--slots", "1", "-c", "262144",
                                "--kv-type", "q8_0", "--sparse-pages", "224",
-                               "--default-temp", "1.0", "--default-top-k", "256", "--default-min-p", "0.0",
+                               "--default-temp", "0.6", "--default-top-p", "0.95",
+                               "--default-top-k", "256", "--default-min-p", "0.0",
                                "--host", "127.0.0.1", "--port", "8080"])
         self.assertEqual(cwd, engine)
         cmd, _ = manifest.server_command(self._manifest({"nib": engine}), model,

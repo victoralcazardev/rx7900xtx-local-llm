@@ -12,23 +12,25 @@ Wed 2026-11-25 12:03:11 WET  859515 1000 1000 SIGSEGV present  ~/IA/Motores/src/
 # coredumpctl info 854424 (the 11:58:39 arm-B start), main thread only
            PID: 854424 (nib)
            TID: 854424 (nib)
-           UID: 1000 (victor)
-           GID: 1000 (victor)
+           UID: 1000 (<redacted>)
+           GID: 1000 (<redacted>)
         Signal: 11 (SEGV) si_code: SI_KERNEL
      Timestamp: Wed 2026-11-25 11:58:38 WET (48min ago)
   Command Line: ./build/nib serve -m ~/IA/Modelos/Inkling-2-Mini-Nib-Pack/Inkling-2-Mini-Unbound-v2.1-NVFP4-Mixed.gguf --mtp ~/IA/Modelos/Inkling-2-Mini-Nib-Pack/mtp.safetensors --no-vision --slots 1 -c 262144 --kv-type q8_0 --sparse-pages 224 --default-temp 1.0 --default-top-p 1.0 --default-top-k 0 --default-min-p 0.0 --host 127.0.0.1 --port 4444
     Executable: ~/IA/Motores/src/nib-main/build/nib
- Control Group: /user.slice/user-1000.slice/user@1000.service/app.slice/hc-hold-25163770.service
-          Unit: user@1000.service
-     User Unit: hc-hold-25163770.service
-         Slice: user-1000.slice
-     Owner UID: 1000 (victor)
-       Boot ID: 0a9fbe5a9df445fd99c66516b14e459b
-    Machine ID: 1b32a83a5de848d9a29b698885f2ab5f
-      Hostname: cachyos-x8664
-       Storage: /var/lib/systemd/coredump/core.nib.1000.0a9fbe5a9df445fd99c66516b14e459b.854424.1795607918000000.zst (present)
+ Control Group: <redacted>
+          Unit: <redacted>
+     User Unit: <redacted>
+         Slice: <redacted>
+     Owner UID: 1000 (<redacted>)
+       Boot ID: <redacted>
+    Machine ID: <redacted>
+      Hostname: <redacted>
+       Storage: <redacted> (present)
   Size on Disk: 33.5M
        Message: Process 854424 (nib) of user 1000 dumped core.
+                (Machine ID, Boot ID, hostname, unit, user name and core path redacted;
+                signal and stack below are verbatim)
                 Module /dev/zero (deleted) without build-id.
                 Module /dev/zero (deleted) without build-id.
                 Module /dev/zero (deleted) without build-id.
