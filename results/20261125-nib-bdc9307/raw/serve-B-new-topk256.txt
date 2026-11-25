@@ -1,0 +1,31 @@
+[step7i] occupancy blocks/WGP (wgp=48): wo_b=5 wo_c=5 wo_c_h2=6 mix_rms_qkv=9 a_qkv=5
+[step7j] occupancy blocks/CU: qkv_384=7
+[gguf] loaded ~/IA/Modelos/Inkling-2-Mini-Nib-Pack/Inkling-2-Mini-Unbound-v2.1-NVFP4-Mixed.gguf in 2.649 s
+[gguf] total VRAM: 17542839968 bytes (16730.2 MiB)
+[InklingEngine] Ready! max_ctx=262144 slots=1 slot_ctx=262144 swa_cap=1536 kv=q8_0 sparse_pages=224 total_vram=21.15 GiB (weights=16.34 GiB, kv+scratch=4.81 GiB)
+[dspark] captured 4 static draft HIP graphs
+[dspark] drafter ready: layers=3 inter=9216 ctx=8192 short_K=32834 vocab=200058 vram=697 MiB
+[InklingEngine] MTP I/O enabled: taps=9.0 MiB verify_raw=9.8 MiB hist_bak=3.7 MiB
+[mtp] drafter online (threshold=0.80, ctx=8192, shortlist=32834 rows, vram=21.17 GiB total)
+[serve] warming up HIP graphs & multi-slot batch kernels...
+[InklingEngine] Captured 1-shot static decode HIP Graph: 292 kernel nodes!
+[InklingEngine] Captured static verify(m=2) HIP Graph: 698 kernel nodes
+[InklingEngine] Captured static verify(m=3) HIP Graph: 699 kernel nodes
+[InklingEngine] Captured static verify(m=4) HIP Graph: 700 kernel nodes
+[InklingEngine] Captured static verify(m=5) HIP Graph: 701 kernel nodes
+[InklingEngine] Captured static verify(m=6) HIP Graph: 702 kernel nodes
+[InklingEngine] Captured static verify(m=7) HIP Graph: 703 kernel nodes
+[InklingEngine] Captured static verify(m=8) HIP Graph: 704 kernel nodes
+[nib] v0.1.0 listening on http://127.0.0.1:4444
+[nib] Web UI: http://127.0.0.1:4444/  |  OpenAI API: http://127.0.0.1:4444/v1/chat/completions
+[nib] Config: ctx=262144 slots=1(262144/slot, req_max=262144, solo) kv=q8_0 sparse_pages=224 temp=1.00 mtp=ON vision=OFF vram=21.17 GiB
+[serve] chat sync [s0] | prompt=7824 (cached=0, 2204 ms) | gen=256 in 2098 ms (122.0 tok/s, MTP)
+[serve] chat sync [s0] | prompt=7824 (cached=0, 2127 ms) | gen=256 in 2029 ms (126.2 tok/s, MTP)
+[serve] chat sync [s0] | prompt=33191 (cached=0, 9621 ms) | gen=103 in 786 ms (131.0 tok/s, MTP)
+[serve] chat sync [s0] | prompt=33191 (cached=0, 9660 ms) | gen=256 in 1917 ms (133.6 tok/s, MTP)
+[serve] chat sync [s0] | prompt=134222 (cached=0, 43717 ms) | gen=256 in 2115 ms (121.0 tok/s, MTP)
+[serve] chat sync [s0] | prompt=134222 (cached=0, 43763 ms) | gen=256 in 2005 ms (127.7 tok/s, MTP)
+[serve] chat sync [s0] | prompt=258126 (cached=0, 87122 ms) | gen=256 in 2226 ms (115.0 tok/s, MTP)
+[serve] chat sync [s0] | prompt=258126 (cached=0, 86332 ms) | gen=256 in 2222 ms (115.2 tok/s, MTP)
+
+[serve] shutdown complete.

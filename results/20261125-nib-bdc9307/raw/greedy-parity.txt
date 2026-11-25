@@ -1,0 +1,4 @@
+prose: identical (1031 chars, 256 tokens)
+code: identical (884 chars, 256 tokens)
+depth33k: identical (572 chars, 256 tokens)
+summary: 3/3 prompts identical

@@ -1,0 +1,23 @@
+# Startup failures observed on 2026-11-25 (UTC timestamps from the shell)
+# Both builds: serve -m <Unbound gguf> --mtp mtp.safetensors --no-vision --slots 1 -c 262144
+#   --kv-type q8_0 --sparse-pages 224 (--default-* exposure flags identical), port 4444.
+# A start counts as up when GET /v1/models answers within 240 s.
+
+# Manual sampling before raw/serve-lib.sh existed (3 consecutive starts per build):
+#   2e16cf0 : 3/3 up
+#   bdc9307 : up, crash, crash  (crash = SIGSEGV after '[InklingEngine] Ready!', see crash-new-build.txt)
+#   2e16cf0 : 1/1 up (arm A), bdc9307: 1 start crashed (arm B attempt 1), then up on the retry
+# Totals: 2e16cf0 5/5 up; bdc9307 6/9 up, 2/4 selftest runs crashed with no output.
+#
+# Post-helper starts (speed A-D, greedy gate x2, quality): all up on attempt 1, so no row below.
+#
+# coredumpctl list | grep nib, read after the run:
+#   2026-11-24 23:05:34 SIGABRT  3506355  nib/build/nib       (previous trial)
+#   2026-11-24 23:13:06 SIGSEGV  3523206  nib/build/nib       (previous trial)
+#   2026-11-25 00:17:54 SIGSEGV  3723004  nib/build/nib       (previous trial)
+#   2026-11-25 11:36:04 SIGSEGV   821636  nib-main/build/nib  selftest invocation 1 (crashed inside InklingEngine::init)
+#   2026-11-25 11:38:09 SIGSEGV   825304  nib-main/build/nib  selftest invocation 3
+#   2026-11-25 11:58:39 SIGSEGV   854424  nib-main/build/nib  arm B, start attempt 1 of 9
+#   2026-11-25 12:02:52 SIGSEGV   858769  nib-main/build/nib  reliability loop attempt 1
+#   2026-11-25 12:03:11 SIGSEGV   859515  nib-main/build/nib  reliability loop attempt 3
+# Full backtrace of PID 854424: raw/coredump-854424.txt

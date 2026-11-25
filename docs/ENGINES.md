@@ -255,6 +255,12 @@ Reads only GGUF Q8_0 + NVFP4 (the Nib-Pack layout). `local.toml` `engines.nib` =
 segfaults, `nib serve` without `--mtp` dies at warm-up ([Chromadera/nib#1](https://github.com/Chromadera/nib/issues/1)). Trial and numbers:
 [`results/20261124-nib-trial/`](../results/20261124-nib-trial/README.md).
 
+Upstream `bdc9307` (2026-11-25, with `aa394af`) was measured and **not adopted**: its exact GPU sampler makes
+`top_k 0` fast (113-157 tok/s, was ~31) with token-identical greedy output and GSM8K 187/192, but it segfaults in
+`hipGraphInstantiate` (drafter or decode graph capture) on 2-3 of 10 `serve` starts with ROCm `7.16.0-4f6d503`, against
+0/15 for `2e16cf0` ([results](../results/20261125-nib-bdc9307/README.md); reported in
+[nib#1](https://github.com/Chromadera/nib/issues/1#issuecomment-7163284160)). Re-test when upstream answers.
+
 Request surface at `2e16cf0` (source-read 2026-11-25, `src/server.cpp` ~3075-3088 and 967-985): a chat request reads
 only `max_tokens` (or `max_completion_tokens`; **default 131072** when the client sends none, clamped to the slot
 context), `temperature`, `top_p`, `min_p`, `top_k`, `seed`, `mtp`, `stream`, `stop`, and from

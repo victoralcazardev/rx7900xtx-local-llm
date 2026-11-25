@@ -1,0 +1,16 @@
+{"label": "A-old-topk256", "depth": 8192, "prompt_tokens": 7824, "pp": 3576.1, "tg": 121.41, "gen": [256, 256], "tg_all": [128.84, 113.97], "mtp": [1.992, 1.718], "accept": [0.992, 0.718]}
+{"label": "A-old-topk256", "depth": 32768, "prompt_tokens": 33191, "pp": 3413.7, "tg": 117.3, "gen": [256, 256], "tg_all": [124.51, 110.08], "mtp": [2.032, 1.855], "accept": [1.032, 0.855]}
+{"label": "A-old-topk256", "depth": 131072, "prompt_tokens": 134222, "pp": 3050.0, "tg": 108.71, "gen": [256, 256], "tg_all": [110.98, 106.44], "mtp": [1.829, 1.766], "accept": [0.829, 0.766]}
+{"label": "A-old-topk256", "depth": 250000, "prompt_tokens": 258126, "pp": 2989.0, "tg": 131.94, "gen": [256, 256], "tg_all": [129.22, 134.65], "mtp": [2.265, 2.393], "accept": [1.265, 1.393]}
+{"label": "B-new-topk256", "depth": 8192, "prompt_tokens": 7824, "pp": 3613.9, "tg": 124.1, "gen": [256, 256], "tg_all": [122.05, 126.15], "mtp": [1.835, 1.939], "accept": [0.835, 0.939]}
+{"label": "B-new-topk256", "depth": 32768, "prompt_tokens": 33191, "pp": 3442.8, "tg": 132.27, "gen": [103, 256], "tg_all": [130.99, 133.55], "mtp": [2.512, 2.169], "accept": [1.512, 1.169]}
+{"label": "B-new-topk256", "depth": 131072, "prompt_tokens": 134222, "pp": 3068.6, "tg": 124.37, "gen": [256, 256], "tg_all": [121.03, 127.71], "mtp": [1.984, 2.198], "accept": [0.984, 1.198]}
+{"label": "B-new-topk256", "depth": 250000, "prompt_tokens": 258126, "pp": 2976.4, "tg": 115.11, "gen": [256, 256], "tg_all": [114.99, 115.23], "mtp": [1.889, 1.962], "accept": [0.889, 0.962]}
+{"label": "C-new-unbounded", "depth": 8192, "prompt_tokens": 7824, "pp": 3591.2, "tg": 156.61, "gen": [256, 123], "tg_all": [141.85, 171.37], "mtp": [2.237, 3.237], "accept": [1.237, 2.237]}
+{"label": "C-new-unbounded", "depth": 32768, "prompt_tokens": 33191, "pp": 3417.8, "tg": 115.37, "gen": [256, 31], "tg_all": [119.97, 110.76], "mtp": [1.855, 2.067], "accept": [0.855, 1.067]}
+{"label": "C-new-unbounded", "depth": 131072, "prompt_tokens": 134222, "pp": 3057.1, "tg": 113.05, "gen": [256, 256], "tg_all": [113.93, 112.17], "mtp": [1.803, 1.79], "accept": [0.803, 0.79]}
+{"label": "C-new-unbounded", "depth": 250000, "prompt_tokens": 258126, "pp": 2971.1, "tg": 116.57, "gen": [256, 256], "tg_all": [108.29, 124.85], "mtp": [1.718, 2.0], "accept": [0.718, 1.0]}
+{"label": "D-new-shipped", "depth": 8192, "prompt_tokens": 7824, "pp": 3595.1, "tg": 133.64, "gen": [256, 256], "tg_all": [117.04, 150.24], "mtp": [1.796, 2.485], "accept": [0.796, 1.485]}
+{"label": "D-new-shipped", "depth": 32768, "prompt_tokens": 33191, "pp": 3411.0, "tg": 123.19, "gen": [256, 85], "tg_all": [124.52, 121.85], "mtp": [2.065, 2.576], "accept": [1.065, 1.576]}
+{"label": "D-new-shipped", "depth": 131072, "prompt_tokens": 134222, "pp": 3036.9, "tg": 108.63, "gen": [256, 256], "tg_all": [112.85, 104.41], "mtp": [2.008, 1.678], "accept": [1.008, 0.678]}
+{"label": "D-new-shipped", "depth": 250000, "prompt_tokens": 258126, "pp": 2964.0, "tg": 115.69, "gen": [222, 256], "tg_all": [116.34, 115.04], "mtp": [1.965, 1.925], "accept": [0.965, 0.925]}

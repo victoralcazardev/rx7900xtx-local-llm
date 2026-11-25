@@ -1,0 +1,37 @@
+[verify] Q8_0  token_embd             max abs err = 0.000000
+[verify] NVFP4 blk.0.ffn_gate_up_exps  max abs err = 0.000000
+[gguf] loaded ~/IA/Modelos/Inkling-2-Mini-Nib-Pack/Inkling-2-Mini-Unbound-v2.1-NVFP4-Mixed.gguf in 3.344 s
+[gguf] total VRAM: 17542839968 bytes (16730.2 MiB)
+[step7i] occupancy blocks/WGP (wgp=48): wo_b=5 wo_c=5 wo_c_h2=6 mix_rms_qkv=9 a_qkv=5
+[step7j] occupancy blocks/CU: qkv_384=7
+[InklingEngine] Ready! max_ctx=4096 slots=1 slot_ctx=4096 swa_cap=1536 kv=q8_0 sparse_pages=224 total_vram=16.89 GiB (weights=16.34 GiB, kv+scratch=0.55 GiB)
+[InklingEngine] Captured 1-shot static decode HIP Graph: 288 kernel nodes!
+[SELFTEST] Prefill vs Decode (5 tokens): next_pf=111 next_dec=111 | max_diff=0.05151 | cos_sim=0.9999949
+[selftest] sampler bonus    T=1.5: 20000 draws, bad=0, chi2=67.4 (dof=65, gate 133.4), |Z/Z_ref-1|=4.70e-08, |p(excl)-ref|=0.00e+00, p(argmax)=0.2652 -> PASS
+[selftest] sampler residual T=1.5: 20000 draws, bad=0, chi2=74.4 (dof=65, gate 133.4), |Z/Z_ref-1|=4.70e-08, |p(excl)-ref|=1.25e-08, p(argmax)=0.2652 -> PASS
+[selftest] sampler min_p=0.05: 4000 draws, bad=0, outside kept set=0 -> PASS
+[selftest] sampler batch(4x heterogeneous): mismatches=0 -> PASS
+[InklingEngine] MTP I/O enabled: taps=9.0 MiB verify_raw=9.8 MiB hist_bak=3.7 MiB
+[dspark] captured 3 static draft HIP graphs
+[dspark] drafter ready: layers=3 inter=9216 ctx=4096 short_K=32834 vocab=200058 vram=687 MiB
+[dspark] gemv differential (m=8 rows vs engine 1-row GEMV): max |d| = 9.53674e-07
+[dspark] shortlist head differential vs lm_head: max |d| = 2.38419e-07 (row 10608, id 51878, short_K=32834)
+[selftest] draft anchor sensitivity (100 vs 101): max |d(logit)| = 9.40257
+[selftest] draft context sensitivity (populated vs reset): max |d(logit)| = 0
+[selftest] tok_norm rms=0.9021  output_norm rms=5.5911
+[selftest] A: verify(m) vs sequential decode (argmax + bit-exact logits)
+[InklingEngine] Captured static verify(m=2) HIP Graph: 698 kernel nodes
+  [ok]   m=2: 2 rows bit-identical to sequential decode
+[InklingEngine] Captured static verify(m=4) HIP Graph: 700 kernel nodes
+  [ok]   m=4: 4 rows bit-identical to sequential decode
+[InklingEngine] Captured static verify(m=8) HIP Graph: 704 kernel nodes
+  [ok]   m=8: 8 rows bit-identical to sequential decode
+[selftest] B: verify_rollback(commit) vs decode (bit-exact next-step logits)
+  [ok]   m=2: rollback exact for commit = 1..2
+  [ok]   m=4: rollback exact for commit = 1..4
+  [ok]   m=8: rollback exact for commit = 1..8
+[selftest] C: 64-token greedy parity (non-MTP vs --mtp)
+[InklingEngine] Captured static verify(m=3) HIP Graph: 699 kernel nodes
+  [ok]   all 64 tokens identical
+[mtp] 64 tokens in 744.57 ms = 85.96 tok/s | rounds=58 avg_accepted=0.09 tok/round=1.09 avg_m=2.05
+[mtp] per round: draft=1.18 ms verify=11.29 ms (11.63 ms/tok wall) | verify m: 58 calls

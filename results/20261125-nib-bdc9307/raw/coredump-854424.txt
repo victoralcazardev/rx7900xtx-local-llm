@@ -1,0 +1,51 @@
+# coredumpctl list | grep -i nib (read 2026-11-25 after the run; DEBUGINFOD_URLS empty, no network)
+TIME                            PID  UID  GID SIG     COREFILE EXE                                                                                          SIZE
+Tue 2026-11-24 23:05:34 WET 3506355 1000 1000 SIGABRT present  ~/IA/Motores/src/nib/build/nib                                                   12.1M
+Tue 2026-11-24 23:13:06 WET 3523206 1000 1000 SIGSEGV present  ~/IA/Motores/src/nib/build/nib                                                   17.5M
+Wed 2026-11-25 00:17:54 WET 3723004 1000 1000 SIGSEGV present  ~/IA/Motores/src/nib/build/nib                                                   34.9M
+Wed 2026-11-25 11:36:04 WET  821636 1000 1000 SIGSEGV present  ~/IA/Motores/src/nib-main/build/nib                                                19M
+Wed 2026-11-25 11:38:09 WET  825304 1000 1000 SIGSEGV present  ~/IA/Motores/src/nib-main/build/nib                                              18.6M
+Wed 2026-11-25 11:58:39 WET  854424 1000 1000 SIGSEGV present  ~/IA/Motores/src/nib-main/build/nib                                              33.5M
+Wed 2026-11-25 12:02:52 WET  858769 1000 1000 SIGSEGV present  ~/IA/Motores/src/nib-main/build/nib                                              33.5M
+Wed 2026-11-25 12:03:11 WET  859515 1000 1000 SIGSEGV present  ~/IA/Motores/src/nib-main/build/nib                                              33.5M
+
+# coredumpctl info 854424 (the 11:58:39 arm-B start), main thread only
+           PID: 854424 (nib)
+           TID: 854424 (nib)
+           UID: 1000 (victor)
+           GID: 1000 (victor)
+        Signal: 11 (SEGV) si_code: SI_KERNEL
+     Timestamp: Wed 2026-11-25 11:58:38 WET (48min ago)
+  Command Line: ./build/nib serve -m ~/IA/Modelos/Inkling-2-Mini-Nib-Pack/Inkling-2-Mini-Unbound-v2.1-NVFP4-Mixed.gguf --mtp ~/IA/Modelos/Inkling-2-Mini-Nib-Pack/mtp.safetensors --no-vision --slots 1 -c 262144 --kv-type q8_0 --sparse-pages 224 --default-temp 1.0 --default-top-p 1.0 --default-top-k 0 --default-min-p 0.0 --host 127.0.0.1 --port 4444
+    Executable: ~/IA/Motores/src/nib-main/build/nib
+ Control Group: /user.slice/user-1000.slice/user@1000.service/app.slice/hc-hold-25163770.service
+          Unit: user@1000.service
+     User Unit: hc-hold-25163770.service
+         Slice: user-1000.slice
+     Owner UID: 1000 (victor)
+       Boot ID: 0a9fbe5a9df445fd99c66516b14e459b
+    Machine ID: 1b32a83a5de848d9a29b698885f2ab5f
+      Hostname: cachyos-x8664
+       Storage: /var/lib/systemd/coredump/core.nib.1000.0a9fbe5a9df445fd99c66516b14e459b.854424.1795607918000000.zst (present)
+  Size on Disk: 33.5M
+       Message: Process 854424 (nib) of user 1000 dumped core.
+                Module /dev/zero (deleted) without build-id.
+                Module /dev/zero (deleted) without build-id.
+                Module /dev/zero (deleted) without build-id.
+                Module /dev/zero (deleted) without build-id.
+                Module /dev/zero (deleted) without build-id.
+                Stack trace of thread 854424:
+                #0  0x00007f4ebe14d5b8 n/a (libamdhip64.so.7 + 0x74d5b8)
+                #1  0x00007f4ebe1291af n/a (libamdhip64.so.7 + 0x7291af)
+                #2  0x00007f4ebe10e7dc n/a (libamdhip64.so.7 + 0x70e7dc)
+                #3  0x00007f4ebdf45a34 n/a (libamdhip64.so.7 + 0x545a34)
+                #4  0x00007f4ebdb65b0b n/a (libamdhip64.so.7 + 0x165b0b)
+                #5  0x00007f4ebdbdca38 n/a (libamdhip64.so.7 + 0x1dca38)
+                #6  0x00007f4ebdbdf313 n/a (libamdhip64.so.7 + 0x1df313)
+                #7  0x00007f4ebdbe4c09 n/a (libamdhip64.so.7 + 0x1e4c09)
+                #8  0x00007f4ebdc0239a n/a (libamdhip64.so.7 + 0x20239a)
+                #9  0x00007f4ebdc1f14a n/a (libamdhip64.so.7 + 0x21f14a)
+                #10 0x00007f4ebe02320c hipGraphInstantiate (libamdhip64.so.7 + 0x62320c)
+                #11 0x000055a10516e7f6 _ZN7inkling13DSparkDrafter20capture_draft_graphsEv (nib + 0x467f6)
+                #12 0x000055a105172503 _ZN7inkling13DSparkDrafter4initERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEERKNS_12ModelWeightsEiiP12ihipStream_ti (nib + 0x4a503)
+                #13 0x000055a1051d4f52 _ZN12_GLOBAL__N_1L16mtp_session_initERNS_10MtpSessionERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEERN7inkling13InklingEngineEfbi.constprop.0 (nib + 0xacf52)

@@ -1,0 +1,5 @@
+[step7i] occupancy blocks/WGP (wgp=48): wo_b=5 wo_c=5 wo_c_h2=6 mix_rms_qkv=9 a_qkv=5
+[step7j] occupancy blocks/CU: qkv_384=7
+[gguf] loaded ~/IA/Modelos/Inkling-2-Mini-Nib-Pack/Inkling-2-Mini-Unbound-v2.1-NVFP4-Mixed.gguf in 2.721 s
+[gguf] total VRAM: 17542839968 bytes (16730.2 MiB)
+[InklingEngine] Ready! max_ctx=262144 slots=1 slot_ctx=262144 swa_cap=1536 kv=q8_0 sparse_pages=224 total_vram=21.15 GiB (weights=16.34 GiB, kv+scratch=4.81 GiB)
