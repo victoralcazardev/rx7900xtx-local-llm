@@ -15,8 +15,9 @@
   port of `alesha-pro/maya-inkling-mini`) is the faster one: decode 95 / 63.6 / 51.1 tok/s and prefill
   1,894 / 1,292 at 512 / 128K / 262K, GSM8K 95/96, 262K retrieval 3/3, tool calls and prefix reuse working
   ([run](../../results/20261122-inkling-maya-vs-fork/README.md)). Launch:
-  `python3 scripts/launch.py inkling2-mini-unc --profile 262k-maya` ([SOP](../sop/launch-model.md)). Both GodGMN
-  projects are in use: the llama.cpp fork serves `262k-q8q8`, the HIP port serves `262k-maya`. The bullets
+  `python3 scripts/launch.py inkling2-mini-unc-q8d --profile 315k-maya` ([SOP](../sop/launch-model.md)); the IQ4_NL
+  file's own `262k-maya` profile was removed on 2026-11-24 in favor of the faster q8d re-type. Both GodGMN
+  projects are in use: the llama.cpp fork serves `inkling2-mini-unc/262k-q8q8`, the HIP port serves the q8d profiles. The bullets
   below describe the fork profile.
 - **Wired llama.cpp profile** (`262k-q8q8`, the comparison arm; the Q8_0 re-typed `262k-maya` on the HIP
   port above is the setup in use since 2026-11-23): `models.toml` alias `inkling2-mini-unc` (Abiray IQ4_NL, below),
@@ -209,6 +210,7 @@ Who is who (the names overlap; none of these engines is this repository's own co
 | Upstream Project Maya (`mw00/project-maya`) v1.1.74 | field (#1116, 7900 XTX, ROCm 7.2.4): 109.1 tok/s (unsloth UD-Q4_K_XL), 94-95 (Heretic UD-Q4_K_XL) | field: 2,267 tok/s on 8K | field: 131,072 | Unsloth UD layout | not built |
 | Strata `strata-inkling` 0.1.65 | no gfx1100 Inkling number (headline 198.9-250.3 tok/s is an RTX 5090) | — | claim "up to 1M" | its own SQ packs (SQ-20 18.02 GiB, claimed lossless) | not installed |
 | Upstream llama.cpp b12633 | 4.5 tok/s at 262K (MoE offloaded) | 10.0 | 262K does not fit | every type | not wired |
+| [Chromadera/nib](https://github.com/Chromadera/nib) `2e16cf0` (2026-11-24) | **here, 272 W, Nib-Pack NVFP4-Mixed, DSpark + sparse 224, temp 1.0 `top_k 256`: 122.6 / 102.2 / 97.3 / ~104 tok/s** at 7.8K / 33K / 134K / 258K (dense attention 110.5 / 99.2 / 78.4 / 59.7); card sampling without top-k ~31 tok/s; publisher: 186.8 | here: 3,620 / 3,399 / 3,041 / 2,982 at 7.8K / 33K / 134K / 258K | 262,848, Q8_0 KV, 21.50 GiB | Q8_0 + NVFP4 only | **wired, default** (`inkling2-mini-unbound-nib`, [trial](../../results/20261124-nib-trial/README.md)); GSM8K 187/192 (Unbound graft); retrieval 35/36 sparse vs. 36/36 dense to ~184K |
 
 - **Why `maya-ik2` is faster** (author's text, CUDA): llama.cpp runs about 7,350 kernel launches per token for
   this model, `maya-ik2` 757 replayed as one graph; the HIP port keeps graph replay (`hipGraph`) and adds RDNA3
@@ -294,6 +296,7 @@ re-measured here.
 | OpenUncensored `Inkling-2-Mini-Uncensored-LoRA` | 1 MB | rank-2 projection on `attn.wo_ud` of layers 4-23, experts untouched; author: 0/32 refusals, MMLU 78.95 -> 79.47 | as an offline edit | as an offline edit to ggml-org IQ4_NL (experts byte-identical to the file the port was validated on) |
 | Abiray `Inkling-2-Mini-Uncensored-IQ4_NL.gguf` (GGUF of OpenUncensored's merged model) | 13.9 GiB | the OpenUncensored edit already merged (experts byte-identical to the base before quantization); `inkling2_loop`, 48 expert tensors all IQ4_NL, 0 scale tensors (header read 2026-11-22) | expected to run (same layout as AD-Q4_K), not run | readable by type (IQ4_NL experts), not run |
 | JoaoZaokk Heretic UD-Q4_K_XL | 16.42 GiB | abliterated, quality not published here | not checked | ran on upstream Maya + 7900 XTX at 94-95 tok/s (field, #1116) |
+| nokeepai Unbound v2.1 | GGUF Q8_0 25.91 GiB (we graft only its 120 attention tensors, 631 MiB) | abliteration + LoRA fine-tune merged into the q/k/v/output/gate attention projections of all 24 layers; experts byte-identical. Card's same-test comparison (263 harmful prompts, Q8_0, one judge; author's own release ranked first): useful answers thinking off/on 83.7/85.2% vs. OpenUncensored (the edit in our Abiray file) 33.1/41.8%, KLD 0.0439 vs. 0.0228, MMLU-300 74.3 vs. 75.3 | — | grafted onto the Nib-Pack for `nib` ([trial](../../results/20261124-nib-trial/README.md#uncensored-file)); graftable onto `q8dense` too, not built |
 
 Expert types read from the remote headers on 2026-11-22: JoaoZaokk Heretic and onemunanoyo UD-Q4_K_XL are
 `inkling2` 48-block, NVFP4 (40) + Q8_0 (8) with 40 scale tensors (not loadable on the llama.cpp fork);
@@ -334,6 +337,24 @@ OpenUncensored edit did not change usefulness; nokeep's "useful" rate is measure
 training data. Best path to higher quality: an uncensored edit applied to the vendor's NVFP4 experts (no such file yet)
 or a self-built Unbound file.
 
+### Hugging Face re-survey (2026-11-24)
+
+New `base_model:` derivatives since the 2026-11-23 survey, plus the two Strata packs the user named. Expert and
+head types below were read from the first 30 MB of each GGUF (header parse, no full download); quality numbers are
+each publisher's own, not reproduced here. **No published uncensored file beats `q8dense` on `maya-ik2` as is**;
+nothing downloaded or measured.
+
+| Candidate | Header / card facts | Verdict for this setup |
+|---|---|---|
+| nokeepai Unbound **v2.1** (`nokeepai/Inkling-2-Mini-Unbound-GGUF`, current 2026-11-24) | `v2.1-Q8_0.gguf` 25.91 GB: `inkling2_loop`, 24 blocks, `attn_{q,k,v,output,gate,rel}` and experts Q8_0. Card: only the 120 BF16 attention matrices change, experts byte-identical; useful 83.7/85.2% (OpenUncensored 33.1/41.8%), refused 0.4/0.4%, KLD 0.0439 (ours 0.0228), MMLU-300 74.3 (ours 75.3), GSM8K-100 98; greedy hits the 4,096-token thinking cap on 22.1% of its prompts, temp 0.6 fixes most | Too big as published (Q8_0 experts) and its Q4_K_M has K-quant experts. **Buildable**: graft its 120 Q8_0 attention tensors onto `q8dense` (same size, same 315K headroom); same path for v1.0 (`Inkling-2-Mini-Unbound-Q8_0.gguf`, KLD 0.0102, useful 51.3/61.6%). User chose not to now (2026-11-24) |
+| electroglyph `Inkling-2-Mini-Unbound-GGUF` UD-Q4_K_M (15.47 GiB; Unbound main = v2.x) | `inkling2_loop` 24; experts NVFP4 x20 + `down` Q8_0 x4 + `gate_up` Q5_K x4, **no `ffn_*_exps.scale`**; dense and head Q8_0. UD-IQ4_XS: NVFP4 x20 + IQ4_XS/Q4_K/Q5_K/Q5_0, head Q6_K | Not loadable: the port dies on NVFP4 without `.scale` (`src/ik2/ik2_main.cu:4850`) and rejects K-quant rows |
+| Wa1k3r `…NVFP4exp-Q8-draft-LexiSuite-AIO-for-AMD-RDNA` (18.26 GB) | `inkling2_loop` 24; experts NVFP4 x20 with `.scale` + Q8_0 x4; head Q8_0; drafter in the file. Repo also ships secure-boot OS images | Base model (not uncensored), +1.6 GiB over `q8dense` (no 315K); not pursued |
+| notfakerv Abliterated WSP, Mir2k Uncensored (Q4_K_M 16.28 GiB), y0uq AD-IQ4_XS, YukijThird IQ2_S, diablomike20 / npario (AtomicChat re-uploads), kelsey1337 `…-Maya-GGUF` (Unsloth UD, 16.42 GiB) | K-quant, IQ4_XS or IQ2 experts (file names / cards). notfakerv card: edits `attn_output` and all experts' `ffn_down`, KLD 0.034 | Not readable by `maya-ik2` |
+| orcarouter `Inkling-2-Mini-abliterated-GGUF` (Mix-16G 14.64 GiB) | Gated; card unread | Not checked |
+| strata-engine `Inkling-2-Mini-Strata` (SQ-10 / 15 / 20: 10.47 / 14.35 / 19.35 GB) | Card: SQ-20 matches the original 100% (lossless experts); RX 7900 XT 20 GB over OCuLink 54.7+ tok/s on SQ-10 (no 7900 XTX row); not uncensored | Possible quality arm (lossless vs. IQ4_NL), but the card's only RDNA3 number is about half our `maya-ik2` decode; not tried ([`sop/strata.md`](../sop/strata.md)) |
+| Kujira `Inkling-2-Mini-Strata-CHiPS-Abliterated` (SQ-20 19.35 GB, preview) | SQ-20 with CHiPS v6: only layer 11 attention output changed, experts byte-identical (card); refusal numbers measured on a UD-IQ2_XXS GGUF, not on the pack (310/312 -> 0/312 "thinking heads toward refusal"); no GSM8K/MMLU; Strata 0.2.20 cannot install custom packs from the app | Uncensored Strata option if Strata is ever measured here; same speed caveat |
+| @SergioGMN / GodGMN abliterated | No upload (`?author=GodGMN` empty) | Still on watch |
+
 ### Reference repos and engine updates (2026-11-23)
 
 Read by scouts from the primary repos; author numbers, not re-measured here unless stated.
@@ -373,8 +394,8 @@ Read by scouts from the primary repos; author numbers, not re-measured here unle
    vs. 93/96, refusals 0/8, tool calls and prefix reuse work
    ([run](../../results/20261122-inkling-maya-vs-fork/README.md)). Open: wiring it into `launch.py` (the user's
    call), the coding suite and a 262K retrieval check on it, and 393K (fits: every bench ran with 393,216 reserved).
-2. **Fork above 262K**: arithmetic only (~300K `q8_0`/`q8_0`, ~350K `q8_0`/`q5_1`, ~550K `q4_0`); the harness's
-   `local-262k` stops at 262,144, so it only helps outside the harness.
+2. **Fork above 262K**: arithmetic only (~300K `q8_0`/`q8_0`, ~350K `q8_0`/`q5_1`, ~550K `q4_0`); wiring it
+   in a harness needs a window-named entry like `local-315k` (AGENTS.md).
 3. **Drafter**: loads on `maya-ik2` with rocBLAS's device pack but is 4-17% slower ([round 3](../../results/20261123-inkling-round/README.md#dspark-drafter-the-hiperrorinvalidimage-cause-fixed-slower-on-this-card)); retest
    when the port takes project-maya's newer drafter code, or #32218 lands.
 4. **Strata**: only after a gfx1100 Inkling number exists.

@@ -282,5 +282,36 @@ reports Inkling-2-Mini Q4_K_M running on a B70 with llama.cpp Vulkan, no numbers
 |---|---|---|---|---|
 | llama.cpp disables flash attention automatically for models with an additive attention bias (`kq_b`), "like Inkling" | `references/kv-and-context.md:63` | 2026-11-23 | source-checked (quote); mechanism not re-checked in llama.cpp source | Our production engine for Inkling is `maya-ik2`, not llama.cpp; [`models/inkling-2-mini.md`](models/inkling-2-mini.md) |
 | `q4_0` K cache: mean KLD ~5.5 "regardless of V precision" | `references/kv-and-context.md:22` | 2026-11-23 | source-checked (quote; B70 SYCL, model not stated in that row) | Our KV policy and measurements: [`measurements/kv-quality.md`](measurements/kv-quality.md) |
-| Inkling 2 Mini on B70: vLLM XPU + DSpark k=7, 57.2 -> 80.4 tok/s card sampling, 8/8 PASS | `references/levers.md:12,47` | 2026-11-23 | source-checked (author's numbers; Intel-only stack) | not applicable (DSpark does not load on our HIP build: [round](../results/20261123-inkling-round/README.md)) |
+| Inkling 2 Mini on B70: vLLM XPU + DSpark k=7, 57.2 -> 80.4 tok/s card sampling, 8/8 PASS | `references/levers.md:12,47` | 2026-11-23 | source-checked (author's numbers; Intel-only stack) | not applicable (DSpark loads on our HIP build since round 3 but decodes 4-17% slower: [round](../results/20261123-inkling-round/README.md#dspark-drafter-the-hiperrorinvalidimage-cause-fixed-slower-on-this-card)) |
 | llama.cpp SYCL graph replay on Inkling: +34.1% short / +26.6% at 8K, 5/5 greedy identical | `references/levers.md:23` | 2026-11-23 | source-checked (SYCL-only flag) | not applicable: `maya-ik2` already replays one graph per decode step (engine log) |
+
+## Atomic Engine and llamAmpere v0.7.4 Inkling posts (2026-11-24)
+
+Desk review of two X posts the user relayed (@atomic_chat_hq, @JakeKAllDay) against each repository's README and
+latest release; neither repository was cloned (both over 350 MB) and no kernel source was read. Neither engine
+targets HIP, so nothing here is testable on this card. Why llamAmpere matters: on CUDA the Inkling drafter is the
+largest single gain, while on `maya-ik2` HIP it decodes 4-17% slower
+([round 3](../results/20261123-inkling-round/README.md#dspark-drafter-the-hiperrorinvalidimage-cause-fixed-slower-on-this-card)).
+This suggests, unmeasured, that our loss is the HIP drafter implementation (`hipblasSgemv` in the fold), not the card.
+
+| Claim | Source | Date | Status | Own test |
+|---|---|---|---|---|
+| Atomic Engine (llama.cpp fork) streams MoE experts from the GGUF under a memory budget (`--engine-budget-mib`); Inkling IQ2_M + Q8_0 DSpark: 105.71 tok/s on an M4 Max at a 14 GiB budget, 18.26 tok/s at 4 GiB | [AtomicBot-ai/atomic-engine](https://github.com/AtomicBot-ai/atomic-engine) README (`engine-development` branch); release `dev-latest` `1937695dc` (2026-11-10) | 2026-11-24 | source-checked (author's numbers; README documents Metal only) | not applicable: the Inkling file in use fits in VRAM, so expert streaming has nothing to save |
+| Atomic Engine: 122 tok/s on an M5 Max vs. 40 on llama.cpp, "no accuracy loss" | @atomic_chat_hq post, 2026-11-23 | 2026-11-24 | hypothesis (not in the README; baseline is stock llama.cpp) | `maya-ik2` already decodes 106.1 / 68.9 tok/s at 512 / 128K fill ([STATUS](STATUS.md)) |
+| AtomicChat AD-IQ1_M (7.26 GB): 81% top-1 agreement with BF16 | @atomic_chat_hq post, 2026-11-20 | 2026-11-24 | hypothesis (author's metric) | None; AD-Q4_K was measured and dropped ([TRIED](TRIED.md)) |
+| llamAmpere v0.7.4 (CUDA, RTX 30-series): Inkling presets `24ink` / `12ink` / `10ink` / `8ink`, 4-bit KV, 262,144 context on 24 GB; 24 GB with the 0.45 GB drafter, temperature 1, 5,120-token reply: 169.4 / 166.1 / 127.2 tok/s at 3K / 32K / 100K prompt (NVFP4Q8 5.4 bpw, 17.56 GB), 136.3 at 100K (AI4 4.4 bpw, 14.37 GB) | [JakeATX/llamAmpere release v0.7.4](https://github.com/JakeATX/llamAmpere/releases/tag/v0.7.4) (2026-11-24T02:02Z) | 2026-11-24 | source-checked (author's numbers; one RTX 3090, CUDA `sm86` and custom weight formats) | not applicable (CUDA); compare `maya-ik2` without drafter, 90.0 / 68.9 tok/s at 32K / 128K fill |
+| llamAmpere Inkling: "same KLD as Unsloth's top-tier 4 K XL", "faster than Maya + Strata" | @JakeKAllDay post, 2026-11-24 | 2026-11-24 | hypothesis (not checked against the release notes) | None |
+
+## Nib, the Nib-Pack, Unbound v2.1 and Bonsai 2.5 (2026-11-24)
+
+Scouted on 2026-11-24 (web search providers were down: Hugging Face and GitHub APIs and fetched cards only). Each
+row was opened at the source on the date shown; the trial is
+[`results/20261124-nib-trial/`](../results/20261124-nib-trial/README.md).
+
+| Claim | Source | Date | Status | Own test |
+|---|---|---|---|---|
+| Nib on an RX 7900 XTX: 262,848 context + Q8_0 KV + DSpark + vision in 21.50 GiB; 186.8 tok/s weighted single-stream decode; 3,389.5 tok/s prefill at 261,526 tokens; 3/3 needles at 251,659 tokens | [Chromadera/nib](https://github.com/Chromadera/nib) README `2e16cf0`; [Nib-Pack card](https://huggingface.co/degenmeowster/Inkling-2-Mini-Nib-Pack) | 2026-11-24 | source-checked (publisher's numbers, BetterBench, `--slots 8`) | 21.50 GiB reproduced; decode 97-123 tok/s in real requests, prefill 2,982 tok/s at 258K, 35/36 needles to ~184K ([trial](../results/20261124-nib-trial/README.md)) |
+| Nib-Pack NVFP4-Mixed (16.42 GiB): KLD 0.0033, 97.4% same top-1 vs. ggml-org Q8_0 (WikiText-2, 40 x 512); ggml-org IQ4_NL 0.0095 vs. BF16 upcast; MRCR 8-needle 128K-256K 37.28% with sparse 224 | Nib-Pack card | 2026-11-24 | source-checked (publisher; references differ per row) | not re-measured |
+| Unbound v2.1 edits only 120 BF16 attention matrices, experts byte-identical; same-test table: useful answers 83.7/85.2% (v2.1), 52.1/55.5% (AtomicChat LoRA, edits experts), 33.1/41.8% (OpenUncensored) | [nokeepai/Inkling-2-Mini-Unbound](https://huggingface.co/nokeepai/Inkling-2-Mini-Unbound) | 2026-11-24 | source-checked (author ranks its own release first) | grafted onto the Nib-Pack; refusal check pending |
+| Ternary Bonsai 2.5 27B (Qwen3.8-27B): `Q2_0` 7.15 GiB runs on stock llama.cpp >= b11556; tool calling 77.2 vs. FP16 77.7; coding avg 54.2 vs. GSQ-RCO IQ3_XXS 55.5; backends listed CUDA, Metal, CPU, SYCL | [prism-ml/Ternary-Bonsai-2.5-27B-GGUF](https://huggingface.co/prism-ml/Ternary-Bonsai-2.5-27B-GGUF) | 2026-11-24 | source-checked (publisher) | not run (HIP untested upstream; set aside by the user for Inkling) |
+| llama.cpp PR #32218 (Inkling DSpark) merged 2026-11-24 20:11Z; #32740 (compact FA bias) merged 2026-11-23 | GitHub API | 2026-11-24 | source-checked | not built |

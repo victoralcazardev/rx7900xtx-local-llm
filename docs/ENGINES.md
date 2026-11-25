@@ -30,7 +30,7 @@ hash — the difference lives in the shared library, not the file hashed here.
 | `llama-b11160-linux-rocm10-gfx1100-kvmix-vec4` | Discarded, [recipe](archive/engines-builds-2026.md#llama-b11160-linux-rocm10-gfx1100-kvmix-vec4-discarded) (+20% ms/step at depth vs. `kvmix`, see `docs/measurements/speculative.md`) | b11160 / `70c4e1582` + 1-line patch | `3d8565952bcd74cd4e0d3be3a56221619c25da6176d3716972b75b1cc0a34128` (same front-end; patch is in `libggml-hip.so`) |
 | `llama-b11160-linux-rocm-gfx1100-kvmix` | Discarded, [recipe](archive/engines-builds-2026.md#llama-b11160-linux-rocm-gfx1100-kvmix-discarded) (~9% slower than the ROCm-10-toolchain build, see `docs/measurements/engines.md`) | b11160 / `70c4e1582`, own build, older ROCm 7.2.4 system toolchain | `7c27f7fd7c0398075b2837a531c98cc6c57766ff107d671c1c7b06c18d6cd1b2` |
 | `llama-rdnaboosts-v16-ebbb18522-rocm10-gfx1100` | Experimental, not adopted, [recipe](archive/engines-builds-2026.md#llama-rdnaboosts-v16-ebbb18522-rocm10-gfx1100-experimental) (only -2.5% ms/step at depth; not worth maintaining a fork, see `docs/measurements/speculative.md`) | `stew675/llama-cpp-rdna-boosts` v16-`ebbb18522`-r13, 16 patches on llama.cpp `ebbb18522` | `3d8565952bcd74cd4e0d3be3a56221619c25da6176d3716972b75b1cc0a34128` (same front-end) |
-| `maya-inkling-mini-hip` (`build-ik2/maya-ik2`, not a llama.cpp build) | **Experimental, Inkling-2-Mini only** (built 2026-11-22; `launch.py` backend `maya`, profile `inkling2-mini-unc/262k-maya`; [results](../results/20261122-inkling-maya-vs-fork/README.md)). **In use since 2026-11-23: `hip-port` `f472e94`** in the worktree `maya-inkling-mini-hip-f472e94` ([round 3](../results/20261123-inkling-round/README.md#round-3-2026-11-23-evening-hip-port-f472e94-dspark-loads-ik2_kvfp4-global)); the `2b31ffeaa` checkout stays as rollback | `GodGMN/maya-inkling-mini` branch `hip-port` `f472e94` (was `2b31ffeaa`) + local cherry-pick of `alesha-pro/maya-inkling-mini` `549d734` (tool-call parser, `serve/` only) | `a064a1e059191d8ff8cafd9d9cc0354a3fa784fc55529d69d1b946d7649e92f0` (`maya-ik2` `f472e94`); rollback `e142adbb4d7fdee7b9ee7037498936e986bf8beecf62dee461b871d5808b0a92` (`2b31ffeaa`) |
+| `maya-inkling-mini-hip` (`build-ik2/maya-ik2`, not a llama.cpp build) | **Experimental, Inkling-2-Mini only** (built 2026-11-22; `launch.py` backend `maya`, profiles `inkling2-mini-unc-q8d/262k-maya` and `/315k-maya`; [results](../results/20261122-inkling-maya-vs-fork/README.md)). **In use since 2026-11-23: `hip-port` `f472e94`** in the worktree `maya-inkling-mini-hip-f472e94` ([round 3](../results/20261123-inkling-round/README.md#round-3-2026-11-23-evening-hip-port-f472e94-dspark-loads-ik2_kvfp4-global)); the `2b31ffeaa` checkout stays as rollback | `GodGMN/maya-inkling-mini` branch `hip-port` `f472e94` (was `2b31ffeaa`) + local cherry-pick of `alesha-pro/maya-inkling-mini` `549d734` (tool-call parser, `serve/` only) | `a064a1e059191d8ff8cafd9d9cc0354a3fa784fc55529d69d1b946d7649e92f0` (`maya-ik2` `f472e94`); rollback `e142adbb4d7fdee7b9ee7037498936e986bf8beecf62dee461b871d5808b0a92` (`2b31ffeaa`) |
 | `llama-inkling-rdna3-cb0e46960-linux-rocm10-gfx1100-kvmix` | **Current `hip-inkling`, Inkling-2-Mini only** (built and wired 2026-11-22; the only engine measured at 262K with that model, [results](../results/20261122-inkling-rdna3-fork/BUILD.md)). Do not point the Qwen setup at it: its q8_1 cache and fusion matchers touch every model | `GodGMN/llama.cpp` branch `inkling-rdna3` `cb0e46960` (tag `b12600` + 6 commits), built as published (no local patch) | `fefb558933a11198a35e4a4ec592b243a3d96df0dd56914c1e938b08ace7ae77` (same front end as b12633; `libggml-hip.so` `0734ce9771709d07b75473095cccd93c0b8e549766d0819ebc8aa2dc94367096`) |
 
 ## Build recipes
@@ -238,11 +238,22 @@ cmake --build maya-inkling-mini-hip/build-ik2 -j14 --target maya-ik2 ik2_kernels
 - **Updating**: `git -C <checkout> fetch origin && git -C <checkout> log --oneline HEAD..origin/hip-port`, read
   the new commits, then `git pull`, re-apply the local edits if they conflict (`git stash` first: the
   `549d734` tool-call fix and the `%%` retrieval fix), rebuild with the `cmake --build` line above, run
-  `ik2_kernels_test`, and re-run `python3 scripts/smoke.py inkling2-mini-unc --profile 262k-maya`. Before
+  `ik2_kernels_test`, and re-run `python3 scripts/smoke.py inkling2-mini-unc-q8d --profile 262k-maya`. Before
   keeping a speed change, repeat `tools/ik2_bench.py` on the same tokens
   ([run](../results/20261122-inkling-maya-vs-fork/README.md)) and the paired GSM8K. Compare with alesha-pro's
   CUDA `main` (`git fetch alesha`) for fixes the port has not picked up yet.
 - Reads only IQ4_NL, NVFP4 or Q8_0 experts ([why](models/inkling-2-mini.md#engine-and-variant-review-2026-11-22-second-pass)).
+
+### `nib` (Inkling-2-Mini only, default since 2026-11-25)
+
+Not llama.cpp: [Chromadera/nib](https://github.com/Chromadera/nib), a C++17/HIP engine written only for
+Inkling-2-Mini on gfx1100 (DSpark drafter, Quest sparse attention, vision, multi-slot). Commit
+`2e16cf0b824a3d22eceecc2a4502cb922e285b7f` (2026-11-24), Apache-2.0. Built in `~/IA/Motores/src/nib` with the system
+ROCm (`/opt/rocm`): `cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j 12` (38 s, 0 warnings).
+Reads only GGUF Q8_0 + NVFP4 (the Nib-Pack layout). `local.toml` `engines.nib` = the checkout; `launch.py` runs
+`build/nib serve` with `mtp.safetensors` from the GGUF's folder. Known defects at this commit: `nib bench` hangs or
+segfaults, `nib serve` without `--mtp` dies at warm-up ([Chromadera/nib#1](https://github.com/Chromadera/nib/issues/1)). Trial and numbers:
+[`results/20261124-nib-trial/`](../results/20261124-nib-trial/README.md).
 
 ## Other engines evaluated (2026-09-26)
 

@@ -1,0 +1,12 @@
+[step7i] occupancy blocks/WGP (wgp=48): wo_b=5 wo_c=5 wo_c_h2=6 mix_rms_qkv=9 a_qkv=5
+[step7j] occupancy blocks/CU: qkv_384=7
+[gguf] loaded ~/IA/Modelos/Inkling-2-Mini-Nib-Pack/Inkling-2-Mini-NVFP4-Mixed.gguf in 3.248 s
+[gguf] total VRAM: 17542839968 bytes (16730.2 MiB)
+[InklingEngine] Ready! max_ctx=262848 slots=1 slot_ctx=262848 swa_cap=1536 kv=q8_0 sparse_pages=0 total_vram=21.09 GiB (weights=16.34 GiB, kv+scratch=4.76 GiB)
+[InklingEngine] Captured 1-shot static decode HIP Graph: 272 kernel nodes!
+[fuses] wo_v3=-1 moe_gu_v3=-1 moe_dn_v3=-1 moe_fused_v3=-1 | 7H: moe_ship=2 q8_fused=0 b_v3=0 c_v3=0
+[fuses] 7I-1: wob=0 woc=1 mix_qkv=0 a_qkv=0 minmax=0
+[fuses] 7K: fa_swa=-1 fa_global=-1 fa_select=-1 meta=q8 q_lds=0 cached=0
+
+| depth | pp512 (tok/s) | tg128 (tok/s) |
+|------:|--------------:|-------------:|

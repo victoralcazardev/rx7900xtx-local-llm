@@ -11,10 +11,31 @@ adopted: [`TRIED.md`](TRIED.md); planned engine trials:
 
 ## Setups in use
 
-No setup is the recommended one; `scripts/launch.py` falls back to `inkling2-mini-unc-q8d` /
-`315k-maya` (315,392 context; omp compacts it at 75%) — the setup last in use, not a recommendation ([`DECISIONS.md`](DECISIONS.md), 2026-11-23).
+`scripts/launch.py` falls back to `inkling2-mini-unbound-nib` / `262k-nib` (262,144 context), adopted on
+2026-11-25 over the `maya-ik2` setup below, which stays wired as the fallback ([`DECISIONS.md`](DECISIONS.md)).
 
-### Inkling-2-Mini uncensored on `maya-ik2` (`inkling2-mini-unc-q8d` / `262k-maya`)
+### Inkling-2-Mini Unbound v2.1 on Nib (`inkling2-mini-unbound-nib` / `262k-nib`, default)
+
+- Model: degenmeowster Nib-Pack `Inkling-2-Mini-NVFP4-Mixed.gguf` (experts of layers 0-19 in the native
+  NVFP4, the rest Q8_0) with the 120 attention tensors of nokeepai Unbound v2.1 Q8_0 grafted in (experts
+  byte-identical), built by `results/20261124-nib-trial/raw/graft_unbound_q8.py`; vision via the pack's mmproj.
+- Engine: `nib` = [Chromadera/nib](https://github.com/Chromadera/nib) `2e16cf0`, Inkling-only HIP, DSpark
+  drafter (`mtp.safetensors`, required) and Quest sparse attention `--sparse-pages 224`; Q8_0 KV; 21.5 GiB
+  ([`ENGINES.md`](ENGINES.md#nib-inkling-2-mini-only-default-since-2026-11-25)).
+- Numbers: decode 122.6 / 102.2 / 97.3 / ~104 tok/s and prefill 3,620 / 3,399 / 3,041 / 2,982 tok/s at
+  7.8K / 33K / 134K / 258K; GSM8K 187/192; needles 35/36 to ~184K (dense 36/36)
+  ([trial](../results/20261124-nib-trial/README.md)).
+- Sampling: vendor `temperature 1.0`, `min_p 0.0`, plus **`top_k 256`**, a deliberate deviation: Nib's drafter
+  verifier works on the top 256 candidates; without top-k it decodes ~31 tok/s. Clients that send their own
+  `top_k` override it ([`DECISIONS.md`](DECISIONS.md), 2026-11-25).
+- Known engine defects at `2e16cf0`: `nib bench` crashes or hangs, `serve` without `--mtp` dies
+  ([Chromadera/nib#1](https://github.com/Chromadera/nib/issues/1)).
+
+```bash
+python3 scripts/launch.py            # the default above; add --dry-run to print the nib command
+```
+
+### Inkling-2-Mini uncensored on `maya-ik2` (`inkling2-mini-unc-q8d` / `262k-maya`, fallback)
 
 - Model: Abiray Inkling-2-Mini-Uncensored `IQ4_NL` (13.90 GB, OpenUncensored edit) with its head
   and 176 non-expert attention/conv matrices re-typed to Q8_0: experts and `token_embd` unchanged,
@@ -27,14 +48,14 @@ No setup is the recommended one; `scripts/launch.py` falls back to `inkling2-min
 - Sampling: vendor `temperature 1.0` (the card sets nothing else) and the reasoned `min_p 0.0`;
   `top_p`/`top_k` stay unset. Text only: the port takes no mmproj.
 - Power: 272 W permanent cap (driver minimum; stock 303 W) — [`sop/power-cap.md`](sop/power-cap.md).
-- Harness wiring, shared by every setup: one provider `local-262k` on `:8080` at the full 262144;
-  every model compacts at ~35% of its window. `check-sync.py` checks provider, port and window when
+- Harness wiring, shared by every setup: one provider `local-262k` on `:8080` at the full 262144,
+  plus window-named entries for larger profiles (omp `local-315k`, 315392);
+  local entries compact at ~75% (omp `local-262k` at 210,000), cloud models at ~35% of their window. `check-sync.py` checks provider, port and window when
   `local.toml` has `[harness] enabled = true`, not the compaction settings. Hermes profiles use the
   same endpoint, exposed to the tailnet by `tailscale serve` without a key
   ([`DECISIONS.md`](DECISIONS.md), 2026-10-23).
 
 ```bash
-python3 scripts/launch.py            # launcher fallback; add --dry-run to print only
 python3 scripts/launch.py inkling2-mini-unc-q8d --profile 315k-maya   # or 262k-maya
 # the maya backend writes _tmp/maya/inkling2-mini-unc-q8d.maya.json from models.toml plus the
 # port's gfx1100 preset and runs, in the f472e94 worktree:

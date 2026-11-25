@@ -8,6 +8,10 @@ All notable changes to this project are documented here. Format follows
 
 ### Changed
 
+- Default setup is now `inkling2-mini-unbound-nib` / `262k-nib`: the Nib engine (`Chromadera/nib`, new `nib` backend in `launch.py`) with the NVFP4-Mixed Nib-Pack and Unbound v2.1 attention grafted, `top_k 256`; `inkling2-mini-unc-q8d` stays as the fallback ([`results/20261124-nib-trial/`](results/20261124-nib-trial/README.md)).
+
+- Removed profile `inkling2-mini-unc/262k-maya`: the q8d re-type of the same file is faster on `maya` (+7-11% decode). `inkling2-mini-unc` keeps its llama.cpp fork profile `262k-q8q8`. The omp entry `local-315k` is named "Inkling-2-Mini q8d @ maya :8080 (315K)".
+- Harness local entries are named by context window, not by model: `local-262k` stays required, larger profiles get an optional `local-<N>k` (`local-315k` = 315392) that `check-sync.py` validates and `launch.py` prints ([`AGENTS.md`](AGENTS.md), [`docs/DECISIONS.md`](docs/DECISIONS.md)).
 - `launch.py`'s no-alias fallback is `inkling2-mini-unc-q8d` / `315k-maya` (315,392 context, peak 22,874 of 24,560 MiB, retrieval exact at 5/50/95%; [`results/20261123-inkling-315k/`](results/20261123-inkling-315k/README.md)); `check-sync.py` accepts a harness `context_window` up to the largest profile context.
 - Strata: every model file must be on the NVMe before any run or measurement; the 2026-11-22 SC117 number was read from the HDD ([`docs/sop/strata.md`](docs/sop/strata.md)). `scripts/strata.py` follows the v0.2.19 layout (run configs in `terminal/`, `update` runs `./setup.sh --update`).
 
