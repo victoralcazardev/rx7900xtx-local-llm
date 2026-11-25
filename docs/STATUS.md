@@ -139,7 +139,9 @@ Execution order, dependencies and gates: [current plan](ENGINES-EXPERIMENTS.md#c
 1. Run the coding suite and the 68-case retrieval set on Inkling (quality question above).
 2. A2: check the harness compaction change in the next real session —
    [agent-traffic.md](measurements/agent-traffic.md#root-cause-speculative-compaction-on-the-local-slot-2026-10-03).
-3. C1: Qwen4 on day one, gated by the coding suite (27B baseline 6/6:
+3. Inkling loops: confirm `think-cap` in the next real agent session on `262k-nib`; the bisect report to
+   nib#1 waits for the user's OK — [cap](../results/20261125-nib-reasoning-budget/README.md).
+4. C1: Qwen4 on day one, gated by the coding suite (27B baseline 6/6:
    [results](../results/20261023-d1-pr30792q51-240k/README.md)); checklist in
    [sop/new-model.md](sop/new-model.md#qwen4-day-one-checklist).
 

@@ -143,7 +143,10 @@ Source: [`thinkingmachines/Inkling-2-Mini`](https://huggingface.co/thinkingmachi
   resumed in a new session, ~67K context): 32,768 tokens in 145 s, 402 paragraphs, 41 unique, a ~4-paragraph cycle
   ×27. Both loops circle the same unresolved premise conflict in the task (which machine owns a refresh token,
   docs vs. files), so the trigger looks task-driven and the card sampling does not prevent it. Engine, MTP or
-  model still not separated. Since 2026-11-25 `262k-nib` caps thinking at the card's 4,096 tokens with a local Nib
+  model still not separated. Both ran at effort 0.7: the Gentle Shell `local-262k` entry has
+  `supportsReasoningEffort: false`, so it sends no effort and Nib defaults to medium ([`ENGINES.md`](../ENGINES.md)).
+  The vendor names lower effort, not lower temperature, as the lever ([sources](../SOURCES-upstream.md)); below
+  0.7 is untested here. Since 2026-11-25 `262k-nib` caps thinking at the card's 4,096 tokens with a local Nib
   patch ([`results/20261125-nib-reasoning-budget/`](../../results/20261125-nib-reasoning-budget/README.md)).
 - **Nib `bdc9307` (2026-11-25) is not adopted**: its exact GPU sampler makes the vendor sampling fast at `top_k 0`
   (113-157 tok/s, was ~31) with text-identical greedy output and GSM8K 187/192, but it segfaults in

@@ -272,7 +272,8 @@ context), `temperature`, `top_p`, `min_p`, `top_k`, `seed`, `mtp`, `stream`, `st
 (`git apply` on `2e16cf0`, then the `cmake` lines above; profile key `reasoning_budget`), which closes the thinking
 block after N tokens and logs `think-cap` ([checks](../results/20261125-nib-reasoning-budget/README.md)). A top-level `reasoning_effort` of `none` (or `0`) becomes
 "Thinking effort level: 0", which the measurement harnesses send; per the vendor card the minimum does not fully
-disable reasoning. Serve flags for sampling are only
+disable reasoning. A request without any effort gets "Thinking effort level: 0.7" (medium; `format_effort_str`,
+`src/server.cpp` ~932, source-read 2026-11-25), not the template's 0.9. Serve flags for sampling are only
 `--default-temp/-top-p/-min-p/-top-k`. A request with `"mtp": false` runs the drafter-free decode path, measured at 6.7-10.2 tok/s on a
 short prompt and ~0.4 tok/s at 8K (2026-11-25, [`results/20261125-nib-agent-levers/`](../results/20261125-nib-agent-levers/README.md)):
 never send it to the production server.
