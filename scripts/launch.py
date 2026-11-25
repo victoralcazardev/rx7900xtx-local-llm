@@ -53,7 +53,7 @@ def stop_servers(timeout_s: int = STOP_WAIT_S) -> int:
         return 0
     # maya: stop the Python server, which stops its engine; llama-server takes SIGINT directly
     subprocess.run(["pkill", "-INT", "-f", "serve/server.py --engine maya"])
-    subprocess.run(["pkill", "-INT", "-x", "llama-server"])
+    subprocess.run(["pkill", "-INT", "-x", "llama-server|nib"])
     deadline = time.monotonic() + timeout_s
     while time.monotonic() < deadline:
         now_alive = running_servers()
@@ -66,7 +66,7 @@ def stop_servers(timeout_s: int = STOP_WAIT_S) -> int:
             return 0
         time.sleep(2)
     subprocess.run(["pkill", "-KILL", "-f", "serve/server.py --engine maya"])
-    subprocess.run(["pkill", "-KILL", "-x", "llama-server|maya-ik2"])
+    subprocess.run(["pkill", "-KILL", "-x", "llama-server|maya-ik2|nib"])
     time.sleep(3)
     left = running_servers()
     if left is None:
@@ -151,7 +151,7 @@ def main() -> int:
         print(f"ERROR: {e}", file=sys.stderr)
         return 1
 
-    if backend == "maya":
+    if backend in ("maya", "nib"):
         try:
             cmd, cwd = server_command(m, model, profile, backend, REPO / "_tmp" / "maya")
         except ManifestError as e:
@@ -161,7 +161,7 @@ def main() -> int:
     else:
         shown = shlex.join(["llama-server"] + build_argv(m, model, profile))
     entry = harness_entry(profile["context"]) or (
-        "none (no harness entry wired for this context; only local-262k/262144 is wired)"
+        "none (no harness entry for a context below 262144)"
     )
     print(f"backend: {backend}")
     print("command:", shown)
@@ -191,7 +191,7 @@ def main() -> int:
               file=sys.stderr)
         return 1
     if alive:
-        print(f"ERROR: a model server (llama-server or maya-ik2) is already running (PID {alive}). "
+        print(f"ERROR: a model server (llama-server, maya-ik2 or nib) is already running (PID {alive}). "
               "Stop it first.",
               file=sys.stderr)
         return 1

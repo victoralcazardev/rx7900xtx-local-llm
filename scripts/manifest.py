@@ -45,6 +45,9 @@ _HIP_KV_BY_BACKEND = {"hip": _HIP_KV_VALID, "hip-kvmix": _HIP_KVMIX_VALID, "hip-
 # a profile's kv pair maps to IK2_KV (one cache type for K and V).
 MAYA_PRESET = pathlib.Path("docs/inkling2-mini/ik2-mini-gfx1100.json")
 _MAYA_KV = {("fp8", "fp8"): "fp8", ("f16", "f16"): "f16"}
+# "nib" engine: a Chromadera/nib checkout with build/nib (Inkling-2-Mini only, Q8_0 + NVFP4 GGUFs; docs/ENGINES.md).
+# One --kv-type for K and V; the DSpark drafter is `mtp.safetensors` next to the GGUF (the Nib-Pack layout).
+_NIB_KV = {"q8_0", "q4_1", "q4_0"}
 
 
 class ManifestError(Exception):
@@ -202,10 +205,10 @@ def resolve(m: Manifest, alias: str | None, profile: str | None) -> tuple[Model,
 
 
 def harness_entry(context: int) -> str | None:
-    """Name of the fixed local provider entry for the given profile's context, or None if no
-    harness entry is wired for it (see AGENTS.md: only the 262K default is wired)."""
+    """Name of the local provider entry for the given profile's context, named by its window
+    in thousands (262144 -> local-262k, 315392 -> local-315k), or None below 262K (AGENTS.md)."""
     if context >= LOCAL_262K_CONTEXT:
-        return "local-262k"
+        return f"local-{round(context / 1000)}k"
     return None
 
 
@@ -235,6 +238,13 @@ def validate(m: Manifest, model: Model, profile_name: str, profile: dict, backen
         )
 
     k_type, v_type = profile["kv"]
+    if backend == "nib":
+        if k_type != v_type or k_type not in _NIB_KV:
+            raise ManifestError(f"{model.alias}/{profile_name}: the nib engine takes one kv type for K and V "
+                                f"({', '.join(sorted(_NIB_KV))}), not {k_type}/{v_type}")
+        if not model.mtp:  # nib serve without --mtp dies during HIP graph warm-up at 2e16cf0
+            raise ManifestError(f"{model.alias}/{profile_name}: the nib backend needs mtp = true")
+        return
     if backend == "maya":
         if (k_type, v_type) not in _MAYA_KV:
             raise ManifestError(f"{model.alias}/{profile_name}: the maya engine takes kv = "
@@ -304,6 +314,8 @@ def server_command(m: Manifest, model: Model, profile: dict, backend: str,
                    config_dir: pathlib.Path) -> tuple[list[str], pathlib.Path]:
     """(command, cwd) that serves `model`/`profile` on [defaults].port. llama.cpp backends: the binary plus
     build_argv. maya: writes <config_dir>/<alias>.maya.json and runs the port's OpenAI server on it."""
+    if backend == "nib":
+        return _nib_command(m, model, profile)
     if backend != "maya":
         exe = server_executable(m, backend)
         return [str(exe)] + build_argv(m, model, profile), exe.parent
@@ -330,6 +342,22 @@ def server_command(m: Manifest, model: Model, profile: dict, backend: str,
     path.write_text(json.dumps(config, indent=2) + "\n")
     return [str(python), "serve/server.py", "--engine", "maya", "--config", str(path),
             "--port", str(m.default_port), "--tokenizer", config["tokenizer"]], engine
+
+
+def _nib_command(m: Manifest, model: Model, profile: dict) -> tuple[list[str], pathlib.Path]:
+    engine = m.engines.get("nib")
+    if not engine:
+        raise ManifestError("no 'nib' engine configured in local.toml (engines.nib)")
+    cmd = [str(engine / "build" / "nib"), "serve", "-m", str(model.gguf),
+           "--mtp", str(model.gguf.parent / "mtp.safetensors")]
+    cmd += ["--mmproj", str(model.mmproj)] if uses_vision(model, profile) else ["--no-vision"]
+    cmd += ["--slots", "1", "-c", str(profile["context"]), "--kv-type", profile["kv"][0],
+            "--sparse-pages", str(profile.get("sparse_pages", 0))]
+    for key, flag in (("temp", "--default-temp"), ("top_p", "--default-top-p"),
+                      ("top_k", "--default-top-k"), ("min_p", "--default-min-p")):
+        if key in model.sampling:
+            cmd += [flag, str(model.sampling[key])]
+    return cmd + ["--host", "127.0.0.1", "--port", str(m.default_port)], engine
 
 
 def _read_text(path: pathlib.Path) -> str:
@@ -369,7 +397,7 @@ def free_vram_gib() -> float | None:
 
 
 def running_servers() -> list[int] | None:
-    """PIDs of running llama-server or maya-ik2 processes; None means process detection failed."""
+    """PIDs of running llama-server, maya-ik2 or nib processes; None means process detection failed."""
     try:
         if IS_WINDOWS:
             out = subprocess.run(
@@ -390,7 +418,7 @@ def running_servers() -> list[int] | None:
                 elif line.strip():
                     return None
             return pids if pids or saw_no_match else None
-        out = subprocess.run(["pgrep", "-x", "llama-server|maya-ik2"],
+        out = subprocess.run(["pgrep", "-x", "llama-server|maya-ik2|nib"],
                              capture_output=True, text=True,
                              errors="replace", timeout=20)
         if out.returncode == 1:

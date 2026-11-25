@@ -97,7 +97,7 @@ def main() -> int:
         print("ABORTED: could not detect running model servers; cannot safely start.")
         return 2
     if alive:
-        print(f"ABORTED: a model server (llama-server or maya-ik2) is already alive (PID {alive}). Stop it first.")
+        print(f"ABORTED: a model server (llama-server, maya-ik2 or nib) is already alive (PID {alive}). Stop it first.")
         return 2
     if port_in_use(m.default_port):
         print(f"ABORTED: port {m.default_port} is already in use by another server. Stop it first.")

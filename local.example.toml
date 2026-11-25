@@ -13,6 +13,7 @@ vulkan = ""
 hip = ""
 hip-kvmix = ""
 hip-inkling = ""  # optional: GodGMN inkling-rdna3 fork, Inkling-2-Mini only (docs/ENGINES.md)
+nib = ""  # optional: Chromadera/nib checkout with build/nib, Inkling-2-Mini only, Q8_0 + NVFP4 GGUFs (docs/ENGINES.md)
 maya = ""  # optional: GodGMN maya-inkling-mini hip-port checkout with build-ik2/ and .venv/, Inkling-2-Mini only (docs/ENGINES.md)
 
 # Optional: `scripts/build_engine.py` (docs/sop/update-engine.md "Build a new engine"). One
@@ -25,8 +26,8 @@ maya = ""  # optional: GodGMN maya-inkling-mini hip-port checkout with build-ik2
 
 # Optional: verify this launcher is wired into your own coding-agent harness. Off unless
 # harness.enabled = true. Each target's config file is checked for EXACTLY one provider,
-# local-262k, pointing at :8080 with the right contextWindow -- see scripts/check-sync.py
-# and AGENTS.md. Optional per target: `context_window = <N>` (at most 262144) advertises a
+# local-262k, pointing at :8080 with the right contextWindow (plus optional window-named entries
+# such as local-315k for larger profiles) -- see scripts/check-sync.py and AGENTS.md. Optional per target: `context_window = <N>` (at most 262144) advertises a
 # smaller window for local-262k, which moves that harness's auto-compaction trigger for the
 # local model only (omp: thresholdPercent x window; pi/Gentle Shell: window - reserveTokens).
 # [harness]

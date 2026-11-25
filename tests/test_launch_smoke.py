@@ -139,7 +139,7 @@ class TestStopAndWait(unittest.TestCase):
             self.assertEqual(launch.stop_servers(timeout_s=60), 0)
         called = [c.args[0] for c in run.call_args_list]
         self.assertIn(["pkill", "-INT", "-f", "serve/server.py --engine maya"], called)
-        self.assertIn(["pkill", "-INT", "-x", "llama-server"], called)
+        self.assertIn(["pkill", "-INT", "-x", "llama-server|nib"], called)
         self.assertIn("stopped; VRAM free: 23.4 GiB", out.getvalue())
 
     def test_stop_with_nothing_running_is_a_no_op(self):

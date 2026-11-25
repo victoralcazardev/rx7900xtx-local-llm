@@ -20,16 +20,16 @@
 #   no alias — the setup last in use, not a recommendation; pick the alias per task
 #   (docs/DECISIONS.md, 2026-11-23).
 # - No recommended setup: the models sit side by side (2026-11-23, docs/DECISIONS.md). The fallback
-#   is `inkling2-mini-unc-q8d` / `262k-maya`; the other models are the Qwen3.8-27B
-#   `huihui-iq3s-mtp` / `262k-q8q51-mtp` and `inkling2-mini-unc` (both opt-in). The stock
+#   is `inkling2-mini-unc-q8d` / `315k-maya`; the other models are the Qwen3.8-27B
+#   `huihui-iq3s-mtp` / `262k-q8q51-mtp` and `inkling2-mini-unc` / `262k-q8q8` (llama.cpp fork; both opt-in). The stock
 #   `qwen38-iq3s-mtp` stays configured as the measured reference, not as a listed setup.
 #   Add a new model/profile per docs/sop/new-model.md.
 
 [defaults]
 port = 8080
 flags = ["-fa", "on", "-np", "1", "--ctx-checkpoints", "10", "-ngl", "all", "--metrics"]
-default_alias = "inkling2-mini-unc-q8d"
-default_profile = "315k-maya"
+default_alias = "inkling2-mini-unbound-nib"
+default_profile = "262k-nib"
 
 # ---------------------------------------------------------------------------
 # Qwen3.8-27B GSQ-RCO IQ3_S-mtp, stock ISTA-DASLab quant (native NextN head): the measured reference,
@@ -139,21 +139,38 @@ kv = ["q8_0", "q8_0"]
 vision = false
 vram_gib = 20.8
 
-# 262K on the maya-ik2 HIP port, same file (2026-11-22, results/20261122-inkling-maya-vs-fork/): E4M3 KV in
-# 16-token global pages, --chunk 2048. At 272 W: decode 95 / 63.6 / 51.1 tok/s and prefill 1,894 / 1,292 after
-# 512 / 128K / 262K tokens (the fork profile above: 57.6 / 44.5 / 37.8 and 882 / 599); GSM8K 95/96 vs. 93/96 on
-# the same token IDs; refusals 0/8; tool calls and prefix reuse work. The rest of the env is the port's gfx1100
-# preset (docs/inkling2-mini/ik2-mini-gfx1100.json in the checkout). ROCBLAS_TENSILE_LIBPATH: the port's venv
-# rocBLAS has no gfx1100 kernels; the system ROCm library has them (docs/ENGINES.md). Text only. 20,765 MiB total
-# GPU memory in use after load through launch.py (KV is allocated at load); smoke.py 96.5 tok/s.
-[models.inkling2-mini-unc.profiles."262k-maya"]
-backend = "maya"
+# Its maya profile `262k-maya` was removed on 2026-11-24 (docs/DECISIONS.md): the q8d file below is faster on the
+# same engine. Its measurements stay in results/20261122-inkling-maya-vs-fork/. This model keeps the llama.cpp fork
+# profile and is the source file of the q8d re-type.
+
+# Inkling-2-Mini Unbound v2.1 on the Nib engine (Chromadera/nib 2e16cf0): the degenmeowster Nib-Pack
+# (NVFP4-Mixed, layers 0-19 experts native NVFP4) with the 120 attention tensors of nokeepai Unbound v2.1 Q8_0
+# grafted in (results/20261124-nib-trial/raw/graft_unbound_q8.py; experts byte-identical). Measured 2026-11-25
+# (results/20261124-nib-trial/): decode 122.6 / 102.2 / 97.3 / ~104 tok/s at 7.8K / 33K / 134K / 258K vs. maya-ik2
+# 98.2 / 90.0 / 68.9 / 53.6; GSM8K 186/192 (base pack) vs. 187/192; needles 35/36 with sparse 224; refusals 0/8.
+# Sampling: the vendor's generation_config sets only temperature 1.0; top_k 256 is a deliberate deviation
+# (user decision 2026-11-25, docs/DECISIONS.md): Nib's DSpark verifier works on the top 256 candidates and an
+# unbounded tail takes an exact slow path (~31 tok/s). min_p 0.0 as everywhere (llama.cpp-style 0.05 default).
+# The drafter is mtp.safetensors next to the GGUF; nib serve without it dies at warm-up (2e16cf0).
+[models.inkling2-mini-unbound-nib]
+gguf = "Inkling-2-Mini-Nib-Pack/Inkling-2-Mini-Unbound-v2.1-NVFP4-Mixed.gguf"
+mmproj = "Inkling-2-Mini-Nib-Pack/mmproj-Inkling-2-Mini-Q8_0.gguf"
+backend = "nib"
+mtp = true
+
+[models.inkling2-mini-unbound-nib.sampling]
+temp = 1.0
+top_k = 256
+min_p = 0.0
+
+# Sparse 224 = Nib's Quest page-sparse attention (the long-context speed); 0 = dense. Vision on: 21.50 GiB at 262,848.
+[models.inkling2-mini-unbound-nib.profiles."262k-nib"]
+backend = "nib"
 context = 262144
-kv = ["fp8", "fp8"]
-chunk = 2048
-env = { IK2_PAGED_KV = "1", ROCBLAS_TENSILE_LIBPATH = "/opt/rocm/lib/rocblas/library" }
-vision = false
-vram_gib = 20.3
+kv = ["q8_0", "q8_0"]
+sparse_pages = 224
+vram_gib = 21.5
+
 
 # Launcher fallback since 2026-11-23 — the setup in use, not a recommendation (docs/DECISIONS.md):
 # the same Abiray file with the output head and the 176 non-expert attention/conv matrices re-typed to Q8_0
@@ -194,7 +211,7 @@ vram_gib = 21.6
 # 315,392 (2026-11-23, results/20261123-inkling-315k/): same file and env as 262k-maya; FP8 KV grows 16 KiB/token.
 # Peak 22,874 MiB on the whole device (desktop included) of 24,560 during a 315,136-token cold prefill (~1.6 GiB
 # free; 352,256 peaked at 23,577, ~1.0 GiB free, so it was not adopted); retrieval exact at 5%, 50% and 95%
-# (prefill 271-272 s). omp wires local-262k at contextWindow 315392 and compacts it at 75% (DECISIONS.md, 2026-11-23).
+# (prefill 271-272 s). omp wires it as local-315k (contextWindow 315392) and compacts it at 75% (DECISIONS.md, 2026-11-24).
 [models.inkling2-mini-unc-q8d.profiles."315k-maya"]
 backend = "maya"
 context = 315392

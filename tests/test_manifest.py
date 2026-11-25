@@ -254,7 +254,7 @@ class TestRunningServers(unittest.TestCase):
         with mock.patch.object(manifest, "IS_WINDOWS", False), \
              mock.patch.object(manifest.subprocess, "run", return_value=result) as run:
             self.assertEqual(manifest.running_servers(), [123])
-        self.assertEqual(run.call_args.args[0], ["pgrep", "-x", "llama-server|maya-ik2"])
+        self.assertEqual(run.call_args.args[0], ["pgrep", "-x", "llama-server|maya-ik2|nib"])
 
     def test_windows_tasklist_no_match_and_parse_failure_are_distinct(self):
         no_match = mock.Mock(
@@ -334,6 +334,9 @@ class TestHarnessEntry(unittest.TestCase):
         self.assertEqual(manifest.harness_entry(manifest.LOCAL_262K_CONTEXT), "local-262k")
         self.assertEqual(manifest.harness_entry(manifest.LOCAL_262K_CONTEXT + 1), "local-262k")
 
+    def test_larger_context_gets_its_window_named_entry(self):
+        self.assertEqual(manifest.harness_entry(315392), "local-315k")
+
     def test_below_262k_context_has_no_entry(self):
         self.assertIsNone(manifest.harness_entry(manifest.MIN_CONTEXT))
         self.assertIsNone(manifest.harness_entry(manifest.LOCAL_262K_CONTEXT - 1))
@@ -395,9 +398,9 @@ class TestValidate(unittest.TestCase):
             engines={}, models={}, allow_low_context=False,
         )
 
-    def _model(self, mmproj=None) -> manifest.Model:
+    def _model(self, mmproj=None, mtp=False) -> manifest.Model:
         return manifest.Model(
-            alias="m", gguf=self.gguf, backend="hip", mtp=False, sampling={},
+            alias="m", gguf=self.gguf, backend="hip", mtp=mtp, sampling={},
             mmproj=mmproj, profiles={},
         )
 
@@ -485,6 +488,16 @@ class TestValidate(unittest.TestCase):
         for kv in (["q8_0", "q8_0"], ["fp8", "f16"]):
             with self.assertRaises(manifest.ManifestError):
                 manifest.validate(self.m, model, "p", {"context": 131072, "kv": kv}, "maya")
+
+    def test_nib_takes_one_kv_type_and_needs_mtp(self):
+        model = self._model(mtp=True)
+        manifest.validate(self.m, model, "p", {"context": 131072, "kv": ["q8_0", "q8_0"]}, "nib")  # no raise
+        for kv in (["q8_0", "q4_0"], ["f16", "f16"], ["fp8", "fp8"]):
+            with self.assertRaises(manifest.ManifestError):
+                manifest.validate(self.m, model, "p", {"context": 131072, "kv": kv}, "nib")
+        with self.assertRaises(manifest.ManifestError):  # nib serve without --mtp dies at warm-up (2e16cf0)
+            manifest.validate(self.m, self._model(mtp=False), "p", {"context": 131072, "kv": ["q8_0", "q8_0"]},
+                              "nib")
 
     def test_fp8_kv_rejected_outside_maya(self):
         with self.assertRaises(manifest.ManifestError):
@@ -644,6 +657,29 @@ class TestServerCommand(unittest.TestCase):
         with self.assertRaises(manifest.ManifestError):
             manifest.server_command(self._manifest({"maya": engine}), self.model, self.profile, "maya",
                                     self.root / "out")
+
+    def test_nib_command_from_model_and_profile(self):
+        engine = self.root / "nib"
+        (engine / "build").mkdir(parents=True)
+        (engine / "build" / "nib").write_bytes(b"")
+        model = manifest.Model(alias="ink", gguf=self.root / "pack" / "ink.gguf", backend="nib", mtp=True,
+                               sampling={"temp": 1.0, "top_k": 256, "min_p": 0.0},
+                               mmproj=self.root / "pack" / "mm.gguf", profiles={})
+        profile = {"context": 262144, "kv": ["q8_0", "q8_0"], "sparse_pages": 224}
+        cmd, cwd = manifest.server_command(self._manifest({"nib": engine}), model, profile, "nib", self.root / "out")
+        self.assertEqual(cmd, [str(engine / "build" / "nib"), "serve", "-m", str(model.gguf),
+                               "--mtp", str(self.root / "pack" / "mtp.safetensors"),
+                               "--mmproj", str(model.mmproj), "--slots", "1", "-c", "262144",
+                               "--kv-type", "q8_0", "--sparse-pages", "224",
+                               "--default-temp", "1.0", "--default-top-k", "256", "--default-min-p", "0.0",
+                               "--host", "127.0.0.1", "--port", "8080"])
+        self.assertEqual(cwd, engine)
+        cmd, _ = manifest.server_command(self._manifest({"nib": engine}), model,
+                                         {**profile, "vision": False, "sparse_pages": 0}, "nib", self.root / "out")
+        self.assertIn("--no-vision", cmd)
+        self.assertEqual(cmd[cmd.index("--sparse-pages") + 1], "0")
+        with self.assertRaises(manifest.ManifestError):
+            manifest.server_command(self._manifest({}), model, profile, "nib", self.root / "out")
 
     def test_llama_backend_is_binary_plus_build_argv(self):
         engine = self.root / "engine"
