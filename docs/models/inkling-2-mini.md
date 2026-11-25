@@ -132,6 +132,17 @@ Source: [`thinkingmachines/Inkling-2-Mini`](https://huggingface.co/thinkingmachi
 - Card warnings: may get stuck in long reasoning loops (limit output tokens); `reasoning_effort` minimum does
   not fully disable reasoning; weaker in long multi-turn conversations.
 - Sampling (Unsloth guide, from the vendor's generation config): `temp 1.0, top-p 1.0, top-k 0, min-p 0.0`.
+- Unbound v2.1 card (re-read 2026-11-25): "Recommended settings: thinking on, `--temp 0.6 --top-p 0.95`, and a
+  thinking cap"; "No DRY or other repetition samplers". `262k-nib` follows it since 2026-11-25.
+- **Reasoning loop observed (2026-11-25, `262k-nib` at temp 1.0, top-k 256, MTP on)**: one Gentle Shell turn at
+  ~65K context spent the harness's `max_tokens` 32,768 (135 s, 242 tok/s) on thinking that cycled through the
+  same 6 paragraphs 61 times (381 paragraphs, 19 unique) and returned `finish_reason: length` with no tool call.
+  Nib `2e16cf0` samples only temperature/top-k/top-p/min-p (`src/server.cpp` `SampleParams`), has no thinking
+  cap and silently ignores `presence_penalty`. **Repeated at the card's temp 0.6 / top-p 0.95** (11:27, same task
+  resumed in a new session, ~67K context): 32,768 tokens in 145 s, 402 paragraphs, 41 unique, a ~4-paragraph cycle
+  ×27. Both loops circle the same unresolved premise conflict in the task (which machine owns a refresh token,
+  docs vs. files), so the trigger looks task-driven and the card sampling does not prevent it. Engine, MTP or
+  model still not separated.
   Check the vendor card again before configuring (AGENTS.md rule). The smoke runs used greedy on purpose.
 
 ## KV and fit arithmetic
@@ -398,7 +409,14 @@ Read by scouts from the primary repos; author numbers, not re-measured here unle
    in a harness needs a window-named entry like `local-315k` (AGENTS.md).
 3. **Drafter**: loads on `maya-ik2` with rocBLAS's device pack but is 4-17% slower ([round 3](../../results/20261123-inkling-round/README.md#dspark-drafter-the-hiperrorinvalidimage-cause-fixed-slower-on-this-card)); retest
    when the port takes project-maya's newer drafter code, or #32218 lands.
-4. **Strata**: only after a gfx1100 Inkling number exists.
+4. **Strata: on hold (2026-11-25, desk review of v0.2.21, not installed)**. On 24 GB HIP cards setup keeps VRAM
+   for "the first 32K tokens of a conversation and no more", then "the engine moves its conversation memory to RAM
+   ... (5.7 tokens per second at 200K tokens in our test)" ([v0.2.21 notes](https://github.com/Niko1221/Strata/releases/tag/v0.2.21));
+   `262k-nib` keeps 262K in VRAM at 97-104 tok/s past 134K, and the agent sessions here run at 60-70K. It also
+   applies no default sampling to Inkling (greedy unless the client sends one; owner in
+   [#7092](https://github.com/Niko1221/Strata/issues/7092), fix planned for 0.2.22), and HIP KV is fp16 or fp8 only
+   (fp8 18-24% slower on a 7900 XT, field report #7032, unverified). Resume when a release keeps 262K of KV in VRAM
+   on a 24 GB HIP card, a smaller pack leaves room for it, or a gfx1100 Inkling number at 64K+ beats `262k-nib`.
 5. Upstream llama.cpp: on the [triggers](#status-parked-2026-11-22-resume-triggers).
 6. **Above 262K on maya: done (2026-11-23), `315k-maya` adopted** ([run](../../results/20261123-inkling-315k/README.md): 315,392 peaks at 22,874 MiB, retrieval exact; 352,256 leaves ~1.0 GiB). The plan it followed: FP8 KV grows 16 KiB per token (only the 8 global layer passes
    grow), so 352,256 adds ~1.4 GiB over 262K: about 22.2 GiB for `inkling2-mini-unc` and 23.4 GiB for `-q8d`

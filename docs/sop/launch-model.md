@@ -108,17 +108,25 @@ shorthand for the `launch.py` invocation below.
 - `curl http://127.0.0.1:8080/health` returns `{"status":"ok"}`.
 - A real request from your client gets an answer (not `connection refused`, not
   `400 exceed_context`).
-- `python3 scripts/smoke.py <alias> --profile <profile>` for an automated check with tok/s.
+- `python3 scripts/smoke.py <alias> --profile <profile>` for an automated check with tok/s. It starts its own
+  server, so stop a running one first (otherwise it exits 2 with `ABORTED`).
 
 ## Known errors
 
-- **`a model server (llama-server or maya-ik2) is already running`**: stop the previous process first
+- **`a model server (llama-server, maya-ik2 or nib) is already alive`**: stop the previous process first
   (`python3 scripts/launch.py --stop` on Linux, or Task Manager on Windows).
   There's only VRAM for one.
 - **`400 exceed_context`**: your harness's provider entry doesn't match the profile's real `-c`.
   Run `check-sync.py`; if the "harness" block fails, the wiring is out of sync.
 - **`connection refused` when the client tries to use the model**: no server listening on `:8080`
   yet, or it crashed. Check its log in `_tmp/logs/`.
+- **A harness turn "hangs" and then ends with "Response was truncated"**: usually not a hung server. Check
+  `curl :8080/health` (`busy:false` means it is idle) and the last `[serve]` line of the newest log: `gen=`
+  equal to the harness's `max_tokens` (e.g. 32768) and no `tools` tag means the model spent the whole budget
+  without a tool call. The text itself is only in the harness's session file (Gentle Shell / Pi:
+  `~/.gentle-shell/agent/sessions/<cwd>/<session>.jsonl`, the assistant entry with `"stopReason":"length"`);
+  count repeated paragraphs to tell a loop from long reasoning. Fix: retry the turn; if it repeats, check the
+  model's sampling against its card (Inkling case: [`docs/models/inkling-2-mini.md`](../models/inkling-2-mini.md)).
 - **rejected K/V combination** (`ManifestError`): in HIP only `q4_0/q4_0`, `q8_0/q8_0`, `f16/f16`,
   `bf16/bf16` have a compiled FA kernel (see `docs/ENGINES.md`). For `q8_0/q5_1` or `q8_0/q4_1` use
   the `hip-kvmix` engine (own build, see `docs/ENGINES.md`).

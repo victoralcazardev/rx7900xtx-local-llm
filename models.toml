@@ -148,7 +148,10 @@ vram_gib = 20.8
 # grafted in (results/20261124-nib-trial/raw/graft_unbound_q8.py; experts byte-identical). Measured 2026-11-25
 # (results/20261124-nib-trial/): decode 122.6 / 102.2 / 97.3 / ~104 tok/s at 7.8K / 33K / 134K / 258K vs. maya-ik2
 # 98.2 / 90.0 / 68.9 / 53.6; GSM8K 186/192 (base pack) vs. 187/192; needles 35/36 with sparse 224; refusals 0/8.
-# Sampling: the vendor's generation_config sets only temperature 1.0; top_k 256 is a deliberate deviation
+# Sampling: the Unbound v2.1 card (nokeepai/Inkling-2-Mini-Unbound-GGUF, re-read 2026-11-25) recommends
+# "--temp 0.6 --top-p 0.95, and a thinking cap" and no repetition samplers; it wins over the base vendor's
+# temperature 1.0 (generation_config), which looped here (docs/models/inkling-2-mini.md). Nib has no thinking cap:
+# the client's max_tokens is the only limit. The trial was measured at temp 1.0. top_k 256 is a deliberate deviation
 # (user decision 2026-11-25, docs/DECISIONS.md): Nib's DSpark verifier works on the top 256 candidates and an
 # unbounded tail takes an exact slow path (~31 tok/s). min_p 0.0 as everywhere (llama.cpp-style 0.05 default).
 # The drafter is mtp.safetensors next to the GGUF; nib serve without it dies at warm-up (2e16cf0).
@@ -159,7 +162,8 @@ backend = "nib"
 mtp = true
 
 [models.inkling2-mini-unbound-nib.sampling]
-temp = 1.0
+temp = 0.6
+top_p = 0.95
 top_k = 256
 min_p = 0.0
 

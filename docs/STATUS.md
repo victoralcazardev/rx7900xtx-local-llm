@@ -25,9 +25,11 @@ adopted: [`TRIED.md`](TRIED.md); planned engine trials:
 - Numbers: decode 122.6 / 102.2 / 97.3 / ~104 tok/s and prefill 3,620 / 3,399 / 3,041 / 2,982 tok/s at
   7.8K / 33K / 134K / 258K; GSM8K 187/192; needles 35/36 to ~184K (dense 36/36)
   ([trial](../results/20261124-nib-trial/README.md)).
-- Sampling: vendor `temperature 1.0`, `min_p 0.0`, plus **`top_k 256`**, a deliberate deviation: Nib's drafter
+- Sampling: Unbound v2.1 card `temperature 0.6`, `top_p 0.95` (since 2026-11-25; was the base vendor's 1.0,
+  which looped in a real session), `min_p 0.0`, plus **`top_k 256`**, a deliberate deviation: Nib's drafter
   verifier works on the top 256 candidates; without top-k it decodes ~31 tok/s. Clients that send their own
-  `top_k` override it ([`DECISIONS.md`](DECISIONS.md), 2026-11-25).
+  `top_k` override it ([`DECISIONS.md`](DECISIONS.md), 2026-11-25). Nib has no thinking cap and ignores
+  `presence_penalty`/`repeat_penalty`: the client's `max_tokens` is the only limit on a loop.
 - Known engine defects at `2e16cf0`: `nib bench` crashes or hangs, `serve` without `--mtp` dies
   ([Chromadera/nib#1](https://github.com/Chromadera/nib/issues/1)).
 

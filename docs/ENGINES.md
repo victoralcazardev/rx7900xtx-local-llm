@@ -255,6 +255,14 @@ Reads only GGUF Q8_0 + NVFP4 (the Nib-Pack layout). `local.toml` `engines.nib` =
 segfaults, `nib serve` without `--mtp` dies at warm-up ([Chromadera/nib#1](https://github.com/Chromadera/nib/issues/1)). Trial and numbers:
 [`results/20261124-nib-trial/`](../results/20261124-nib-trial/README.md).
 
+Request surface at `2e16cf0` (source-read 2026-11-25, `src/server.cpp` ~3075-3088 and 967-985): a chat request reads
+only `max_tokens` (or `max_completion_tokens`; **default 131072** when the client sends none, clamped to the slot
+context), `temperature`, `top_p`, `min_p`, `top_k`, `seed`, `mtp`, `stream`, `stop`, and from
+`chat_template_kwargs` only `reasoning_effort` / `enable_thinking`. `presence_penalty`, `frequency_penalty`,
+`repeat_penalty` and DRY are ignored without an error, and there is no thinking cap or `--reasoning-budget`: the
+client's `max_tokens` is the only limit on a reasoning loop. Serve flags for sampling are only
+`--default-temp/-top-p/-min-p/-top-k`.
+
 ## Other engines evaluated (2026-09-26)
 
 Community claims reviewed 2026-09-26 (`docs/SOURCES.md`) surfaced four candidates:
