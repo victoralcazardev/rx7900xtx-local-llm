@@ -1,0 +1,7 @@
+# drafter off per request (mtp:false) on 2e16cf0, production profile, 2026-11-25
+# 8K coding request, 512 max tokens, shipped sampling: health in_flight showed completion_tokens 370 after elapsed_ms 904510; client timed out at 900 s; server restarted
+# short prompt, 64 tokens, reasoning_effort none (curl):
+[serve] chat sync [s0] | prompt=31 (cached=0, 45 ms) | gen=64 in 488 ms (131.0 tok/s, MTP)
+[serve] chat sync [s0] | prompt=31 (cached=0, 41 ms) | gen=64 in 6256 ms (10.2 tok/s)
+[serve] chat sync [s0] | prompt=31 (cached=0, 40 ms) | gen=64 in 9609 ms (6.7 tok/s)
+# rows in order: mtp on shipped sampling; mtp:false temperature 0; mtp:false shipped sampling

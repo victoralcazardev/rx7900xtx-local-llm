@@ -390,7 +390,8 @@ prompt reading was 23.2% of server time (48.5% without the two reasoning loops a
 than 10K new tokens, 106 s of the 125 s of reading; seven of them re-read the whole 32-72K prompt (9.5-23.1 s).
 `--slots 2` does not keep a second agent's prefix on this build: an A→B→A run with two ~63K prompts put every
 request on slot 0 with 0 cached tokens (20.3 s each), same as `--slots 1`. A DSpark round costs ~1.6 ms of drafting
-and 16-20 ms of verify, at 2.6-3.6 tokens per round from 8K to 68K. Detail and the unfinished drafter-off baseline:
+and 16-20 ms of verify, at 2.6-3.6 tokens per round from 8K to 68K. A request with `mtp: false` drops to 6.7-10.2 tok/s on a short prompt
+and ~0.4 tok/s at 8K, so the drafter is the fast path on this build, not an add-on. Detail:
 [`results/20261125-nib-agent-levers/`](../../results/20261125-nib-agent-levers/README.md).
 
 ## Open A/B tests

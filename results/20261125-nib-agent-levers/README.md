@@ -6,8 +6,8 @@ from full re-reads? (2) Does `--slots 2` keep a second agent's prefix, so A→B�
 DSpark ("MTP") round cost at agent depths?
 
 **Status: measured, no profile change.** Re-reads cost real time (about 20 s per switch at 63K), `--slots 2` does
-not fix them on this Nib build, and the drafter round is cheap and keeps its acceptance to 65K. The drafter-off
-baseline was not completed (see [Not measured](#not-measured)).
+not fix them on this Nib build, and the drafter round is cheap and keeps its acceptance to 65K. Turning the drafter off per request
+(`mtp: false`) is a trap: decode falls to 6.7-10.2 tok/s on a short prompt and to ~0.4 tok/s at 8K.
 
 ## 1. Agent traffic (two real sessions)
 
@@ -65,12 +65,25 @@ Drafting costs about 1.6 ms of a ~18 ms round (under 10%); the round is the targ
 does not fall with depth to 68K. Two replies stopped early (8K: 150 tokens; 68K: 98 tokens), and the 162.1 tok/s at
 68K is the 98-token one.
 
+## 4. Drafter off per request
+
+The same server with `"mtp": false` in the request ([`raw/drafter-off.txt`](raw/drafter-off.txt), server log lines):
+
+| Request | Decode |
+|---|---|
+| 31-token prompt, 64 tokens, drafter on, shipped sampling | 131.0 tok/s |
+| same, `mtp: false`, `temperature 0` | 10.2 tok/s |
+| same, `mtp: false`, shipped sampling | 6.7 tok/s |
+| 8K coding request, `mtp: false`, shipped sampling | 370 tokens after 904 s (~0.4 tok/s), client timed out |
+
+On `2e16cf0` the drafter-off path is not a plain decode at the same speed minus speculation: it is 13-20x slower
+at a short prompt and much worse at 8K, so the drafter's net gain cannot be read as "MTP vs. no MTP" from this
+build. Never send `mtp: false` to this server. A first attempt at the 8K run, while `whisper-cli` large-v3 shared
+the GPU, ran at 333 tokens in 375 s; the clean rerun above shows the slowness is the path, not the shared VRAM.
+Why the path is slow (no decode graph, CPU sampling or something else) was not traced in the source.
+
 ## Not measured
 
-- **Drafter off (`mtp: false` per request).** The run was stopped before its first row: another process
-  (`whisper-cli` large-v3 on Vulkan) filled the remaining VRAM, the kernel reset its compute queue three times
-  (13:41-13:42) and the display failed to pin framebuffers (`-ENOMEM`). The one finished request ran at 333 tokens
-  in 375 s and is not kept. Without it, the drafter's net gain at these depths is not known from this run.
 - Concurrent requests with `--slots 2` (only sequential alternation was run).
 - A→A control for the slot test.
 
@@ -80,6 +93,6 @@ Production server up on `:8080` for parts 1 and 3; nothing else on the GPU (Nib 
 
 ```
 python3 raw/agent_traffic.py _tmp/logs/<nib-log>...
-python3 raw/drafter_rounds.py 8080 --depths 8192 32768 65536 --gen 512 --repeats 3 [--no-mtp]
+python3 raw/drafter_rounds.py 8080 --depths 8192 32768 65536 --gen 512 --repeats 3   # --no-mtp: see part 4
 bash raw/slots-run.sh        # stops production, uses port 4444, assumes the author's ~/IA layout
 ```
