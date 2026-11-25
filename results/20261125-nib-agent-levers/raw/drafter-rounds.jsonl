@@ -1,0 +1,9 @@
+{"depth": 8192, "rep": 0, "prompt": 7840, "gen": 512, "tg": 27.58, "tok_per_round": 3.042, "accepted": 2.042, "draft_ms": 9.898, "verify_ms": 97.56}
+{"depth": 8192, "rep": 1, "prompt": 7840, "gen": 512, "tg": 167.97, "tok_per_round": 2.954, "accepted": 1.954, "draft_ms": 1.596, "verify_ms": 15.621}
+{"depth": 8192, "rep": 2, "prompt": 7840, "gen": 150, "tg": 144.82, "tok_per_round": 2.885, "accepted": 1.885, "draft_ms": 1.623, "verify_ms": 17.886}
+{"depth": 32768, "rep": 0, "prompt": 33212, "gen": 512, "tg": 150.0, "tok_per_round": 2.792, "accepted": 1.792, "draft_ms": 1.61, "verify_ms": 16.623}
+{"depth": 32768, "rep": 1, "prompt": 33212, "gen": 512, "tg": 149.22, "tok_per_round": 3.006, "accepted": 2.006, "draft_ms": 1.582, "verify_ms": 17.218}
+{"depth": 32768, "rep": 2, "prompt": 33212, "gen": 512, "tg": 142.24, "tok_per_round": 2.762, "accepted": 1.762, "draft_ms": 1.589, "verify_ms": 16.785}
+{"depth": 65536, "rep": 0, "prompt": 68018, "gen": 98, "tg": 162.05, "tok_per_round": 3.63, "accepted": 2.63, "draft_ms": 1.638, "verify_ms": 20.213}
+{"depth": 65536, "rep": 1, "prompt": 68018, "gen": 512, "tg": 136.29, "tok_per_round": 2.586, "accepted": 1.586, "draft_ms": 1.598, "verify_ms": 16.607}
+{"depth": 65536, "rep": 2, "prompt": 68018, "gen": 512, "tg": 152.99, "tok_per_round": 3.03, "accepted": 2.03, "draft_ms": 1.617, "verify_ms": 17.561}

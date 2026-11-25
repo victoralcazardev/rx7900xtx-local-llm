@@ -159,7 +159,7 @@ first), uncached, 256-token cap.
 Sampling per arm: A `{"temperature":1.0,"top_k":256}`; B the same; C `{"temperature":1.0,"top_p":1.0,"top_k":0,"min_p":0.0}`
 (the base vendor's generation config); D `{"temperature":0.6,"top_p":0.95,"top_k":256,"min_p":0.0}` (the Unbound
 v2.1 card, which production follows). Every request also sends `reasoning_effort: "none"` at the top level, which
-`2e16cf0` honors (`src/server.cpp:966-982`), so all arms decode without thinking.
+`2e16cf0` honors (`src/server.cpp:966-982`), so all arms run at the minimum thinking effort (level 0, which per the vendor card does not fully disable reasoning).
 
 **Method note — these numbers are noisy, read them as "no regression".** Each cell is a median of two sampled
 runs, and the two runs do not decode the same text: accepted draft tokens per drafter round range from 0.68 to
