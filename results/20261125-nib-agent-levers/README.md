@@ -43,7 +43,11 @@ server configs: [`raw/slots-config.txt`](raw/slots-config.txt).
 | Decode | 127-136 tok/s | 128-136 tok/s |
 
 With `--slots 2` every request still went to slot 0 and re-read from scratch, so the second slot kept nothing for
-sequential alternation. The run has no A→A control, so it does not show whether an identical repeat would hit; the
+sequential alternation. The source explains why (`src/server.cpp` at `2e16cf0`, admission loop near line 2234): a
+request that arrives with nothing active and nothing queued is `strictly_solo`, and the solo path scores slot 0
+above every other slot ("Solo fast path: always slot 0 (HIP Graph + MTP)"). A prefix hit on another slot would
+win, but sequential traffic never puts anything on another slot. A hit also needs the new prompt to be longer
+than the cached tokens and start with all of them, which an agent's next turn is and an identical repeat is not. The run has no A→A control, so it does not show whether an identical repeat would hit; the
 real sessions above show prefix extension does hit (88.8%). Whether Nib can route by prefix (or by a client slot
 id) needs a source read of `src/server.cpp` and possibly an upstream request; nothing here changes the profile.
 
@@ -85,7 +89,7 @@ Why the path is slow (no decode graph, CPU sampling or something else) was not t
 ## Not measured
 
 - Concurrent requests with `--slots 2` (only sequential alternation was run).
-- A→A control for the slot test.
+- A→A control for the slot test (an identical repeat cannot hit by the rule above; an extended turn would).
 
 ## Reproduce
 

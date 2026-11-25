@@ -132,5 +132,11 @@ shorthand for the `launch.py` invocation below.
   the `hip-kvmix` engine (own build, see `docs/ENGINES.md`).
 - **`WARNING: less than 0.5 GiB of margin`**: something else is using VRAM (another llama-server, a
   game, a browser with many tabs/video). See `docs/measurements/coexistence.md`.
+- **Another GPU job starts while the server is up** (`ring comp_… timeout`, `Starting comp_… ring reset`,
+  `Failed to pin framebuffer: -ENOMEM` in `journalctl -k`; the desktop reports a GPU reset). The `262k-nib`
+  profile holds ~21.5 GiB of the 24 GiB, so a second model does not fit next to it: on 2026-11-25 `whisper-cli`
+  large-v3 (Vulkan) next to Nib got its compute queue reset three times and the display could not pin
+  framebuffers. Fix: `python3 scripts/launch.py --stop` before a transcription or another GPU model, relaunch
+  after; or run that job on the CPU. `launch.py` checks free VRAM only at start, not later arrivals.
 - **Never suspend the machine with a model loaded** if you start the server by hand (without
   `launch.py`): use `systemd-inhibit --what=sleep:idle --mode=block llama-server ...`.
