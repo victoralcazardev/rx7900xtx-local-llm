@@ -35,7 +35,7 @@ adopted: [`TRIED.md`](TRIED.md); planned engine trials:
 python3 scripts/launch.py            # the default above; add --dry-run to print the nib command
 ```
 
-### Inkling-2-Mini uncensored on `maya-ik2` (`inkling2-mini-unc-q8d` / `262k-maya`, fallback)
+### Inkling-2-Mini uncensored on `maya-ik2` (`inkling2-mini-unc-q8d` / `262k-maya` and `315k-maya`, fallback)
 
 - Model: Abiray Inkling-2-Mini-Uncensored `IQ4_NL` (13.90 GB, OpenUncensored edit) with its head
   and 176 non-expert attention/conv matrices re-typed to Q8_0: experts and `token_embd` unchanged,
