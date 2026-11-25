@@ -1,0 +1,25 @@
+[nib] Config: ctx=262144 slots=1(262144/slot, req_max=262144, solo) kv=q8_0 sparse_pages=224 temp=0.60 mtp=ON vision=ON vram=21.49 GiB
+[serve] chat sync [s0] | prompt=54 (cached=0, 49 ms) | gen=914 in 4898 ms (186.6 tok/s, MTP)
+[serve] chat sync [s0] | prompt=30 (cached=0, 40 ms) | gen=332 in 1873 ms (177.2 tok/s, MTP)
+[serve] chat sync [s0] | prompt=25 (cached=0, 38 ms) | gen=247 in 1515 ms (163.0 tok/s, MTP)
+[serve] chat sync [s0] | prompt=26 (cached=0, 38 ms) | gen=868 in 4339 ms (200.0 tok/s, MTP)
+[nib] Config: ctx=262144 slots=1(262144/slot, req_max=262144, solo) kv=q8_0 sparse_pages=224 temp=0.60 reasoning_budget=4096 mtp=ON vision=ON vram=21.49 GiB
+[serve] chat sync [s0] | prompt=54 (cached=0, 49 ms) | gen=914 in 4890 ms (186.9 tok/s, MTP)
+[serve] chat sync [s0] | prompt=30 (cached=0, 40 ms) | gen=332 in 1870 ms (177.5 tok/s, MTP)
+[serve] chat sync [s0] | prompt=25 (cached=0, 38 ms) | gen=247 in 1513 ms (163.2 tok/s, MTP)
+[serve] chat sync [s0] | prompt=26 (cached=0, 38 ms) | gen=868 in 4348 ms (199.6 tok/s, MTP)
+[nib] Config: ctx=262144 slots=1(262144/slot, req_max=262144, solo) kv=q8_0 sparse_pages=224 temp=0.60 reasoning_budget=256 mtp=ON vision=ON vram=21.49 GiB
+[serve] chat sync [s0] | prompt=57 (cached=0, 51 ms) | gen=396 in 2312 ms (171.3 tok/s, MTP, think-cap)
+[serve] chat stream [s0] | prompt=132 (cached=0, 66 ms) | gen=216 in 1428 ms (151.2 tok/s, MTP)
+[serve] chat stream [s0] | prompt=132 (cached=0, 65 ms) | gen=198 in 1129 ms (175.4 tok/s, MTP, tools)
+[serve] chat stream [s0] | prompt=132 (cached=0, 65 ms) | gen=197 in 1301 ms (151.4 tok/s, MTP, tools)
+[nib] Config: ctx=262144 slots=1(262144/slot, req_max=262144, solo) kv=q8_0 sparse_pages=224 temp=0.60 reasoning_budget=32 mtp=ON vision=ON vram=21.49 GiB
+[serve] chat stream [s0] | prompt=132 (cached=0, 64 ms) | gen=151 in 963 ms (156.8 tok/s, MTP, think-cap)
+[serve] chat stream [s0] | prompt=132 (cached=0, 65 ms) | gen=135 in 837 ms (161.4 tok/s, MTP, think-cap)
+[serve] chat stream [s0] | prompt=132 (cached=0, 65 ms) | gen=160 in 1010 ms (158.5 tok/s, MTP, think-cap)
+[serve] chat stream [s0] | prompt=132 (cached=0, 65 ms) | gen=122 in 845 ms (144.4 tok/s, MTP, think-cap)
+[nib] Config: ctx=262144 slots=1(262144/slot, req_max=262144, solo) kv=q8_0 sparse_pages=224 temp=0.60 reasoning_budget=-1 mtp=ON vision=ON vram=21.49 GiB
+[serve] chat sync [s0] | prompt=54 (cached=0, 49 ms) | gen=914 in 4884 ms (187.1 tok/s, MTP)
+[serve] chat sync [s0] | prompt=30 (cached=0, 40 ms) | gen=332 in 1868 ms (177.7 tok/s, MTP)
+[serve] chat sync [s0] | prompt=25 (cached=0, 38 ms) | gen=247 in 1512 ms (163.3 tok/s, MTP)
+[serve] chat sync [s0] | prompt=26 (cached=0, 38 ms) | gen=868 in 4332 ms (200.4 tok/s, MTP)

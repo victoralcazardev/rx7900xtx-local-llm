@@ -150,8 +150,10 @@ vram_gib = 20.8
 # 98.2 / 90.0 / 68.9 / 53.6; GSM8K 186/192 (base pack) vs. 187/192; needles 35/36 with sparse 224; refusals 0/8.
 # Sampling: the Unbound v2.1 card (nokeepai/Inkling-2-Mini-Unbound-GGUF, re-read 2026-11-25) recommends
 # "--temp 0.6 --top-p 0.95, and a thinking cap" and no repetition samplers; it wins over the base vendor's
-# temperature 1.0 (generation_config), which looped here (docs/models/inkling-2-mini.md). Nib has no thinking cap:
-# the client's max_tokens is the only limit. The trial was measured at temp 1.0. top_k 256 is a deliberate deviation
+# temperature 1.0 (generation_config), which looped here (docs/models/inkling-2-mini.md); 0.6 / 0.95 looped too.
+# Upstream Nib has no thinking cap: the profile's reasoning_budget 4096 (the card's "we used 4,096 tokens") needs
+# engine-patches/nib-reasoning-budget-2e16cf0.patch (results/20261125-nib-reasoning-budget/). The trial was
+# measured at temp 1.0. top_k 256 is a deliberate deviation
 # (user decision 2026-11-25, docs/DECISIONS.md): Nib's DSpark verifier works on the top 256 candidates and an
 # unbounded tail takes an exact slow path (~31 tok/s). min_p 0.0 as everywhere (llama.cpp-style 0.05 default).
 # The drafter is mtp.safetensors next to the GGUF; nib serve without it dies at warm-up (2e16cf0).
@@ -173,6 +175,7 @@ backend = "nib"
 context = 262144
 kv = ["q8_0", "q8_0"]
 sparse_pages = 224
+reasoning_budget = 4096
 vram_gib = 21.5
 
 

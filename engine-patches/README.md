@@ -19,8 +19,9 @@ after its base instead (`…-b<N>.patch`).
 |---|---|---|
 | `tests-kvmix-cases-b12633.patch` | b12633 | the local FlashAttention op cases for the Qwen3.8 shape (head 256, GQA 6): the `q8_0`/`q5_1` and `q8_0`/`q8_0` eval widths, the tile boundary, KV pad, permuted KV, softcap, long context, and the two agent-depth perf sets |
 | `pr30792-q5_1-b12633.patch` | b12633 (PR #30792 rebased) | native `q8_0` KV plus the local `q5_1` V loader in the `flash_attn_tile` kernel, `ne[1] <= 8` guard |
+| `nib-reasoning-budget-2e16cf0.patch` | [Chromadera/nib](https://github.com/Chromadera/nib) `2e16cf0` (not a llama.cpp base: apply by hand, `build_engine.py` does not build Nib) | `nib serve --reasoning-budget N`: closes the thinking block after N tokens, MTP-safe ([checks](../results/20261125-nib-reasoning-budget/README.md)) |
 
-Both are byte-identical copies of the patches under
+The two llama.cpp patches are byte-identical copies of the patches under
 [`results/20261122-engine-b12633/`](../results/20261122-engine-b12633/README.md), which stay the
 measurement record (`docs/STYLE.md` §7): the rebase notes, the op-test log and the SHA256s are
 there. Why the build needs `-DGGML_CUDA_FA_QUANTS` at all is in

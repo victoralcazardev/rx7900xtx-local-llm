@@ -1,0 +1,150 @@
+capglobal | 19:40:45 capglobal start 1: died exit=139 last: [InklingEngine] Ready! max_ctx=262144 slots=1 slot_ctx=262144 swa_cap=1536 kv=q8_0 sparse_pages=224 total_vram=21.15 GiB (weights=16.34 GiB, kv+scratc
+capglobal | 19:41:03 capglobal start 2: ok exit=0 last: [serve] shutdown complete.
+capglobal | 19:41:19 capglobal start 3: ok exit=0 last: [serve] shutdown complete.
+capglobal | 19:41:29 capglobal start 4: ok exit=0 last: [serve] shutdown complete.
+capglobal | 19:41:42 capglobal start 5: died exit=139 last: [InklingEngine] Ready! max_ctx=262144 slots=1 slot_ctx=262144 swa_cap=1536 kv=q8_0 sparse_pages=224 total_vram=21.15 GiB (weights=16.34 GiB, kv+scratc
+capglobal | 19:41:54 capglobal start 6: ok exit=0 last: [serve] shutdown complete.
+capglobal | 19:42:04 capglobal start 7: ok exit=0 last: [serve] shutdown complete.
+capglobal | 19:42:14 capglobal start 8: ok exit=0 last: [serve] shutdown complete.
+capglobal | 19:42:23 capglobal start 9: ok exit=0 last: [serve] shutdown complete.
+capglobal | 19:42:33 capglobal start 10: ok exit=0 last: [serve] shutdown complete.
+capglobal | 19:42:42 capglobal start 11: died exit=139 last: [InklingEngine] Ready! max_ctx=262144 slots=1 slot_ctx=262144 swa_cap=1536 kv=q8_0 sparse_pages=224 total_vram=21.15 GiB (weights=16.34 GiB, kv+scratc
+capglobal | 19:42:52 capglobal start 12: ok exit=0 last: [serve] shutdown complete.
+capglobal | 19:43:02 capglobal start 13: ok exit=0 last: [serve] shutdown complete.
+capglobal | 19:43:12 capglobal start 14: ok exit=0 last: [serve] shutdown complete.
+capglobal | 19:43:23 capglobal start 15: died exit=139 last: [InklingEngine] Ready! max_ctx=262144 slots=1 slot_ctx=262144 swa_cap=1536 kv=q8_0 sparse_pages=224 total_vram=21.15 GiB (weights=16.34 GiB, kv+scratc
+capglobal | 19:43:34 capglobal start 16: died exit=139 last: [InklingEngine] Ready! max_ctx=262144 slots=1 slot_ctx=262144 swa_cap=1536 kv=q8_0 sparse_pages=224 total_vram=21.15 GiB (weights=16.34 GiB, kv+scratc
+capglobal | 19:43:44 capglobal start 17: ok exit=0 last: [serve] shutdown complete.
+capglobal | 19:43:57 capglobal start 18: died exit=139 last: [InklingEngine] Ready! max_ctx=262144 slots=1 slot_ctx=262144 swa_cap=1536 kv=q8_0 sparse_pages=224 total_vram=21.15 GiB (weights=16.34 GiB, kv+scratc
+capglobal | 19:44:16 capglobal start 19: died exit=139 last: [InklingEngine] Ready! max_ctx=262144 slots=1 slot_ctx=262144 swa_cap=1536 kv=q8_0 sparse_pages=224 total_vram=21.15 GiB (weights=16.34 GiB, kv+scratc
+capglobal | 19:44:28 capglobal start 20: ok exit=0 last: [serve] shutdown complete.
+c2d23530 | 19:49:39 c2d23530 start 1: ok exit=0 last: [serve] shutdown complete.
+c2d23530 | 19:50:05 c2d23530 start 2: ok exit=0 last: [serve] shutdown complete.
+c2d23530 | 19:50:42 c2d23530 start 3: ok exit=0 last: [serve] shutdown complete.
+c2d23530 | 19:50:51 c2d23530 start 4: ok exit=0 last: [serve] shutdown complete.
+c2d23530 | 19:51:01 c2d23530 start 5: ok exit=0 last: [serve] shutdown complete.
+c2d23530 | 19:51:11 c2d23530 start 6: ok exit=0 last: [serve] shutdown complete.
+c2d23530 | 19:51:21 c2d23530 start 7: ok exit=0 last: [serve] shutdown complete.
+c2d23530 | 19:51:31 c2d23530 start 8: ok exit=0 last: [serve] shutdown complete.
+c2d23530 | 19:51:41 c2d23530 start 9: ok exit=0 last: [serve] shutdown complete.
+c2d23530 | 19:51:50 c2d23530 start 10: ok exit=0 last: [serve] shutdown complete.
+c2d23530 | 19:52:02 c2d23530 start 11: ok exit=0 last: [serve] shutdown complete.
+c2d23530 | 19:52:12 c2d23530 start 12: ok exit=0 last: [serve] shutdown complete.
+c2d23530 | 19:52:24 c2d23530 start 13: ok exit=0 last: [serve] shutdown complete.
+c2d23530 | 19:52:50 c2d23530 start 14: ok exit=0 last: [serve] shutdown complete.
+c2d23530 | 19:53:00 c2d23530 start 15: ok exit=0 last: [serve] shutdown complete.
+c2d23530 | 19:53:12 c2d23530 start 16: ok exit=0 last: [serve] shutdown complete.
+c2d23530 | 19:53:22 c2d23530 start 17: ok exit=0 last: [serve] shutdown complete.
+c2d23530 | 19:53:39 c2d23530 start 18: died exit=139 last: [InklingEngine] Ready! max_ctx=262144 slots=1 slot_ctx=262144 swa_cap=1536 kv=q8_0 sparse_pages=224 total_vram=21.15 GiB (weights=16.34 GiB, kv+scratc
+c2d23530 | 19:53:51 c2d23530 start 19: ok exit=0 last: [serve] shutdown complete.
+c2d23530 | 19:54:02 c2d23530 start 20: died exit=139 last: [InklingEngine] Ready! max_ctx=262144 slots=1 slot_ctx=262144 swa_cap=1536 kv=q8_0 sparse_pages=224 total_vram=21.15 GiB (weights=16.34 GiB, kv+scratc
+caa394af | 19:54:13 caa394af start 1: died exit=139 last: [InklingEngine] Ready! max_ctx=262144 slots=1 slot_ctx=262144 swa_cap=1536 kv=q8_0 sparse_pages=224 total_vram=21.15 GiB (weights=16.34 GiB, kv+scratc
+caa394af | 19:54:23 caa394af start 2: ok exit=0 last: [serve] shutdown complete.
+caa394af | 19:54:32 caa394af start 3: died exit=139 last: [InklingEngine] Ready! max_ctx=262144 slots=1 slot_ctx=262144 swa_cap=1536 kv=q8_0 sparse_pages=224 total_vram=21.15 GiB (weights=16.34 GiB, kv+scratc
+caa394af | 19:54:42 caa394af start 4: ok exit=0 last: [serve] shutdown complete.
+caa394af | 19:54:52 caa394af start 5: ok exit=0 last: [serve] shutdown complete.
+caa394af | 19:55:01 caa394af start 6: ok exit=0 last: [serve] shutdown complete.
+caa394af | 19:55:11 caa394af start 7: died exit=139 last: [InklingEngine] Ready! max_ctx=262144 slots=1 slot_ctx=262144 swa_cap=1536 kv=q8_0 sparse_pages=224 total_vram=21.15 GiB (weights=16.34 GiB, kv+scratc
+caa394af | 19:55:20 caa394af start 8: ok exit=0 last: [serve] shutdown complete.
+caa394af | 19:55:30 caa394af start 9: ok exit=0 last: [serve] shutdown complete.
+caa394af | 19:55:40 caa394af start 10: ok exit=0 last: [serve] shutdown complete.
+caa394af | 19:55:50 caa394af start 11: ok exit=0 last: [serve] shutdown complete.
+caa394af | 19:56:00 caa394af start 12: ok exit=0 last: [serve] shutdown complete.
+caa394af | 19:56:09 caa394af start 13: died exit=139 last: [InklingEngine] Ready! max_ctx=262144 slots=1 slot_ctx=262144 swa_cap=1536 kv=q8_0 sparse_pages=224 total_vram=21.15 GiB (weights=16.34 GiB, kv+scratc
+caa394af | 19:56:19 caa394af start 14: ok exit=0 last: [serve] shutdown complete.
+caa394af | 19:56:29 caa394af start 15: ok exit=0 last: [serve] shutdown complete.
+caa394af | 19:56:39 caa394af start 16: ok exit=0 last: [serve] shutdown complete.
+caa394af | 19:56:48 caa394af start 17: ok exit=0 last: [serve] shutdown complete.
+caa394af | 19:56:58 caa394af start 18: ok exit=0 last: [serve] shutdown complete.
+caa394af | 19:57:08 caa394af start 19: ok exit=0 last: [serve] shutdown complete.
+caa394af | 19:57:18 caa394af start 20: ok exit=0 last: [serve] shutdown complete.
+c2e16cf0 | 19:57:42 c2e16cf0 start 1: ok exit=0 last: [serve] shutdown complete.
+c2e16cf0 | 19:57:55 c2e16cf0 start 2: ok exit=0 last: [serve] shutdown complete.
+c2e16cf0 | 19:58:24 c2e16cf0 start 3: ok exit=0 last: [serve] shutdown complete.
+c2e16cf0 | 19:58:34 c2e16cf0 start 4: ok exit=0 last: [serve] shutdown complete.
+c2e16cf0 | 19:58:44 c2e16cf0 start 5: ok exit=0 last: [serve] shutdown complete.
+c2e16cf0 | 19:58:54 c2e16cf0 start 6: ok exit=0 last: [serve] shutdown complete.
+c2e16cf0 | 19:59:04 c2e16cf0 start 7: ok exit=0 last: [serve] shutdown complete.
+c2e16cf0 | 19:59:14 c2e16cf0 start 8: ok exit=0 last: [serve] shutdown complete.
+c2e16cf0 | 19:59:24 c2e16cf0 start 9: ok exit=0 last: [serve] shutdown complete.
+c2e16cf0 | 19:59:34 c2e16cf0 start 10: ok exit=0 last: [serve] shutdown complete.
+c2e16cf0 | 19:59:43 c2e16cf0 start 11: ok exit=0 last: [serve] shutdown complete.
+c2e16cf0 | 19:59:53 c2e16cf0 start 12: ok exit=0 last: [serve] shutdown complete.
+c2e16cf0 | 20:00:03 c2e16cf0 start 13: ok exit=0 last: [serve] shutdown complete.
+c2e16cf0 | 20:00:13 c2e16cf0 start 14: ok exit=0 last: [serve] shutdown complete.
+c2e16cf0 | 20:00:23 c2e16cf0 start 15: ok exit=0 last: [serve] shutdown complete.
+c2e16cf0 | 20:00:33 c2e16cf0 start 16: ok exit=0 last: [serve] shutdown complete.
+c2e16cf0 | 20:00:43 c2e16cf0 start 17: ok exit=0 last: [serve] shutdown complete.
+c2e16cf0 | 20:00:53 c2e16cf0 start 18: ok exit=0 last: [serve] shutdown complete.
+c2e16cf0 | 20:01:03 c2e16cf0 start 19: ok exit=0 last: [serve] shutdown complete.
+c2e16cf0 | 20:01:13 c2e16cf0 start 20: ok exit=0 last: [serve] shutdown complete.
+c2e16cf0fresh | 20:03:10 c2e16cf0fresh start 1: ok exit=0 last: [serve] shutdown complete.
+c2e16cf0fresh | 20:03:20 c2e16cf0fresh start 2: ok exit=0 last: [serve] shutdown complete.
+c2e16cf0fresh | 20:03:34 c2e16cf0fresh start 3: ok exit=0 last: [serve] shutdown complete.
+c2e16cf0fresh | 20:03:44 c2e16cf0fresh start 4: ok exit=0 last: [serve] shutdown complete.
+c2e16cf0fresh | 20:03:55 c2e16cf0fresh start 5: died exit=139 last: [InklingEngine] Ready! max_ctx=262144 slots=1 slot_ctx=262144 swa_cap=1536 kv=q8_0 sparse_pages=224 total_vram=21.15 GiB (weights=16.34 GiB, kv+scratc
+c2e16cf0fresh | 20:04:06 c2e16cf0fresh start 6: died exit=139 last: [InklingEngine] Ready! max_ctx=262144 slots=1 slot_ctx=262144 swa_cap=1536 kv=q8_0 sparse_pages=224 total_vram=21.15 GiB (weights=16.34 GiB, kv+scratc
+c2e16cf0fresh | 20:04:34 c2e16cf0fresh start 7: ok exit=0 last: [serve] shutdown complete.
+c2e16cf0fresh | 20:04:44 c2e16cf0fresh start 8: ok exit=0 last: [serve] shutdown complete.
+c2e16cf0fresh | 20:04:54 c2e16cf0fresh start 9: ok exit=0 last: [serve] shutdown complete.
+c2e16cf0fresh | 20:05:04 c2e16cf0fresh start 10: ok exit=0 last: [serve] shutdown complete.
+c2e16cf0fresh | 20:05:14 c2e16cf0fresh start 11: ok exit=0 last: [serve] shutdown complete.
+c2e16cf0fresh | 20:05:24 c2e16cf0fresh start 12: ok exit=0 last: [serve] shutdown complete.
+c2e16cf0fresh | 20:05:34 c2e16cf0fresh start 13: ok exit=0 last: [serve] shutdown complete.
+c2e16cf0fresh | 20:05:43 c2e16cf0fresh start 14: ok exit=0 last: [serve] shutdown complete.
+c2e16cf0fresh | 20:05:53 c2e16cf0fresh start 15: ok exit=0 last: [serve] shutdown complete.
+c2e16cf0fresh | 20:06:03 c2e16cf0fresh start 16: ok exit=0 last: [serve] shutdown complete.
+c2e16cf0fresh | 20:06:13 c2e16cf0fresh start 17: ok exit=0 last: [serve] shutdown complete.
+c2e16cf0fresh | 20:06:23 c2e16cf0fresh start 18: ok exit=0 last: [serve] shutdown complete.
+c2e16cf0fresh | 20:06:33 c2e16cf0fresh start 19: ok exit=0 last: [serve] shutdown complete.
+c2e16cf0fresh | 20:06:43 c2e16cf0fresh start 20: ok exit=0 last: [serve] shutdown complete.
+altprod | 20:07:03 altprod start 1: ok exit=0 last: [serve] shutdown complete.
+altprod | 20:07:37 altprod start 1: ok exit=0 last: [serve] shutdown complete.
+altprod | 20:07:57 altprod start 1: ok exit=0 last: [serve] shutdown complete.
+altprod | 20:08:17 altprod start 1: ok exit=0 last: [serve] shutdown complete.
+altprod | 20:08:36 altprod start 1: ok exit=0 last: [serve] shutdown complete.
+altprod | 20:08:56 altprod start 1: ok exit=0 last: [serve] shutdown complete.
+altprod | 20:09:16 altprod start 1: ok exit=0 last: [serve] shutdown complete.
+altprod | 20:09:35 altprod start 1: ok exit=0 last: [serve] shutdown complete.
+altprod | 20:09:55 altprod start 1: ok exit=0 last: [serve] shutdown complete.
+altprod | 20:10:15 altprod start 1: ok exit=0 last: [serve] shutdown complete.
+altprod | 20:10:35 altprod start 1: ok exit=0 last: [serve] shutdown complete.
+altprod | 20:10:54 altprod start 1: ok exit=0 last: [serve] shutdown complete.
+altprod | 20:11:14 altprod start 1: ok exit=0 last: [serve] shutdown complete.
+altprod | 20:11:34 altprod start 1: ok exit=0 last: [serve] shutdown complete.
+altprod | 20:11:54 altprod start 1: ok exit=0 last: [serve] shutdown complete.
+altfresh | 20:07:13 altfresh start 1: ok exit=0 last: [serve] shutdown complete.
+altfresh | 20:07:47 altfresh start 1: ok exit=0 last: [serve] shutdown complete.
+altfresh | 20:08:07 altfresh start 1: ok exit=0 last: [serve] shutdown complete.
+altfresh | 20:08:27 altfresh start 1: ok exit=0 last: [serve] shutdown complete.
+altfresh | 20:08:46 altfresh start 1: ok exit=0 last: [serve] shutdown complete.
+altfresh | 20:09:06 altfresh start 1: ok exit=0 last: [serve] shutdown complete.
+altfresh | 20:09:25 altfresh start 1: ok exit=0 last: [serve] shutdown complete.
+altfresh | 20:09:45 altfresh start 1: ok exit=0 last: [serve] shutdown complete.
+altfresh | 20:10:05 altfresh start 1: ok exit=0 last: [serve] shutdown complete.
+altfresh | 20:10:25 altfresh start 1: ok exit=0 last: [serve] shutdown complete.
+altfresh | 20:10:45 altfresh start 1: ok exit=0 last: [serve] shutdown complete.
+altfresh | 20:11:04 altfresh start 1: ok exit=0 last: [serve] shutdown complete.
+altfresh | 20:11:24 altfresh start 1: ok exit=0 last: [serve] shutdown complete.
+altfresh | 20:11:44 altfresh start 1: ok exit=0 last: [serve] shutdown complete.
+altfresh | 20:12:04 altfresh start 1: ok exit=0 last: [serve] shutdown complete.
+thinkcap | 20:16:25 thinkcap start 1: ok exit=0 last: [serve] shutdown complete.
+thinkcap | 20:16:35 thinkcap start 2: ok exit=0 last: [serve] shutdown complete.
+thinkcap | 20:16:45 thinkcap start 3: ok exit=0 last: [serve] shutdown complete.
+thinkcap | 20:16:55 thinkcap start 4: ok exit=0 last: [serve] shutdown complete.
+thinkcap | 20:17:05 thinkcap start 5: ok exit=0 last: [serve] shutdown complete.
+thinkcap | 20:17:15 thinkcap start 6: ok exit=0 last: [serve] shutdown complete.
+thinkcap | 20:17:24 thinkcap start 7: ok exit=0 last: [serve] shutdown complete.
+thinkcap | 20:17:36 thinkcap start 8: died exit=139 last: [InklingEngine] Ready! max_ctx=262144 slots=1 slot_ctx=262144 swa_cap=1536 kv=q8_0 sparse_pages=224 total_vram=21.15 GiB (weights=16.34 GiB, kv+scratc
+thinkcap | 20:17:45 thinkcap start 9: ok exit=0 last: [serve] shutdown complete.
+thinkcap | 20:17:55 thinkcap start 10: ok exit=0 last: [serve] shutdown complete.
+thinkcap | 20:18:05 thinkcap start 11: ok exit=0 last: [serve] shutdown complete.
+thinkcap | 20:18:15 thinkcap start 12: ok exit=0 last: [serve] shutdown complete.
+thinkcap | 20:19:07 thinkcap start 13: ok exit=0 last: [serve] shutdown complete.
+thinkcap | 20:19:17 thinkcap start 14: ok exit=0 last: [serve] shutdown complete.
+thinkcap | 20:19:31 thinkcap start 15: ok exit=0 last: [serve] shutdown complete.
+thinkcap | 20:20:01 thinkcap start 16: ok exit=0 last: [serve] shutdown complete.
+thinkcap | 20:20:11 thinkcap start 17: ok exit=0 last: [serve] shutdown complete.
+thinkcap | 20:20:21 thinkcap start 18: ok exit=0 last: [serve] shutdown complete.
+thinkcap | 20:20:34 thinkcap start 19: ok exit=0 last: [serve] shutdown complete.
+thinkcap | 20:21:06 thinkcap start 20: ok exit=0 last: [serve] shutdown complete.

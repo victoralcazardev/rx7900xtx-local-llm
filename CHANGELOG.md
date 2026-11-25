@@ -8,6 +8,7 @@ All notable changes to this project are documented here. Format follows
 
 ### Changed
 
+- `262k-nib` caps thinking at 4,096 tokens (`reasoning_budget`, the Unbound card's value) through the local Nib patch `engine-patches/nib-reasoning-budget-2e16cf0.patch`; `launch.py` passes `--reasoning-budget` ([`results/20261125-nib-reasoning-budget/`](results/20261125-nib-reasoning-budget/README.md)).
 - Default setup is now `inkling2-mini-unbound-nib` / `262k-nib`: the Nib engine (`Chromadera/nib`, new `nib` backend in `launch.py`) with the NVFP4-Mixed Nib-Pack and Unbound v2.1 attention grafted, `top_k 256`; `inkling2-mini-unc-q8d` stays as the fallback ([`results/20261124-nib-trial/`](results/20261124-nib-trial/README.md)).
 
 - `inkling2-mini-unbound-nib` samples at `temperature 0.6` / `top_p 0.95` (temp 1.0 / engine-default top_p before), following the Unbound v2.1 card after two reasoning loops ran to the 32,768-token cap at both settings; the harness Inkling entries cap output at `maxTokens` 16384 (was 32768). `models.toml`, [`docs/models/inkling-2-mini.md`](docs/models/inkling-2-mini.md)

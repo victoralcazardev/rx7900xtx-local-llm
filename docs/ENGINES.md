@@ -267,8 +267,10 @@ Request surface at `2e16cf0` (source-read 2026-11-25, `src/server.cpp` ~3075-308
 context), `temperature`, `top_p`, `min_p`, `top_k`, `seed`, `mtp`, `stream`, `stop`, and the thinking level from
 `reasoning_effort` at the request top level first, then `chat_template_kwargs.reasoning_effort`, then
 `enable_thinking: false` (in `chat_template_kwargs` or at the top level). `presence_penalty`, `frequency_penalty`,
-`repeat_penalty` and DRY are ignored without an error, and there is no thinking cap or `--reasoning-budget`: the
-client's `max_tokens` is the only limit on a reasoning loop. A top-level `reasoning_effort` of `none` (or `0`) becomes
+`repeat_penalty` and DRY are ignored without an error, and upstream has no thinking cap: the production build adds
+`--reasoning-budget N` with [`engine-patches/nib-reasoning-budget-2e16cf0.patch`](../engine-patches/nib-reasoning-budget-2e16cf0.patch)
+(`git apply` on `2e16cf0`, then the `cmake` lines above; profile key `reasoning_budget`), which closes the thinking
+block after N tokens and logs `think-cap` ([checks](../results/20261125-nib-reasoning-budget/README.md)). A top-level `reasoning_effort` of `none` (or `0`) becomes
 "Thinking effort level: 0", which the measurement harnesses send; per the vendor card the minimum does not fully
 disable reasoning. Serve flags for sampling are only
 `--default-temp/-top-p/-min-p/-top-k`. A request with `"mtp": false` runs the drafter-free decode path, measured at 6.7-10.2 tok/s on a

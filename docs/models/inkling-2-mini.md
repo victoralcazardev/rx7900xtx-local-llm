@@ -143,7 +143,8 @@ Source: [`thinkingmachines/Inkling-2-Mini`](https://huggingface.co/thinkingmachi
   resumed in a new session, ~67K context): 32,768 tokens in 145 s, 402 paragraphs, 41 unique, a ~4-paragraph cycle
   ×27. Both loops circle the same unresolved premise conflict in the task (which machine owns a refresh token,
   docs vs. files), so the trigger looks task-driven and the card sampling does not prevent it. Engine, MTP or
-  model still not separated.
+  model still not separated. Since 2026-11-25 `262k-nib` caps thinking at the card's 4,096 tokens with a local Nib
+  patch ([`results/20261125-nib-reasoning-budget/`](../../results/20261125-nib-reasoning-budget/README.md)).
 - **Nib `bdc9307` (2026-11-25) is not adopted**: its exact GPU sampler makes the vendor sampling fast at `top_k 0`
   (113-157 tok/s, was ~31) with text-identical greedy output and GSM8K 187/192, but it segfaults in
   `hipGraphInstantiate` on 3 of 9 `serve` starts in the A/B run and 2 of 10 in the retest (0/15 on `2e16cf0`), in

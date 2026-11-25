@@ -19,7 +19,8 @@ adopted: [`TRIED.md`](TRIED.md); planned engine trials:
 - Model: degenmeowster Nib-Pack `Inkling-2-Mini-NVFP4-Mixed.gguf` (experts of layers 0-19 in the native
   NVFP4, the rest Q8_0) with the 120 attention tensors of nokeepai Unbound v2.1 Q8_0 grafted in (experts
   byte-identical), built by `results/20261124-nib-trial/raw/graft_unbound_q8.py`; vision via the pack's mmproj.
-- Engine: `nib` = [Chromadera/nib](https://github.com/Chromadera/nib) `2e16cf0`, Inkling-only HIP, DSpark
+- Engine: `nib` = [Chromadera/nib](https://github.com/Chromadera/nib) `2e16cf0` plus the local thinking-cap patch
+  ([`engine-patches/nib-reasoning-budget-2e16cf0.patch`](../engine-patches/nib-reasoning-budget-2e16cf0.patch)), Inkling-only HIP, DSpark
   drafter (`mtp.safetensors`, required) and Quest sparse attention `--sparse-pages 224`; Q8_0 KV; 21.5 GiB
   ([`ENGINES.md`](ENGINES.md#nib-inkling-2-mini-only-default-since-2026-11-25)).
 - Numbers: decode 122.6 / 102.2 / 97.3 / ~104 tok/s and prefill 3,620 / 3,399 / 3,041 / 2,982 tok/s at
@@ -28,10 +29,12 @@ adopted: [`TRIED.md`](TRIED.md); planned engine trials:
 - Sampling: Unbound v2.1 card `temperature 0.6`, `top_p 0.95` (since 2026-11-25; was the base vendor's 1.0,
   which looped in a real session), `min_p 0.0`, plus **`top_k 256`**, a deliberate deviation: Nib's drafter
   verifier works on the top 256 candidates; without top-k it decodes ~31 tok/s. Clients that send their own
-  `top_k` override it ([`DECISIONS.md`](DECISIONS.md), 2026-11-25). Nib has no thinking cap and ignores
-  `presence_penalty`/`repeat_penalty`: the client's `max_tokens` is the only limit on a loop.
+  `top_k` override it ([`DECISIONS.md`](DECISIONS.md), 2026-11-25). Thinking cap `--reasoning-budget 4096` (the
+  card's value; profile key `reasoning_budget`): both observed loops hit 32,768 tokens, one at 0.6 / 0.95. Nib ignores
+  `presence_penalty`/`repeat_penalty` ([cap](../results/20261125-nib-reasoning-budget/README.md)).
 - Known engine defects at `2e16cf0`: `nib bench` crashes or hangs, `serve` without `--mtp` dies
-  ([Chromadera/nib#1](https://github.com/Chromadera/nib/issues/1)).
+  ([Chromadera/nib#1](https://github.com/Chromadera/nib/issues/1)); a fresh build segfaults on ~1 of 10 starts in
+  `hipGraphInstantiate` (relaunch; [bisect](../results/20261125-nib-reasoning-budget/README.md#3-start-up-crash-bisect)).
 
 ```bash
 python3 scripts/launch.py            # the default above; add --dry-run to print the nib command

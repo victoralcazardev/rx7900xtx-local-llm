@@ -679,6 +679,9 @@ class TestServerCommand(unittest.TestCase):
                                          {**profile, "vision": False, "sparse_pages": 0}, "nib", self.root / "out")
         self.assertIn("--no-vision", cmd)
         self.assertEqual(cmd[cmd.index("--sparse-pages") + 1], "0")
+        cmd, _ = manifest.server_command(self._manifest({"nib": engine}), model,
+                                         {**profile, "reasoning_budget": 4096}, "nib", self.root / "out")
+        self.assertEqual(cmd[-6:], ["--reasoning-budget", "4096", "--host", "127.0.0.1", "--port", "8080"])
         with self.assertRaises(manifest.ManifestError):
             manifest.server_command(self._manifest({}), model, profile, "nib", self.root / "out")
 

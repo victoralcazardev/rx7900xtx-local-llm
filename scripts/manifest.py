@@ -357,6 +357,8 @@ def _nib_command(m: Manifest, model: Model, profile: dict) -> tuple[list[str], p
                       ("top_k", "--default-top-k"), ("min_p", "--default-min-p")):
         if key in model.sampling:
             cmd += [flag, str(model.sampling[key])]
+    if "reasoning_budget" in profile:  # thinking cap; needs the engine-patches/nib-reasoning-budget patch
+        cmd += ["--reasoning-budget", str(profile["reasoning_budget"])]
     return cmd + ["--host", "127.0.0.1", "--port", str(m.default_port)], engine
 
 
