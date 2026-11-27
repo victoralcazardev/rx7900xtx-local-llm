@@ -21,7 +21,7 @@
 #   (docs/DECISIONS.md, 2026-11-23).
 # - No recommended setup: the models sit side by side (2026-11-23, docs/DECISIONS.md). The fallback
 #   is `inkling2-mini-unc-q8d` / `315k-maya`; the other models are the Qwen3.8-27B
-#   `huihui-iq3s-mtp` / `262k-q8q51-mtp` and `inkling2-mini-unc` / `262k-q8q8` (llama.cpp fork; both opt-in). The stock
+#   `huihui-iq3s-mtp` / `262k-q8q51-mtp` (opt-in). The stock
 #   `qwen38-iq3s-mtp` stays configured as the measured reference, not as a listed setup.
 #   Add a new model/profile per docs/sop/new-model.md.
 
@@ -107,41 +107,8 @@ vision = false
 vram_gib = 22.2
 flags = ["-ub", "256", "--reasoning-effort", "medium", "--cache-ram", "12288"]
 
-# ---------------------------------------------------------------------------
-# Abiray Inkling-2-Mini-Uncensored IQ4_NL (uncensored; the untyped file behind the launcher fallback
-# `inkling2-mini-unc-q8d`). GGUF of
-# OpenUncensored/Inkling-2-Mini-Uncensored (rank-2 refusal edit on 20 attention output projections, experts untouched);
-# replaced AtomicChat AD-Q4_K on 2026-11-22 (docs/DECISIONS.md). Experts all IQ4_NL, so the same file also loads in
-# GodGMN's maya-ik2 HIP port. Cards: https://huggingface.co/thinkingmachines/Inkling-2-Mini (generation_config.json
-# sets only temperature 1.0; re-read 2026-11-22) and https://huggingface.co/Abiray/Inkling-2-Mini-Uncensored-GGUF
-# (recommends temp 1.0 + top-p 0.95; top-p is not the vendor's, so it stays unset like top_k; GGUF general.sampling
-# is temp 1.0 only). Vendor warning: may loop in long reasoning; limit output tokens and agent turns.
-# Engine: `hip-inkling` = GodGMN/llama.cpp `inkling-rdna3` cb0e46960. Upstream b12633 cannot hold 262K
-# (12,765 MiB dense relative-bias compute buffer -> MoE offloaded, 4.5 tok/s); the fork computes the
-# bias inside the FA kernel (docs/models/inkling-2-mini.md, results/20261122-inkling-uncensored-ad-q4k/).
-[models.inkling2-mini-unc]
-gguf = "Inkling-2-Mini-Uncensored-Abiray/Inkling-2-Mini-Uncensored-IQ4_NL.gguf"
-backend = "hip-inkling"
-mtp = false  # whether this GGUF carries the checkpoint's MTP head is unchecked
-mmproj = "Inkling-2-Mini-Uncensored-Abiray/mmproj-Inkling-2-Mini-Uncensored-BF16.gguf"
-
-[models.inkling2-mini-unc.sampling]
-temp = 1.0
-min_p = 0.0
-
-# 262K, KV q8_0/q8_0 (2026-11-22, results/20261122-inkling-abiray-iq4nl/): 59.9 tok/s plain decode (code and
-# prose, temperature 0), 21,305 MiB total GPU memory in use after load (KV and compute buffer are allocated at
-# load; no full-context fill measured). q8_0/q8_0 chosen on the AtomicChat file over q8_0/q5_1 (faster, and the
-# fork's own tests do not cover q8_0/q5_1). KV parity against f16 not measured on this fork (open). Text only.
-[models.inkling2-mini-unc.profiles."262k-q8q8"]
-context = 262144
-kv = ["q8_0", "q8_0"]
-vision = false
-vram_gib = 20.8
-
-# Its maya profile `262k-maya` was removed on 2026-11-24 (docs/DECISIONS.md): the q8d file below is faster on the
-# same engine. Its measurements stay in results/20261122-inkling-maya-vs-fork/. This model keeps the llama.cpp fork
-# profile and is the source file of the q8d re-type.
+# Abiray Inkling-2-Mini-Uncensored IQ4_NL (`inkling2-mini-unc`, llama.cpp `hip-inkling` fork, 59.9 tok/s) was removed
+# on 2026-11-27 with its file (docs/DECISIONS.md); its measurements stay in results/20261122-inkling-abiray-iq4nl/.
 
 # Inkling-2-Mini Unbound v2.1 on the Nib engine (Chromadera/nib 2e16cf0): the degenmeowster Nib-Pack
 # (NVFP4-Mixed, layers 0-19 experts native NVFP4) with the 120 attention tensors of nokeepai Unbound v2.1 Q8_0
@@ -180,7 +147,7 @@ vram_gib = 21.5
 
 
 # Launcher fallback since 2026-11-23 — the setup in use, not a recommendation (docs/DECISIONS.md):
-# the same Abiray file with the output head and the 176 non-expert attention/conv matrices re-typed to Q8_0
+# the Abiray IQ4_NL file (source deleted 2026-11-27; re-download it to rebuild) with the output head and the 176 non-expert attention/conv matrices re-typed to Q8_0
 # (2026-11-23, results/20261123-inkling-round/raw/retype_q8.py; experts and token_embd byte-identical, sha256
 # 375eea1b...). maya-ik2 then takes its planar Q8 decode path, like the port author's ggml-org file. At 272 W, same
 # bench: decode 106.1 / 98.2 / 90.0 / 68.9 tok/s at 512 / 8K / 32K / 128K vs. 95.7 / 88.2 / 82.3 / 64.2 (+7-11%),

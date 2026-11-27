@@ -8,6 +8,7 @@ All notable changes to this project are documented here. Format follows
 
 ### Changed
 
+- Removed `inkling2-mini-unc` / `262k-q8q8` (Abiray IQ4_NL on the `hip-inkling` llama.cpp fork, the slowest Inkling setup) together with its file; `inkling2-mini-unc-q8d` is unaffected. The 2026-11-27 engine round (nib v0.2.2, Tintero + DFlash2, Strata 0.2.23 + ISTA IQ3_S, Project Maya) kept the `262k-nib` default ([`docs/models/inkling-2-mini.md`](docs/models/inkling-2-mini.md#engine-round-2026-11-27)).
 - `262k-nib` caps thinking at 4,096 tokens (`reasoning_budget`, the Unbound card's value) through the local Nib patch `engine-patches/nib-reasoning-budget-2e16cf0.patch`; `launch.py` passes `--reasoning-budget` ([`results/20261125-nib-reasoning-budget/`](results/20261125-nib-reasoning-budget/README.md)).
 - Default setup is now `inkling2-mini-unbound-nib` / `262k-nib`: the Nib engine (`Chromadera/nib`, new `nib` backend in `launch.py`) with the NVFP4-Mixed Nib-Pack and Unbound v2.1 attention grafted, `top_k 256`; `inkling2-mini-unc-q8d` stays as the fallback ([`results/20261124-nib-trial/`](results/20261124-nib-trial/README.md)).
 

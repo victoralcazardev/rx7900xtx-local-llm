@@ -17,14 +17,14 @@ measured on the stock GSQ-RCO quant:
 full VRAM has been observed to hang the machine on resume (see `docs/measurements/coexistence.md`).
 It also warns if free VRAM doesn't cover the profile's `vram_gib` + 0.5 GiB margin.
 
-### Inkling-2-Mini uncensored (`inkling2-mini-unc`)
+### Inkling-2-Mini uncensored on `maya` (`inkling2-mini-unc-q8d`, fallback)
 
-Two profiles on the same Abiray IQ4_NL file; `--profile` is required. Text only, no vision.
+The Abiray IQ4_NL file re-typed to Q8_0 dense; `--profile` is required. Text only, no vision. The llama.cpp fork
+profile `inkling2-mini-unc` / `262k-q8q8` (57.6 / 44.5 / 37.8 tok/s) was removed with its file on 2026-11-27.
 
 | Profile | Engine | Decode at 512 / 128K / 262K (tok/s, 272 W) | Use |
 |---|---|---|---|
 | `inkling2-mini-unc-q8d` / `315k-maya` | `maya` (GodGMN `maya-inkling-mini` HIP port, not llama.cpp) | 106.1 / 68.9 at 512 / 128K | Faster on this card; 315K context |
-| `262k-q8q8` | `hip-inkling` (GodGMN `inkling-rdna3` llama.cpp fork) | 57.6 / 44.5 / 37.8 | llama.cpp features (`/metrics`, n-gram speculation, checkpoints) |
 
 ```
 python3 scripts/launch.py inkling2-mini-unc-q8d --profile 315k-maya --background --wait   # returns once /health answers
