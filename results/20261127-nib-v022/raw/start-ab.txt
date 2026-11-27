@@ -1,0 +1,7 @@
+17:54:40 old-1: up=yes exit=0 last: [serve] shutdown complete.
+17:55:28 plain-1: up=yes exit=0 last: [serve] shutdown complete.
+17:56:17 old-2: up=yes exit=0 last: [serve] shutdown complete.
+17:57:02 plain-2: up=no exit=139 last: [InklingEngine] Ready! max_ctx=262144 slots=1 slot_ctx=262144 swa_cap=1536 kv=q8_0 sparse_
+18:00:20 old-3: up=no exit=137 last: 
+18:03:33 plain-3: up=no exit=137 last: [nib] GPU: AMD Radeon RX 7900 XTX (gfx1100, RDNA3, 48 MPs, wave32, 23.98 GiB VRAM)
+18:06:52 old-4: up=no exit=137 last: 

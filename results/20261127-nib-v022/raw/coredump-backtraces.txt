@@ -1,0 +1,79 @@
+Backtraces from coredumpctl for the nib v0.2.2 trial (2026-11-27). Frames 0-9 (or 0-4 below) are
+anonymous frames inside libamdhip64.so.7; the kernel names the library as
+libamdhip64.so.7.16.0-4f6d503 in every trap line. Host name, user/machine IDs and the absolute
+build paths are redacted. Three representative cores of the 14 kept (13 of the patched build,
+1 of the unpatched one); coredumpctl list:
+
+Fri 2026-11-27 17:13:15 WET 1615069 1000 1000 SIGSEGV present  <home>/IA/Motores/src/nib-v022/build/nib    34M
+Fri 2026-11-27 17:13:41 WET 1633052 1000 1000 SIGSEGV present  <home>/IA/Motores/src/nib-v022/build/nib  33.6M
+Fri 2026-11-27 17:14:10 WET 1634845 1000 1000 SIGSEGV present  <home>/IA/Motores/src/nib-v022/build/nib  33.6M
+Fri 2026-11-27 17:15:32 WET 1645107 1000 1000 SIGSEGV present  <home>/IA/Motores/src/nib-v022/build/nib  33.6M
+Fri 2026-11-27 17:40:26 WET 2101904 1000 1000 SIGSEGV present  <home>/IA/Motores/src/nib-v022/build/nib  33.6M
+Fri 2026-11-27 17:40:46 WET 2132127 1000 1000 SIGSEGV present  <home>/IA/Motores/src/nib-v022/build/nib  33.6M
+Fri 2026-11-27 17:41:15 WET 2143688 1000 1000 SIGSEGV present  <home>/IA/Motores/src/nib-v022/build/nib  37.1M
+Fri 2026-11-27 17:42:30 WET 2172515 1000 1000 SIGSEGV present  <home>/IA/Motores/src/nib-v022/build/nib  33.6M
+Fri 2026-11-27 17:42:55 WET 2178496 1000 1000 SIGSEGV present  <home>/IA/Motores/src/nib-v022/build/nib  33.6M
+Fri 2026-11-27 17:51:15 WET 2272721 1000 1000 SIGSEGV present  <home>/IA/Motores/src/nib-v022/build/nib    11M
+Fri 2026-11-27 17:51:20 WET 2275280 1000 1000 SIGSEGV present  <home>/IA/Motores/src/nib-v022/build/nib    11M
+Fri 2026-11-27 17:51:24 WET 2277849 1000 1000 SIGSEGV present  <home>/IA/Motores/src/nib-v022/build/nib    11M
+Fri 2026-11-27 17:51:30 WET 2280305 1000 1000 SIGSEGV present  <home>/IA/Motores/src/nib-v022/build/nib    11M
+Fri 2026-11-27 17:56:53 WET 2416114 1000 1000 SIGSEGV present  <home>/IA/Motores/src/nib-v022-plain/build/nib 33.5M
+
+The nine cores from 17:13:15 to 17:42:55 all end at hipGraphInstantiate; the four from 17:51 end at
+hipStreamCreate.
+
+# core 1615069, 17:13:15, SIGSEGV, patched v0.2.2, start 1 of the reliability loop
+# (frames 0-9 anonymous in libamdhip64.so.7)
+#0  0x00007f8395d4d5b8 n/a (libamdhip64.so.7 + 0x74d5b8)
+#1  0x00007f8395d291af n/a (libamdhip64.so.7 + 0x7291af)
+#2  0x00007f8395d0e7dc n/a (libamdhip64.so.7 + 0x70e7dc)
+#3  0x00007f8395b45a34 n/a (libamdhip64.so.7 + 0x545a34)
+#4  0x00007f8395765b0b n/a (libamdhip64.so.7 + 0x165b0b)
+#5  0x00007f83957dca38 n/a (libamdhip64.so.7 + 0x1dca38)
+#6  0x00007f83957df313 n/a (libamdhip64.so.7 + 0x1df313)
+#7  0x00007f83957e4c09 n/a (libamdhip64.so.7 + 0x1e4c09)
+#8  0x00007f839580239a n/a (libamdhip64.so.7 + 0x20239a)
+#9  0x00007f839581f14a n/a (libamdhip64.so.7 + 0x21f14a)
+#10 0x00007f8395c2320c hipGraphInstantiate (libamdhip64.so.7 + 0x62320c)
+#11 0x000055825c68b9b6 _ZN7inkling13DSparkDrafter20capture_draft_graphsEv (nib + 0x499b6)
+#12 0x000055825c69019c _ZN7inkling13DSparkDrafter4initERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEERKNS_12ModelWeightsEiiP12ihipStream_ti (nib + 0x4e19c)
+#13 0x000055825c6fad92 _ZN12_GLOBAL__N_1L16mtp_session_initERNS_10MtpSessionERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEERN7inkling13InklingEngineEfbi.constprop.0 (nib + 0xb8d92)
+#14 0x000055825c661df8 main (nib + 0x1fdf8)
+#15 0x00007f8394e27d0e n/a (libc.so.6 + 0x27d0e)
+#16 0x00007f8394e27e4b __libc_start_main (libc.so.6 + 0x27e4b)
+#17 0x000055825c664755 _start (nib + 0x22755)
+
+# core 2272721, 17:51:15, SIGSEGV, patched v0.2.2, first of the four cap-step attempts
+# (frames 0-4 anonymous in libamdhip64.so.7)
+#0  0x00007f6e6394d5b8 n/a (libamdhip64.so.7 + 0x74d5b8)
+#1  0x00007f6e639291af n/a (libamdhip64.so.7 + 0x7291af)
+#2  0x00007f6e6390e7dc n/a (libamdhip64.so.7 + 0x70e7dc)
+#3  0x00007f6e63745a34 n/a (libamdhip64.so.7 + 0x545a34)
+#4  0x00007f6e6376366d n/a (libamdhip64.so.7 + 0x56366d)
+#5  0x00007f6e6382880e hipStreamCreate (libamdhip64.so.7 + 0x62880e)
+#6  0x0000559400554634 _ZN7inkling13InklingEngine4initERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEERKNS_12EngineConfigEb (nib + 0x42634)
+#7  0x0000559400531c78 main (nib + 0x1fc78)
+#8  0x00007f6e62a27d0e n/a (libc.so.6 + 0x27d0e)
+#9  0x00007f6e62a27e4b __libc_start_main (libc.so.6 + 0x27e4b)
+#10 0x0000559400534755 _start (nib + 0x22755)
+
+# core 2416114, 17:56:53, SIGSEGV, PLAIN v0.2.2 (no local patch), plain-2 of the start-only A/B
+# (frames 0-9 anonymous in libamdhip64.so.7)
+#0  0x00007f877294d5b8 n/a (libamdhip64.so.7 + 0x74d5b8)
+#1  0x00007f87729291af n/a (libamdhip64.so.7 + 0x7291af)
+#2  0x00007f877290e7dc n/a (libamdhip64.so.7 + 0x70e7dc)
+#3  0x00007f8772745a34 n/a (libamdhip64.so.7 + 0x545a34)
+#4  0x00007f8772365b0b n/a (libamdhip64.so.7 + 0x165b0b)
+#5  0x00007f87723dca38 n/a (libamdhip64.so.7 + 0x1dca38)
+#6  0x00007f87723df313 n/a (libamdhip64.so.7 + 0x1df313)
+#7  0x00007f87723e4c09 n/a (libamdhip64.so.7 + 0x1e4c09)
+#8  0x00007f877240239a n/a (libamdhip64.so.7 + 0x20239a)
+#9  0x00007f877241f14a n/a (libamdhip64.so.7 + 0x21f14a)
+#10 0x00007f877282320c hipGraphInstantiate (libamdhip64.so.7 + 0x62320c)
+#11 0x000055c281a4b936 _ZN7inkling13DSparkDrafter20capture_draft_graphsEv (nib + 0x49936)
+#12 0x000055c281a5011c _ZN7inkling13DSparkDrafter4initERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEERKNS_12ModelWeightsEiiP12ihipStream_ti (nib + 0x4e11c)
+#13 0x000055c281abaa92 _ZN12_GLOBAL__N_1L16mtp_session_initERNS_10MtpSessionERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEERN7inkling13InklingEngineEfbi.constprop.0 (nib + 0xb8a92)
+#14 0x000055c281a21dd6 main (nib + 0x1fdd6)
+#15 0x00007f8771a27d0e n/a (libc.so.6 + 0x27d0e)
+#16 0x00007f8771a27e4b __libc_start_main (libc.so.6 + 0x27e4b)
+#17 0x000055c281a246b5 _start (nib + 0x226b5)

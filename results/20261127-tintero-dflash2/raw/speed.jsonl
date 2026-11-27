@@ -1,0 +1,21 @@
+{"label": "base", "depth": 8192, "prompt_tokens": 7823, "pp": 2800.0, "tg": 90.95, "gen": [256, 256], "tg_all": [96.5, 85.4], "mtp": [null, null], "accept": [null, null]}
+{"label": "base", "depth": 32768, "prompt_tokens": 33142, "pp": 2246.2, "tg": 87.35, "gen": [256, 256], "tg_all": [87.3, 87.4], "mtp": [null, null], "accept": [null, null]}
+{"label": "base", "depth": 131072, "prompt_tokens": 134456, "pp": 974.4, "tg": 63.35, "gen": [256, 33], "tg_all": [62.4, 64.3], "mtp": [null, null], "accept": [null, null]}
+{"label": "base", "depth": 250000, "prompt_tokens": 258569, "pp": 1313.9, "tg": 46.25, "gen": [256, 256], "tg_all": [46.3, 46.2], "mtp": [null, null], "accept": [null, null]}
+{"label": "dflash2", "depth": 8192, "prompt_tokens": 7823, "pp": 2814.5, "tg": 59.9, "gen": [29, 256], "tg_all": [23.6, 96.2], "mtp": [null, null], "accept": [null, null]}
+{"label": "dflash2", "depth": 32768, "prompt_tokens": 33142, "pp": 2812.8, "tg": 85.35, "gen": [256, 256], "tg_all": [82.0, 88.7], "mtp": [null, null], "accept": [null, null]}
+{"label": "dflash2", "depth": 131072, "prompt_tokens": 134456, "pp": 1868.7, "tg": 64.7, "gen": [256, 256], "tg_all": [59.6, 69.8], "mtp": [null, null], "accept": [null, null]}
+{"label": "dflash2", "depth": 250000, "prompt_tokens": 258569, "pp": 1305.3, "tg": 52.35, "gen": [256, 256], "tg_all": [50.3, 54.4], "mtp": [null, null], "accept": [null, null]}
+{"label": "dflash2-diag", "depth": 8192, "prompt_tokens": 7823, "pp": 3303.4, "tg": 97.0, "gen": [256, 256, 256], "tg_all": [95.7, 99.9, 97.0], "mtp": [null, null, null], "accept": [null, null, null]}
+{"label": "tintero-dense-tm", "depth": 8192, "prompt_tokens": 7823, "pp": 3418.3, "tg": 94.0, "gen": [256, 25], "tg_all": [82.3, 105.7], "mtp": [null, null], "accept": [null, null]}
+{"label": "tintero-dense-tm", "depth": 32768, "prompt_tokens": 33142, "pp": 2367.8, "tg": 79.2, "gen": [256, 256], "tg_all": [85.6, 72.8], "mtp": [null, null], "accept": [null, null]}
+{"label": "tintero-dense-tm", "depth": 131072, "prompt_tokens": 134456, "pp": 1311.6, "tg": 55.25, "gen": [256, 256], "tg_all": [57.9, 52.6], "mtp": [null, null], "accept": [null, null]}
+{"label": "tintero-dense-tm", "depth": 250000, "prompt_tokens": 258569, "pp": 1086.1, "tg": 41.1, "gen": [256, 256], "tg_all": [41.5, 40.7], "mtp": [null, null], "accept": [null, null]}
+{"label": "tintero-sparse", "depth": 8192, "prompt_tokens": 7823, "pp": 3283.6, "tg": 98.3, "gen": [256, 256], "tg_all": [98.2, 98.4], "mtp": [null, null], "accept": [null, null]}
+{"label": "tintero-sparse", "depth": 32768, "prompt_tokens": 33142, "pp": 2873.9, "tg": 92.2, "gen": [256, 256], "tg_all": [92.7, 91.7], "mtp": [null, null], "accept": [null, null]}
+{"label": "tintero-sparse", "depth": 131072, "prompt_tokens": 134456, "pp": 1668.6, "tg": 78.6, "gen": [256, 256], "tg_all": [88.8, 68.4], "mtp": [null, null], "accept": [null, null]}
+{"label": "tintero-sparse", "depth": 250000, "prompt_tokens": 258569, "pp": 1170.6, "tg": 90.45, "gen": [256, 256], "tg_all": [90.5, 90.4], "mtp": [null, null], "accept": [null, null]}
+{"label": "nib-dense", "depth": 8192, "prompt_tokens": 7824, "pp": 3695.2, "tg": 143.11, "gen": [256, 194], "tg_all": [136.03, 150.18], "mtp": [2.226, 2.658], "accept": [1.226, 1.658]}
+{"label": "nib-dense", "depth": 32768, "prompt_tokens": 33142, "pp": 3444.2, "tg": 106.38, "gen": [256, 256], "tg_all": [102.6, 110.16], "mtp": [1.753, 1.954], "accept": [0.753, 0.954]}
+{"label": "nib-dense", "depth": 131072, "prompt_tokens": 134445, "pp": 2691.1, "tg": 86.91, "gen": [256, 256], "tg_all": [89.68, 84.13], "mtp": [2.04, 1.977], "accept": [1.04, 0.977]}
+{"label": "nib-dense", "depth": 250000, "prompt_tokens": 258447, "pp": 2115.1, "tg": 66.48, "gen": [256, 95], "tg_all": [60.31, 72.65], "mtp": [1.707, 2.065], "accept": [0.707, 1.065]}

@@ -1,0 +1,140 @@
+diff --git a/src/main.cpp b/src/main.cpp
+index fdd2346..6cbdd70 100644
+--- a/src/main.cpp
++++ b/src/main.cpp
+@@ -100,7 +100,7 @@ static void print_usage(const char * argv0) {
+         "           [--mtp models/mtp.safetensors] [--spec-threshold 0.8] [--draft-ctx 8192] [--no-verify-batch]\n"
+         "  vision   -m <gguf> --mmproj <mmproj.gguf> --image <img.png> [--prompt <text>] [-c 262144] [-d 0] [-n 256] [--kv-type q8_0|q4_1|q4_0] [--sparse-pages 0|112|192|224] [--sparse-meta q8|q4] [--bench-vision 5] [--dump-embeds <path>] [--no-graph]\n"
+         "  serve    -m <gguf> [--host 127.0.0.1] [--port 4444] [--model-name inkling-2-mini] [--slots 4] [-c 262848] [--strict-slot-ctx] [--max-slot-ctx N] [--kv-type q8_0|q4_1|q4_0] [--sparse-pages 0|112|192|224] [--sparse-meta q8|q4]\n"
+-        "           [--default-temp 1.0] [--default-top-p 1.0] [--default-top-k 0] [--default-min-p 0.0] [--mtp models/mtp.safetensors] [--spec-threshold 0.8] [--draft-ctx 8192] [--mmproj <mmproj.gguf> | --no-vision] [--no-graph]\n"
++        "           [--default-temp 1.0] [--default-top-p 1.0] [--default-top-k 0] [--default-min-p 0.0] [--reasoning-budget -1] [--mtp models/mtp.safetensors] [--spec-threshold 0.8] [--draft-ctx 8192] [--mmproj <mmproj.gguf> | --no-vision] [--no-graph]\n"
+         "  selftest -m <gguf> [--kv-type q8_0|q4_1|q4_0] [--sparse-pages 0|112|192|224] [--sparse-meta q8|q4] [--mtp models/mtp.safetensors] [--bench-mtp] [--cpu-embd]\n"
+         "  --version  Print Nib version and target GPU architecture\n"
+         "VRAM options (bench / gen / vision / serve):\n"
+@@ -924,6 +924,7 @@ int main(int argc, char ** argv) {
+     float serve_default_top_p = 1.0f;
+     float serve_default_min_p = 0.0f;
+     int serve_default_top_k = 0;
++    int serve_reasoning_budget = -1;
+     float spec_threshold = 0.8f;
+     int draft_ctx = DSparkDrafter::DEFAULT_DRAFT_CTX;
+     bool bench_mtp = false;
+@@ -1106,6 +1107,7 @@ int main(int argc, char ** argv) {
+         else if (a == "--default-top-p" && i + 1 < argc) serve_default_top_p = (float)std::atof(argv[++i]);
+         else if (a == "--default-min-p" && i + 1 < argc) serve_default_min_p = (float)std::atof(argv[++i]);
+         else if (a == "--default-top-k" && i + 1 < argc) serve_default_top_k = std::atoi(argv[++i]);
++        else if (a == "--reasoning-budget" && i + 1 < argc) serve_reasoning_budget = std::atoi(argv[++i]);
+         else if (a == "--no-vision") no_vision = true;
+     }
+ 
+@@ -1634,6 +1636,7 @@ int main(int argc, char ** argv) {
+         scfg.default_top_p = serve_default_top_p;
+         scfg.default_min_p = serve_default_min_p;
+         scfg.default_top_k = serve_default_top_k;
++        scfg.reasoning_budget = serve_reasoning_budget;
+ 
+         return run_http_server(eng, bpe, drafter_ptr, vision_ptr, scfg);
+     }
+diff --git a/src/server.cpp b/src/server.cpp
+index 31363ce..fade66f 100644
+--- a/src/server.cpp
++++ b/src/server.cpp
+@@ -1423,6 +1423,9 @@ struct StreamJob {
+     bool allow_mtp = true;
+     bool need_logits = false;
+     int max_tokens = 1024;
++    bool in_thinking = false;  // scheduler-side: inside <|content_thinking|> of this reply
++    int think_toks = 0;
++    bool think_capped = false;
+     int est_prompt_toks = 0; // exact for text-only; pre-estimated for multimodal
+     SampleParams sp;
+     std::mt19937_64 rng;
+@@ -2510,6 +2513,18 @@ private:
+         }
+     }
+ 
++    // --reasoning-budget: true when the next token must close the thinking block.
++    bool think_cap_due(bool in_thinking, int think_toks) const {
++        return cfg_.reasoning_budget >= 0 && in_thinking && think_toks >= cfg_.reasoning_budget;
++    }
++    // think_toks counts every thinking block of the reply: Inkling may open a new block right after a forced
++    // close, and a per-block count would re-arm the cap (llama.cpp #32836).
++    void track_thinking(bool & in_thinking, int & think_toks, int32_t tok) const {
++        if (tok == id_thinking_) { in_thinking = true; }
++        else if (tok == id_end_msg_) in_thinking = false;
++        else if (in_thinking) ++think_toks;
++    }
++
+     // Emits a newly produced token to the HTTP thread and updates scheduler state.
+     // Returns true if job should keep decoding, false if job finished (EOS / max_tokens / cancelled).
+     bool emit_token(const std::shared_ptr<StreamJob> & job, int32_t tok, bool mark_prefill_ready = false) {
+@@ -2521,6 +2536,13 @@ private:
+             finish_job(job, "stop");
+             return false;
+         }
++        // Over the thinking cap: close the block. Safe because tok is not in the KV yet: it becomes
++        // cur_tok; the MTP path never accepts a draft past the cap (see mtp step).
++        if (think_cap_due(job->in_thinking, job->think_toks)) {
++            tok = id_end_msg_;
++            job->think_capped = true;
++        }
++        track_thinking(job->in_thinking, job->think_toks, tok);
+         ++job->sched_completion_tokens;
+         job->live_gen_toks.store(job->sched_completion_tokens, std::memory_order_relaxed);
+         {
+@@ -3422,6 +3444,14 @@ private:
+         int emit_acc = acc;
+         const int rem = job->max_tokens - job->sched_completion_tokens;
+         if (rem >= 0 && emit_acc > rem) emit_acc = rem;
++        if (cfg_.reasoning_budget >= 0) {  // accept no draft past the thinking cap; `next` gets replaced
++            bool th = job->in_thinking;
++            int tt = job->think_toks;
++            for (int r = 0; r < emit_acc; ++r) {
++                if (think_cap_due(th, tt)) { emit_acc = r; break; }
++                track_thinking(th, tt, drafts[r]);
++            }
++        }
+         bool stop_on_draft_eos = false;
+         int32_t stop_eos_tok = id_end_sampling_;
+         for (int r = 0; r < emit_acc; ++r) {
+@@ -4265,12 +4295,13 @@ private:
+         }
+         char log_buf[384];
+         std::snprintf(log_buf, sizeof(log_buf),
+-                      "%s %s [%s] | prompt=%d (cached=%d, %.0f ms) | gen=%d in %.0f ms (%.1f tok/s%s%s)",
++                      "%s %s [%s] | prompt=%d (cached=%d, %.0f ms) | gen=%d in %.0f ms (%.1f tok/s%s%s%s)",
+                       is_chat ? "chat" : "cmpl", stream ? "stream" : "sync", slot_tag,
+                       gr.prompt_tokens, gr.cache_hit_tokens, gr.prompt_ms,
+                       gr.completion_tokens, gr.predicted_ms, tps,
+                       gr.mtp_used ? ", MTP" : "",
+-                      gr.tool_calls.empty() ? "" : ", tools");
++                      gr.tool_calls.empty() ? "" : ", tools",
++                      job->think_capped ? ", think-cap" : "");
+         std::printf("[serve] %s\n", log_buf);
+         std::fflush(stdout);
+         record_activity(gr, stream, has_images);
+@@ -4481,10 +4512,10 @@ int run_http_server(
+                 NIB_VERSION, cfg.host.c_str(), cfg.port);
+     std::printf("[nib] Web UI: http://%s:%d/  |  OpenAI API: http://%s:%d/v1/chat/completions\n",
+                 cfg.host.c_str(), cfg.port, cfg.host.c_str(), cfg.port);
+-    std::printf("[nib] Config: ctx=%d slots=%d(%d/slot, req_max=%d, %s) kv=%s sparse_pages=%d temp=%.2f top_p=%.2f top_k=%d min_p=%.2f mtp=%s vision=%s vram=%.2f GiB\n",
++    std::printf("[nib] Config: ctx=%d slots=%d(%d/slot, req_max=%d, %s) kv=%s sparse_pages=%d temp=%.2f top_p=%.2f top_k=%d min_p=%.2f reasoning_budget=%d mtp=%s vision=%s vram=%.2f GiB\n",
+                 eng.max_ctx(), eng.num_slots(), eng.slot_ctx(), req_max, ctx_mode,
+                 cfg.kv_type_name.c_str(), cfg.sparse_pages, cfg.default_temperature,
+-                cfg.default_top_p, cfg.default_top_k, cfg.default_min_p,
++                cfg.default_top_p, cfg.default_top_k, cfg.default_min_p, cfg.reasoning_budget,
+                 drafter ? "ON" : "OFF", vision ? "ON" : "OFF", vram);
+     size_t dev_free_b = 0, dev_total_b = 0;
+     if (hipMemGetInfo(&dev_free_b, &dev_total_b) == hipSuccess && dev_total_b > 0) {
+diff --git a/src/server.hpp b/src/server.hpp
+index 71f4efd..50f25a0 100644
+--- a/src/server.hpp
++++ b/src/server.hpp
+@@ -25,6 +25,7 @@ struct ServerConfig {
+     float       default_top_p = 1.0f;
+     float       default_min_p = 0.0f;
+     int         default_top_k = 0;
++    int         reasoning_budget = -1;  // max thinking tokens per reply; -1 = unlimited
+     std::string output_dir = "outputs";
+ };
+ 

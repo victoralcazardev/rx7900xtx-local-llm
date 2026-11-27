@@ -1,0 +1,12 @@
+{"label": "A-old-card", "depth": 8192, "prompt_tokens": 7824, "pp": 3582.0, "tg": 121.15, "gen": [256, 256], "tg_all": [123.64, 118.66], "mtp": [2.116, 1.977], "accept": [1.116, 0.977]}
+{"label": "A-old-card", "depth": 32768, "prompt_tokens": 33142, "pp": 3432.5, "tg": 120.76, "gen": [256, 256], "tg_all": [111.36, 130.17], "mtp": [1.778, 2.327], "accept": [0.778, 1.327]}
+{"label": "A-old-card", "depth": 131072, "prompt_tokens": 134187, "pp": 3030.0, "tg": 107.98, "gen": [256, 256], "tg_all": [99.75, 116.22], "mtp": [1.778, 1.91], "accept": [0.778, 0.91]}
+{"label": "A-old-card", "depth": 250000, "prompt_tokens": 258129, "pp": 2961.1, "tg": 106.9, "gen": [256, 256], "tg_all": [110.43, 103.36], "mtp": [1.861, 1.79], "accept": [0.861, 0.79]}
+{"label": "B-new-card", "depth": 8192, "prompt_tokens": 7823, "pp": 3467.7, "tg": 130.25, "gen": [256, 256], "tg_all": [123.69, 136.81], "mtp": [2.008, 2.237], "accept": [1.008, 1.237]}
+{"label": "B-new-card", "depth": 32768, "prompt_tokens": 33142, "pp": 3395.9, "tg": 112.53, "gen": [256, 256], "tg_all": [113.24, 111.81], "mtp": [1.829, 1.861], "accept": [0.829, 0.861]}
+{"label": "B-new-card", "depth": 131072, "prompt_tokens": 134206, "pp": 3043.3, "tg": 117.84, "gen": [256, 256], "tg_all": [118.35, 117.34], "mtp": [2.065, 1.947], "accept": [1.065, 0.947]}
+{"label": "B-new-card", "depth": 250000, "prompt_tokens": 258260, "pp": 2958.7, "tg": 108.47, "gen": [256, 256], "tg_all": [109.95, 106.98], "mtp": [1.882, 1.829], "accept": [0.882, 0.829]}
+{"label": "C-new-card-notopk", "depth": 8192, "prompt_tokens": 7823, "pp": 3466.7, "tg": 120.9, "gen": [256, 256], "tg_all": [122.46, 119.34], "mtp": [1.992, 1.861], "accept": [0.992, 0.861]}
+{"label": "C-new-card-notopk", "depth": 32768, "prompt_tokens": 33142, "pp": 3387.0, "tg": 110.39, "gen": [256, 256], "tg_all": [110.86, 109.92], "mtp": [1.91, 1.848], "accept": [0.91, 0.848]}
+{"label": "C-new-card-notopk", "depth": 131072, "prompt_tokens": 134206, "pp": 3012.6, "tg": 110.78, "gen": [256, 256], "tg_all": [110.75, 110.8], "mtp": [1.848, 1.809], "accept": [0.848, 0.809]}
+{"label": "C-new-card-notopk", "depth": 250000, "prompt_tokens": 258260, "pp": 2933.1, "tg": 102.97, "gen": [256, 256], "tg_all": [105.61, 100.32], "mtp": [1.783, 1.835], "accept": [0.783, 0.835]}

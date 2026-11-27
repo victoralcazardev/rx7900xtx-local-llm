@@ -374,6 +374,46 @@ nothing downloaded or measured.
 | Kujira `Inkling-2-Mini-Strata-CHiPS-Abliterated` (SQ-20 19.35 GB, preview) | SQ-20 with CHiPS v6: only layer 11 attention output changed, experts byte-identical (card); refusal numbers measured on a UD-IQ2_XXS GGUF, not on the pack (310/312 -> 0/312 "thinking heads toward refusal"); no GSM8K/MMLU; Strata 0.2.20 cannot install custom packs from the app | Uncensored Strata option if Strata is ever measured here; same speed caveat |
 | @SergioGMN / GodGMN abliterated | No upload (`?author=GodGMN` empty) | Still on watch |
 
+### Engine round (2026-11-27)
+
+Every engine update of the day against the `262k-nib` default; decode tok/s at 7.8K / 33K / 134K / 258K. **The
+default stays**: nothing else was faster at any depth.
+
+| Engine, file | Decode | Record |
+|---|---|---|
+| nib `2e16cf0` + patch, sparse 224 (default; loaded host) | 121 / 121 / 108 / 107 | [nib-v022](../../results/20261127-nib-v022/README.md) |
+| nib `2e16cf0` + patch, dense (`--sparse-pages 0`) | 143 / 106 / 87 / 66 | [tintero](../../results/20261127-tintero-dflash2/README.md) |
+| nib `v0.2.2` + patch, card sampling without `top_k` | 121 / 110 / 111 / 103; dies at start-up on ~half the starts (upstream) | [nib-v022](../../results/20261127-nib-v022/README.md) |
+| Tintero `dc52e6f`, Abiray q8dense, dense / sparse / + DFlash2 | 94 / 79 / 55 / 41; 98 / 92 / 79 / 90; at most +13% | [tintero](../../results/20261127-tintero-dflash2/README.md) |
+| Strata 0.2.23, ISTA GSQ-RCO IQ3_S | 58 / 44 / 25 / 18 | [strata](../../results/20261127-strata-0223-inkling-iq3s/README.md) |
+| Project Maya v1.1.83 / alesha-pro `27daec5` | not run: needs the Maya-L layout (disk) / no gfx1100 build | [maya](../../results/20261127-project-maya-v1183/README.md) |
+
+Retest triggers: nib start-up fix (then drop `top_k 256`), Project Maya once 18 GB are free, Strata only for models
+that do not fit VRAM.
+
+### Hugging Face re-survey (2026-11-27)
+
+New uncensored derivatives since 2026-11-24, read from the HF API and cards only (no header parse, nothing
+downloaded); every number is the publisher's. Engine fit uses the documented readers: `nib` = Q8_0 + NVFP4 experts
+(Nib-Pack layout), `tintero` = IQ4_NL or Unsloth UD-Q4_K_XL ([`SOURCES-community.md`](../SOURCES-community.md#tintero-strata-0221-0222-ista-gsq-rco-and-inkling-cyber-2026-11-27)).
+**No uncensored GSQ-RCO file exists**: [ISTA-DASLab](https://huggingface.co/ISTA-DASLab/Inkling-2-Mini-GSQ-RCO-GGUF)
+added nothing after 2026-11-26, and `joyfox/Inkling-2-Mini-GSQ-RCO-Uncensor` is ISTA's IQ3_S plus an unmerged
+43.8 MB AtomicChat LoRA (49 residual writers), with no refusal numbers for the pair.
+
+| Candidate (2026-11-26/27) | Card facts | Fit here |
+|---|---|---|
+| [onemunanoyo Abliterated-Aggressive](https://huggingface.co/onemunanoyo/Inkling-2-Mini-Abliterated-Aggressive-GGUF) UD-Q4_K_XL 17.63 GB (also Q8_K_XL to Q2_K_XL) | Unsloth UD requant; edits `attn_output`, `ffn_down_exps`, `attn_gate`, `ffn_gate_inp`, `output`; 0/40 refusals, KLD 0.0706, MMLU 77.98% | **Next candidate**: UD-Q4_K_XL may load on `nib` and `tintero` (unverified); experts edited, so not graftable onto the Nib-Pack |
+| [OBLITERATUS](https://huggingface.co/OBLITERATUS/Inkling-2-Mini-OBLITERATED) `v2e-IQ4_NL` 14 GB | rank-2 projection on `attn_output` layers 4-21; 86.8% answered of 740 | `tintero`, llama.cpp |
+| [savealamb abliterated-tuned](https://huggingface.co/savealamb/Inkling-2-Mini-abliterated-tuned-GGUF) Q4_K_M 17.48 GB | `attn_output` + all `ffn_down_exps` layers 4-23, LoRA merged; 7/104 refusals, KLD 0.021, HumanEval 94.5% | llama.cpp only (K-quant experts) |
+| [KatterMobile ARA-HERETIC](https://huggingface.co/KatterMobile/Inkling-2-Mini-ARA-HERETIC-GGUF) Q4_K_M | 15/100 refusals, KL 0.2725 | llama.cpp only |
+| [isichan-ai Unlock](https://huggingface.co/isichan-ai/Inkling-2-Mini-Unlock-GGUF) UD quants (gated) | attention only | not checked (gated) |
+| [MECHUK Tideglass](https://huggingface.co/MECHUK/Tideglass-Inkling-2-Mini-Unbound-v2.1-GGUF), [AiAF](https://huggingface.co/AiAF/Inkling-2-Mini-Unbound-v2.1-GGUF) | Unbound v2.1 on Q4_0 / Q4_K_M experts | llama.cpp only; our graft covers it |
+| [GCSA-AiLab Uncensored](https://huggingface.co/GCSA-AiLab/Inkling-2-Mini-Uncensored) safetensors | 113 attention + 23 router-bias tensors; StrongREJECT 5/180 refusals | vLLM only |
+| [sergiogmn Cyber](https://huggingface.co/sergiogmn/Inkling-2-Mini-Cyber-GGUF) IQ4_NL / Q6_K / Q8_0 | 20 Q8_0 `blk.4-23.attn_output` changed; HumanEval+ 93.3% -> 82.9% | graftable onto the Nib-Pack; security use, worse at code |
+
+Buildable fallback if nothing better appears: graft the 120 Unbound v2.1 Q8_0 attention tensors onto ISTA IQ3_S, as
+done for the Nib-Pack; it would run on llama.cpp only, which decoded Inkling at 57.6 / 44.5 / 37.8 tok/s here.
+
 ### Reference repos and engine updates (2026-11-23)
 
 Read by scouts from the primary repos; author numbers, not re-measured here unless stated.

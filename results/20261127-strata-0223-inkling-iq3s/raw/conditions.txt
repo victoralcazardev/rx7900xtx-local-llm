@@ -1,0 +1,5 @@
+2026-11-27T19:39:52+00:00 start, load 8.40 12.86 11.97, GPU use (%): 2
+2026-11-27T19:40:27+00:00 launch exit 0
+2026-11-27T19:40:27+00:00 health=yes
+GPU[0]		: GPU Memory Allocated (VRAM%): 86
+3460927 ~/.local/share/strata/components/shapes/inkling2/engine/0.1.70-linux-x86_64-hip-rx7900/strata-inkling --serve --native ~/models/Inkling-2-Mini-GSQ-RCO-ISTA/Inkling-2-Mini-GSQ-RCO-IQ3_S.gguf --max-context 262144 --vram-experts-gb 11.99 --draft off

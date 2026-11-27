@@ -1,0 +1,15 @@
+2026-11-27T18:40:01+00:00 GPU idle, load 9.38 9.46 15.18
+2026-11-27T18:40:44+00:00 base up=yes load 9.96 9.62 14.99
+GPU[0]		: GPU Memory Allocated (VRAM%): 92
+2026-11-27T18:53:30+00:00 dflash2 up=yes load 3.92 5.02 9.57
+GPU[0]		: GPU Memory Allocated (VRAM%): 96
+2026-11-27T19:03:46+00:00 dflash2-sparse up=no load 2.81 3.12 6.36
+GPU[0]		: GPU Memory Allocated (VRAM%): 4
+2026-11-27T19:06:35+00:00 diag dflash2 up load 2.03 2.57 5.61
+2026-11-27T19:07:10+00:00 diag sparse never came up: tintero: IK2_SPARSE_DECODE requires token-major IK2_KV=fp8 and IK2_ATTN_MMA=3 with 128-wide heads
+2026-11-27T19:08:03+00:00 tintero-dense-tm up load 2.60 2.61 5.34
+tintero-dense-tm GPU[0]		: GPU Memory Allocated (VRAM%): 91
+2026-11-27T19:21:12+00:00 tintero-sparse up load 17.02 15.89 11.67
+tintero-sparse GPU[0]		: GPU Memory Allocated (VRAM%): 90
+2026-11-27T19:32:41+00:00 nib-dense up load 5.23 8.06 10.10
+nib-dense GPU[0]		: GPU Memory Allocated (VRAM%): 95

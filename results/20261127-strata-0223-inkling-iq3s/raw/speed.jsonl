@@ -1,0 +1,4 @@
+{"label": "strata-iq3s", "depth": 8192, "prompt_tokens": 7823, "pp": 1764.2, "tg": 57.8, "gen": [256, 256], "tg_all": [57.9, 57.7], "mtp": [null, null], "accept": [null, null]}
+{"label": "strata-iq3s", "depth": 32768, "prompt_tokens": 33142, "pp": 1554.6, "tg": 44.25, "gen": [256, 256], "tg_all": [45.1, 43.4], "mtp": [null, null], "accept": [null, null]}
+{"label": "strata-iq3s", "depth": 131072, "prompt_tokens": 134456, "pp": 1083.4, "tg": 24.95, "gen": [256, 104], "tg_all": [26.9, 23.0], "mtp": [null, null], "accept": [null, null]}
+{"label": "strata-iq3s", "depth": 250000, "prompt_tokens": 258569, "pp": 845.5, "tg": 17.6, "gen": [256, 256], "tg_all": [16.9, 18.3], "mtp": [null, null], "accept": [null, null]}

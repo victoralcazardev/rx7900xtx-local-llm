@@ -1,0 +1,6 @@
+prose: identical (1031 chars, 256 tokens)
+code: identical (884 chars, 256 tokens)
+depth33k: DIFFERENT at char 4 (a=572 chars/256 tokens, b=909 chars/256 tokens)
+  a: '\n\n# Long-context inference server tuning\n\n##'
+  b: '\n\n# Tuning long-context inference servers\n\nH'
+summary: 2/3 prompts identical, 1 not
