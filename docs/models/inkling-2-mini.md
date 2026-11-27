@@ -16,15 +16,9 @@
   1,894 / 1,292 at 512 / 128K / 262K, GSM8K 95/96, 262K retrieval 3/3, tool calls and prefix reuse working
   ([run](../../results/20261122-inkling-maya-vs-fork/README.md)). Launch:
   `python3 scripts/launch.py inkling2-mini-unc-q8d --profile 315k-maya` ([SOP](../sop/launch-model.md)); the IQ4_NL
-  file's own `262k-maya` profile was removed on 2026-11-24 in favor of the faster q8d re-type. Both GodGMN
-  projects are in use: the llama.cpp fork serves `inkling2-mini-unc/262k-q8q8`, the HIP port serves the q8d profiles. The bullets
-  below describe the fork profile.
-- **Wired llama.cpp profile** (`262k-q8q8`, the comparison arm; the Q8_0 re-typed `262k-maya` on the HIP
-  port above is the setup in use since 2026-11-23): `models.toml` alias `inkling2-mini-unc` (Abiray IQ4_NL, below),
-  profile `262k-q8q8` (262,144 context, KV `q8_0`/`q8_0`, text only), backend `hip-inkling` = the GodGMN fork below
-  (`local.toml` `[engines] hip-inkling`). Launch: `python3 scripts/launch.py inkling2-mini-unc --profile 262k-q8q8`.
-  `smoke.py` with the final flags (temp 1.0, min-p 0.0): **44.1 tok/s**. This fork is the only llama.cpp
-  path that holds 262K on this card ([`DECISIONS.md`](../DECISIONS.md)).
+  file's own `262k-maya` profile was removed on 2026-11-24 in favor of the faster q8d re-type. The llama.cpp fork profile
+  `inkling2-mini-unc` / `262k-q8q8` (44.1 tok/s `smoke.py`, the only llama.cpp path that holds 262K here) was removed
+  with its untyped file on 2026-11-27 ([`DECISIONS.md`](../DECISIONS.md)).
 - **Sampling**: vendor `generation_config.json` sets only `temperature 1.0` (re-read 2026-11-22), so
   `top_p`/`top_k` stay at the engine default; the `top-p 1.0, top-k 0` of the Unsloth guide below is
   not the vendor's. Vendor warning: limit output tokens and agent turns (reasoning loops).

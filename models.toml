@@ -19,8 +19,8 @@
 # - `default_alias`/`default_profile`: the launcher fallback when `scripts/launch.py` is called with
 #   no alias — the setup last in use, not a recommendation; pick the alias per task
 #   (docs/DECISIONS.md, 2026-11-23).
-# - No recommended setup: the models sit side by side (2026-11-23, docs/DECISIONS.md). The fallback
-#   is `inkling2-mini-unc-q8d` / `315k-maya`; the other models are the Qwen3.8-27B
+# - No recommended setup: the models sit side by side (2026-11-23, docs/DECISIONS.md). The default is
+#   `inkling2-mini-unbound-nib` / `262k-nib` and the fallback `inkling2-mini-unc-q8d` / `315k-maya`; the other models are the Qwen3.8-27B
 #   `huihui-iq3s-mtp` / `262k-q8q51-mtp` (opt-in). The stock
 #   `qwen38-iq3s-mtp` stays configured as the measured reference, not as a listed setup.
 #   Add a new model/profile per docs/sop/new-model.md.

@@ -87,9 +87,9 @@ Nib either. Per-question rows: [`raw/gsm-strata-iq3s.jsonl`](raw/gsm-strata-iq3s
 | Harness | `depth_http.py 4445 --depths 8192 32768 131072 250000 --gen 256 --repeats 2 --chars-per-token 2.9 --sampling '{"temperature":0.6,"top_p":0.95,"top_k":256,"min_p":0.0}'`, then `gsm8k_http.py` (both borrowed unchanged from the nib-v022 run); every request sends `reasoning_effort: "none"` |
 | Sequence | [`raw/run.sh`](raw/run.sh) — it waits for the day's other benchmarks to finish before launching |
 
-One operational wrinkle: the scripted stop failed. `strata runtime stop` requires `--profile` (usage error in
-`raw/stop.log`), so the `strata runtime cleanup` fallback ran, and the `pgrep` right after it — the last line of
-[`raw/conditions.txt`](raw/conditions.txt) — still listed the engine; it was no longer running when the machine was
+One operational wrinkle: the scripted stop failed. `strata runtime stop` requires `--profile` (usage error, log not kept),
+so the `strata runtime cleanup` fallback ran, and the `pgrep` right after it ([`raw/processes.txt`](raw/processes.txt))
+still listed the engine; it was no longer running when the machine was
 checked later, so nothing Strata held the GPU past the session.
 
 ## Not measured
